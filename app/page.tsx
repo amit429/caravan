@@ -1,7 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getAdminUser } from "@/lib/auth/session";
 import { FlowShell } from "@/components/caravan/flow-shell";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const admin = await getAdminUser();
+  if (admin) redirect("/trips");
+
   return (
     <FlowShell className="justify-end gap-5 px-5 pb-10 pt-6 md:justify-center md:px-8">
       <div className="flex-1 md:hidden" />
