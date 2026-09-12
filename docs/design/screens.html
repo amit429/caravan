@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Caravan — v1 screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Inter+Tight:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* surfaces */
+  --paper:#EDEAE3; --card:#FFFFFF; --sunk:#E4E0D6; --line:#D8D3C7;
+  /* ink */
+  --ink:#17181C; --ink2:#5A5C63; --ink3:#9A9CA3;
+  /* identity */
+  --plum:#5D2A5B; --plum-d:#46203F; --plum-t:#EFE2EE;
+  --signal:#CBE83A; --signal-d:#8FA81C;
+  --agent:#1B7A6B; --agent-t:#DCEFEB;
+  --warn:#C98A06; --warn-t:#F7ECD2;
+  --stop:#B93333; --stop-t:#F6DEDE;
+  /* member colours */
+  --m1:#5D2A5B; --m2:#1B7A6B; --m3:#2F5AA8; --m4:#B06A1C; --m5:#9C2B54; --m6:#4A6B22;
+  --r-sm:8px; --r:12px; --r-lg:18px; --r-xl:26px;
+  --f-disp:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-ui:"Inter Tight",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"DM Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--f-ui);background:#22232A;color:var(--ink);display:flex;min-height:100vh}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- shell ---------- */
+aside{position:sticky;top:0;height:100vh;width:250px;flex:none;background:#1A1B21;color:#D6D7DC;padding:26px 20px;overflow-y:auto;border-right:1px solid #2E3038}
+aside h1{font-family:var(--f-disp);font-size:19px;font-weight:700;color:#fff;letter-spacing:-.01em}
+aside .sub{font-size:12px;color:#84868F;margin-top:5px;line-height:1.5}
+aside .flow{margin-top:22px}
+aside .flow > p{font-family:var(--f-mono);font-size:10.5px;color:#6E707A;margin-bottom:7px}
+aside a{display:block;color:#B9BAC2;text-decoration:none;font-size:12.5px;padding:4px 8px;border-radius:6px;line-height:1.45}
+aside a:hover{background:#2A2C34;color:#fff}
+main{flex:1;padding:36px 40px 90px}
+main > header{margin-bottom:32px;max-width:640px}
+main > header h2{font-family:var(--f-disp);font-size:30px;font-weight:700;color:#fff;letter-spacing:-.02em}
+main > header p{color:#9A9CA6;font-size:14px;margin-top:10px;line-height:1.6}
+.flowhead{font-family:var(--f-disp);font-size:16px;font-weight:600;color:#fff;margin:44px 0 4px;padding-top:22px;border-top:1px solid #32343C}
+.flowhead:first-of-type{border-top:0;padding-top:0;margin-top:8px}
+.flowdesc{color:#83858F;font-size:12.5px;margin-bottom:22px;max-width:620px;line-height:1.6}
+.grid{display:flex;flex-wrap:wrap;gap:34px}
+.slot{width:390px}
+.slot > .cap{color:#9EA0AA;font-size:12px;margin-bottom:9px;display:flex;gap:8px;align-items:baseline}
+.slot > .cap b{color:#fff;font-weight:500;font-size:12.5px}
+.slot > .cap i{font-family:var(--f-mono);font-style:normal;color:#65676F;font-size:10.5px}
+
+/* ---------- device ---------- */
+.phone{width:390px;height:844px;background:var(--paper);border-radius:34px;overflow:hidden;
+  display:flex;flex-direction:column;position:relative;font-size:15px;line-height:1.45;color:var(--ink);
+  box-shadow:0 18px 44px rgba(0,0,0,.42)}
+.phone *{font-size:inherit}
+.scroll{flex:1;overflow:hidden;display:flex;flex-direction:column}
+
+/* ---------- chrome ---------- */
+.sb{display:flex;align-items:center;padding:13px 24px 6px;flex:none}
+.sb .t{font-weight:600;font-size:13px}
+.sb .r{margin-left:auto;font-size:11px;color:var(--ink2);font-family:var(--f-mono)}
+.appbar{display:flex;align-items:center;gap:11px;padding:4px 20px 13px;flex:none}
+.appbar .bk{font-size:21px;color:var(--ink);line-height:1;margin-top:-3px}
+.appbar h3{font-family:var(--f-disp);font-size:17px;font-weight:600;letter-spacing:-.01em}
+.appbar .rt{margin-left:auto;font-size:12px;color:var(--ink2)}
+.body{flex:1;padding:0 20px 22px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.body.tight{gap:11px}
+.body.flush{padding-left:0;padding-right:0}
+.push{flex:1}
+
+/* tab bar */
+.tabbar{flex:none;display:flex;border-top:1px solid var(--line);background:var(--card);padding:9px 8px 22px}
+.tabbar div{flex:1;text-align:center;font-size:11px;color:var(--ink3);display:flex;flex-direction:column;gap:5px;align-items:center;position:relative}
+.tabbar .ic{width:21px;height:21px;border-radius:6px;background:var(--ink3);opacity:.5}
+.tabbar .on{color:var(--plum);font-weight:600}
+.tabbar .on .ic{background:var(--plum);opacity:1}
+.tabbar .bdg{position:absolute;top:-3px;right:50%;margin-right:-19px;background:var(--stop);color:#fff;
+  font-size:9px;font-weight:600;min-width:15px;height:15px;border-radius:99px;display:grid;place-items:center;padding:0 4px}
+
+/* ---------- type ---------- */
+.d1{font-family:var(--f-disp);font-size:29px;font-weight:700;letter-spacing:-.03em;line-height:1.12}
+.h1{font-family:var(--f-disp);font-size:23px;font-weight:600;letter-spacing:-.02em;line-height:1.2}
+.h2{font-family:var(--f-disp);font-size:17px;font-weight:600;letter-spacing:-.01em}
+.h3{font-size:14px;font-weight:600}
+.p{font-size:14.5px;color:var(--ink2);line-height:1.55}
+.sm{font-size:12.5px;color:var(--ink2);line-height:1.5}
+.xs{font-size:11.5px;color:var(--ink3);line-height:1.45}
+.mono{font-family:var(--f-mono)}
+.strong{color:var(--ink);font-weight:500}
+
+/* ---------- atoms ---------- */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 18px;border-radius:var(--r);
+  font-size:15px;font-weight:600;border:0;width:100%;font-family:var(--f-ui);cursor:default}
+.btn-p{background:var(--plum);color:#fff}
+.btn-s{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn-g{background:transparent;color:var(--ink2);font-weight:500}
+.btn-sig{background:var(--signal);color:#25290D}
+.btn.sm{padding:10px 14px;font-size:13px;width:auto}
+.row{display:flex;gap:10px;align-items:center}
+.col{display:flex;flex-direction:column;gap:10px}
+.wrap{display:flex;flex-wrap:wrap;gap:7px}
+.card{background:var(--card);border-radius:var(--r-lg);padding:16px}
+.card.flat{background:var(--sunk)}
+.card.line{background:transparent;border:1px solid var(--line)}
+.chip{padding:8px 13px;border-radius:99px;font-size:13px;background:var(--card);border:1px solid var(--line);color:var(--ink2);white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--paper);font-weight:500}
+.chip.sig{background:var(--signal);border-color:var(--signal);color:#25290D;font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:99px;font-size:10.5px;font-weight:600;font-family:var(--f-mono)}
+.pill.plum{background:var(--plum-t);color:var(--plum)}
+.pill.agent{background:var(--agent-t);color:var(--agent)}
+.pill.warn{background:var(--warn-t);color:var(--warn)}
+.pill.ok{background:var(--signal);color:#3B4410}
+.pill.stop{background:var(--stop-t);color:var(--stop)}
+.pill.grey{background:var(--sunk);color:var(--ink2)}
+.av{width:32px;height:32px;border-radius:99px;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:600;flex:none}
+.av.sm{width:24px;height:24px;font-size:9.5px}
+.av.lg{width:46px;height:46px;font-size:16px}
+.stackav{display:flex}
+.stackav .av{margin-left:-9px;border:2px solid var(--paper)}
+.stackav .av:first-child{margin-left:0}
+.field{display:flex;flex-direction:column;gap:7px}
+.field label{font-size:12.5px;font-weight:500;color:var(--ink2)}
+.input{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;font-size:15px}
+.input.ph{color:var(--ink3)}
+.rule{height:1px;background:var(--line)}
+.dots{display:flex;gap:5px;align-items:center}
+.dots i{width:6px;height:6px;border-radius:99px;background:var(--line);display:block}
+.dots i.on{width:22px;background:var(--plum)}
+.sheet{margin-top:auto;background:var(--card);border-radius:var(--r-xl) var(--r-xl) 0 0;padding:10px 20px 26px;
+  display:flex;flex-direction:column;gap:15px;box-shadow:0 -8px 30px rgba(23,24,28,.12)}
+.grab{width:38px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 6px}
+.scrim{position:absolute;inset:0;background:rgba(23,24,28,.4)}
+.ovl{position:absolute;inset:0;display:flex;flex-direction:column}
+.body::-webkit-scrollbar,.feed::-webkit-scrollbar{width:4px}
+.body::-webkit-scrollbar-thumb,.feed::-webkit-scrollbar-thumb{background:var(--line);border-radius:9px}
+</style>
+</head>
+<body>
+<style>
+/* ---------- room / feed ---------- */
+.feed{flex:1;padding:2px 16px 12px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.daysep{display:flex;align-items:center;gap:10px;color:var(--ink3);font-size:10.5px;font-family:var(--f-mono)}
+.daysep::before,.daysep::after{content:"";flex:1;height:1px;background:var(--line)}
+.msg{display:flex;gap:9px}
+.msg .bub{background:var(--card);border-radius:4px 15px 15px 15px;padding:10px 13px;max-width:262px}
+.msg .who{font-size:11.5px;font-weight:600;margin-bottom:3px}
+.msg .tx{font-size:14px;line-height:1.45}
+.msg.me{justify-content:flex-end}
+.msg.me .bub{background:var(--plum);color:#fff;border-radius:15px 4px 15px 15px}
+.agent{border-left:2.5px solid var(--agent);background:var(--agent-t);border-radius:0 14px 14px 0;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.agent .hd{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--agent);font-family:var(--f-mono)}
+.agent .tx{font-size:14px;line-height:1.5;color:var(--ink)}
+.receipt{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--ink2);padding:8px 12px;background:var(--sunk);border-radius:10px}
+.receipt .undo{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--plum)}
+.thread{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--card);border:1px dashed var(--line);border-radius:12px;font-size:12px;color:var(--ink2)}
+.composer{flex:none;border-top:1px solid var(--line);background:var(--card);padding:11px 14px 20px;display:flex;gap:9px;align-items:center}
+.composer .in{flex:1;background:var(--sunk);border-radius:99px;padding:11px 15px;color:var(--ink3);font-size:14px}
+.composer .send{width:38px;height:38px;border-radius:99px;background:var(--plum);color:#fff;display:grid;place-items:center;font-size:16px;flex:none}
+.locked-banner{background:var(--ink);color:var(--paper);border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:5px}
+
+/* ---------- decisions ---------- */
+.dec{background:var(--card);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--line)}
+.dec .top{display:flex;align-items:center;gap:8px;padding:12px 14px 10px}
+.dec .top .lbl{font-family:var(--f-mono);font-size:10px;color:var(--ink3)}
+.dec .ttl{padding:0 14px 11px;font-family:var(--f-disp);font-size:16px;font-weight:600;letter-spacing:-.01em}
+.dec .opts{display:flex;flex-direction:column}
+.opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--line);position:relative}
+.opt .bar{position:absolute;left:0;top:0;bottom:0;background:var(--plum-t);z-index:0}
+.opt > *{position:relative;z-index:1}
+.opt .nm{font-size:14px;font-weight:500}
+.opt .rt{margin-left:auto;display:flex;align-items:center;gap:7px}
+.opt.win .nm{font-weight:600}
+.opt.dead .nm{color:var(--ink3);text-decoration:line-through}
+.opt .box{width:19px;height:19px;border-radius:6px;border:1.5px solid var(--line);flex:none}
+.opt .box.on{background:var(--plum);border-color:var(--plum)}
+.dec .foot{display:flex;align-items:center;gap:8px;padding:11px 14px;border-top:1px solid var(--line);background:var(--sunk);font-size:11.5px;color:var(--ink2)}
+.stamp{border:2px solid var(--signal-d);color:var(--signal-d);border-radius:8px;padding:5px 10px;font-family:var(--f-mono);
+  font-size:11px;font-weight:600;transform:rotate(-3deg);display:inline-block;letter-spacing:.04em}
+
+/* ---------- dates ---------- */
+.cal{background:var(--card);border-radius:var(--r-lg);padding:14px}
+.cal .hd{display:flex;align-items:center;margin-bottom:10px;font-size:13px;font-weight:600}
+.cal .hd .nav{margin-left:auto;display:flex;gap:14px;color:var(--ink3)}
+.cal .dow,.cal .days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal .dow span{text-align:center;font-size:10px;color:var(--ink3);font-family:var(--f-mono);padding-bottom:5px}
+.cal .days b{aspect-ratio:1;display:grid;place-items:center;font-size:12.5px;font-weight:400;border-radius:8px;color:var(--ink2)}
+.cal .days b.free{background:var(--signal);color:#2F3708;font-weight:600}
+.cal .days b.part{background:var(--warn-t);color:var(--warn);font-weight:500}
+.cal .days b.blok{background:var(--stop-t);color:var(--stop);text-decoration:line-through}
+.cal .days b.off{color:var(--ink3);opacity:.4}
+.avail{display:flex;align-items:center;gap:9px}
+.avail .nm{width:52px;font-size:12px;flex:none}
+.avail .strip{flex:1;display:flex;gap:2px;height:16px}
+.avail .strip i{flex:1;border-radius:3px;background:var(--sunk)}
+.avail .strip i.f{background:var(--signal)}
+.avail .strip i.p{background:var(--warn-t)}
+.avail .strip i.b{background:var(--stop-t)}
+
+/* ---------- destinations ---------- */
+.dest{background:var(--card);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--line)}
+.dest .img{height:92px;background:linear-gradient(135deg,var(--plum),#8A4A82);display:flex;align-items:flex-end;padding:11px 14px}
+.dest .img.b{background:linear-gradient(135deg,#1B7A6B,#3DA893)}
+.dest .img.c{background:linear-gradient(135deg,#B06A1C,#D99A3F)}
+.dest .img h4{font-family:var(--f-disp);font-size:19px;font-weight:700;color:#fff;letter-spacing:-.02em}
+.dest .meta{display:flex;gap:14px;padding:11px 14px;border-bottom:1px solid var(--line)}
+.dest .meta div{display:flex;flex-direction:column;gap:2px}
+.dest .meta .k{font-size:9.5px;font-family:var(--f-mono);color:var(--ink3)}
+.dest .meta .v{font-size:13px;font-weight:600}
+.dest .why{padding:11px 14px;display:flex;flex-direction:column;gap:7px}
+.dest .why .ln{display:flex;gap:8px;font-size:12.5px;line-height:1.45;color:var(--ink2)}
+.dest .why .ln b{flex:none;width:13px;font-weight:700}
+.dest .why .ln.good b{color:var(--signal-d)}
+.dest .why .ln.bad b{color:var(--stop)}
+
+/* ---------- lists ---------- */
+.lrow{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
+.lrow:last-child{border-bottom:0}
+.lrow .gr{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.lrow .nm{font-size:14px;font-weight:500}
+.lrow .sub{font-size:11.5px;color:var(--ink3)}
+.fact{display:flex;align-items:flex-start;gap:9px;padding:11px 0;border-bottom:1px solid var(--line)}
+.fact .dot{width:7px;height:7px;border-radius:99px;margin-top:6px;flex:none;background:var(--agent)}
+.fact .dot.low{background:var(--warn)}
+.fact .dot.hard{background:var(--stop)}
+.fact .dot.said{background:var(--ink3)}
+.tick{width:21px;height:21px;border-radius:7px;border:1.5px solid var(--line);flex:none;display:grid;place-items:center;font-size:12px;color:transparent}
+.tick.on{background:var(--signal);border-color:var(--signal);color:#2F3708;font-weight:700}
+.tl{display:flex;gap:12px}
+.tl .time{width:46px;flex:none;font-family:var(--f-mono);font-size:10.5px;color:var(--ink3);padding-top:14px}
+.tl .spine{width:1px;background:var(--line);position:relative;flex:none}
+.tl .spine::before{content:"";position:absolute;top:16px;left:-3.5px;width:8px;height:8px;border-radius:99px;background:var(--plum)}
+.ring{width:44px;height:44px;border-radius:99px;flex:none;display:grid;place-items:center;font-size:11px;font-weight:700;
+  background:conic-gradient(var(--signal) 0 62%,var(--sunk) 62% 100%)}
+.ring span{width:34px;height:34px;border-radius:99px;background:var(--card);display:grid;place-items:center}
+.bar{height:9px;border-radius:99px;background:var(--sunk);overflow:hidden;display:flex}
+.bar i{display:block;background:var(--plum)}
+.bar i.over{background:var(--stop)}
+.mail{background:var(--card);border-radius:var(--r-lg);padding:16px;display:flex;flex-direction:column;gap:11px;border:1px solid var(--line)}
+</style>
+
+<aside>
+  <h1>Caravan</h1>
+  <p class="sub">Agentic group-trip planner. v1 screens, F1&ndash;F16. Mobile 390&times;844.</p>
+  <nav id="nav"></nav>
+</aside>
+
+<main>
+  <header>
+    <h2>The whole v1, on one page</h2>
+    <p>Forty screens across seven flows. Everything a friend group touches between &ldquo;let&rsquo;s go somewhere&rdquo; and a locked destination &mdash; plus the surfaces the agents act on. Read left to right within each flow.</p>
+  </header>
+  <div id="app"></div>
+</main>
+
+<script>
+const M = {amit:["AP","var(--m1)"],rhea:["R","var(--m2)"],karan:["K","var(--m3)"],nidhi:["N","var(--m4)"],farhan:["F","var(--m5)"],ishaan:["I","var(--m6)"]};
+const av=(k,c)=>`<div class="av ${c||''}" style="background:${M[k][1]}">${M[k][0]}</div>`;
+const avs=(ks)=>`<div class="stackav">${ks.map(k=>av(k,'sm')).join('')}</div>`;
+const sb=()=>`<div class="sb"><span class="t">9:41</span><span class="r">5G 84%</span></div>`;
+const bar=(t,{back=true,right=''}={})=>`<div class="appbar">${back?'<span class="bk">&lsaquo;</span>':''}<h3>${t}</h3>${right?`<span class="rt">${right}</span>`:''}</div>`;
+const tabs=(on,b={})=>`<div class="tabbar">
+  ${['Room','Plan','You'].map(n=>`<div class="${on===n?'on':''}"><span class="ic"></span>${n}${b[n]?`<span class="bdg">${b[n]}</span>`:''}</div>`).join('')}
+</div>`;
+const dots=(i,n)=>`<div class="dots">${Array.from({length:n},(_,k)=>`<i class="${k===i?'on':''}"></i>`).join('')}</div>`;
+const chips=(a)=>`<div class="wrap">${a.map(([l,s])=>`<span class="chip ${s||''}">${l}</span>`).join('')}</div>`;
+const fld=(l,v,ph)=>`<div class="field"><label>${l}</label><div class="input ${ph?'ph':''}">${v}</div></div>`;
+
+const SCREENS=[];
+const S=(flow,id,name,note,inner)=>SCREENS.push({flow,id,name,note,inner});
+const FLOWS={};
+const F=(key,title,desc)=>FLOWS[key]={title,desc};
+</script>
+<script>
+F('A','Setting up a trip','Only the person starting the trip signs in. Everything they set here is a starting point the group can argue with later, not a decision.');
+
+S('A','A1','Landing','First hit on the root URL',`
+${sb()}
+<div class="body" style="padding-top:26px">
+  <div class="push"></div>
+  <div class="row"><div class="av lg" style="background:var(--plum);border-radius:15px">C</div><span class="h1">Caravan</span></div>
+  <div class="d1">Somebody always ends up running the trip.</div>
+  <p class="p">Share one link. Everyone drops their dates and budget from their own phone. An agent does the chasing, the date maths and the deciding.</p>
+  <div class="push"></div>
+  <button class="btn btn-p">Start a trip</button>
+  <button class="btn btn-s">I have an invite code</button>
+</div>`);
+
+S('A','A2','Admin sign-in','F1 &middot; Google only',`
+${sb()}${bar('',{back:true})}
+<div class="body">
+  <div class="push"></div>
+  <div class="h1">Sign in to start a trip</div>
+  <p class="p">Only you need an account. Everyone you invite joins with a name and an email, nothing else.</p>
+  <div class="push"></div>
+  <button class="btn btn-s"><span class="av sm" style="background:var(--sunk);color:var(--ink2)">G</span>Continue with Google</button>
+  <p class="xs" style="text-align:center">Joining someone else&rsquo;s trip? Just open the link they sent you.</p>
+</div>`);
+
+S('A','A3','Your trips','F1 &middot; one person, many trips',`
+${sb()}
+<div class="appbar"><h3 style="font-size:23px">Your trips</h3><span class="rt">${av('amit')}</span></div>
+<div class="body tight">
+  ${[['Goa, probably','5 joined',' 2 decisions need you','warn','Waiting on you'],
+     ['Manali in December','7 joined',' dates locked, destination next','ok','Moving'],
+     ['Farhan&rsquo;s bachelor trip','3 joined',' not started yet','grey','Draft']]
+   .map(([n,a,b,p,pl])=>`<div class="card"><div class="row"><span class="h2">${n}</span><span class="pill ${p}" style="margin-left:auto">${pl}</span></div>
+   <p class="sm" style="margin-top:7px">${a} &middot;${b}</p></div>`).join('')}
+  <div class="push"></div>
+  <button class="btn btn-p">Start a trip</button>
+</div>`);
+
+S('A','A4','New trip &mdash; basics','F1 &middot; step 1',`
+${sb()}${bar('New trip',{right:'1 of 3'})}
+<div class="body">
+  ${dots(0,3)}
+  <div class="h1">What are we calling it?</div>
+  ${fld('Trip name','Goa, probably')}
+  ${fld('The rough idea, if you have one','Long weekend, beaches, nothing over-planned',true)}
+  <div class="field"><label>Roughly how long?</label>${chips([['Weekend'],['3&ndash;4 days','on'],['A week'],['No idea yet']])}</div>
+  <div class="push"></div>
+  <button class="btn btn-p">Next</button>
+</div>`);
+
+S('A','A5','New trip &mdash; vibe and tone','F1 &middot; step 2 &middot; admin sets the agent&rsquo;s voice',`
+${sb()}${bar('New trip',{right:'2 of 3'})}
+<div class="body tight">
+  ${dots(1,3)}
+  <div class="h1">Set the starting vibe</div>
+  <p class="sm">A starting point, not a decision. The group can push back the moment the trip opens.</p>
+  ${chips([['Beach','on'],['Mountains'],['Party','on'],['Slow'],['Road trip'],['Food','on'],['Trekking'],['Cities']])}
+  <div class="field" style="margin-top:6px"><label>Rough budget a head</label>${chips([['Under 10k'],['10&ndash;20k','on'],['20&ndash;35k'],['Open']])}</div>
+  <div class="field" style="margin-top:6px"><label>How should the agent talk?</label>
+    ${[['Efficient','Short. No jokes. Gets to the point.',1],['Warm','Friendly, a little chatty.',0],['Dry','Funny, slightly mouthy.',0]]
+      .map(([t,d,on])=>`<div class="card ${on?'':'line'}" style="padding:12px 14px;display:flex;align-items:center;gap:11px;${on?'border:1.5px solid var(--plum);background:var(--plum-t)':''}">
+        <div style="flex:1"><div class="h3">${t}</div><div class="xs" style="margin-top:2px">${d}</div></div>
+        <div class="box" style="width:18px;height:18px;border-radius:99px;border:1.5px solid ${on?'var(--plum)':'var(--line)'};background:${on?'var(--plum)':'transparent'}"></div>
+      </div>`).join('')}
+  </div>
+  <div class="push"></div>
+  <button class="btn btn-p">Next</button>
+</div>`);
+
+S('A','A6','New trip &mdash; invite','F1 &middot; the room code',`
+${sb()}${bar('New trip',{right:'3 of 3'})}
+<div class="body">
+  ${dots(2,3)}
+  <div class="h1">Send them the code</div>
+  <p class="sm">No app, no signup. They open the link, type a name, and they are in.</p>
+  <div class="card" style="background:var(--ink);color:var(--paper);text-align:center;padding:26px 16px">
+    <div class="mono" style="font-size:10.5px;color:var(--signal)">ROOM CODE</div>
+    <div class="mono" style="font-size:38px;font-weight:500;letter-spacing:.09em;margin:8px 0 6px">GOA-4K2</div>
+    <div class="mono" style="font-size:11.5px;opacity:.6">caravan.app/j/GOA-4K2</div>
+  </div>
+  <div class="row"><button class="btn btn-s">Copy link</button><button class="btn btn-p">Send to WhatsApp</button></div>
+  <div class="card flat"><p class="sm">The room stays shut until you open it, so nobody trickles in over four days. Everyone starts at the same moment.</p></div>
+  <div class="push"></div>
+  <button class="btn btn-p">Go to the lobby</button>
+</div>`);
+
+S('A','A7','Lobby &mdash; admin','F1 &middot; room locked until the admin starts it',`
+${sb()}${bar('Goa, probably',{right:'GOA-4K2'})}
+<div class="body">
+  <div class="card" style="text-align:center;padding:20px">
+    <div class="h1">5 here, room still shut</div>
+    <p class="sm" style="margin-top:6px">Open it when you think enough people have turned up. The agent posts first.</p>
+  </div>
+  <div class="card">
+    ${[['amit','Amit','you, admin'],['rhea','Rhea','joined 2m ago'],['karan','Karan','joined 5m ago'],['nidhi','Nidhi','joined 11m ago'],['farhan','Farhan','joined 12m ago']]
+      .map(([k,n,s])=>`<div class="lrow">${av(k)}<div class="gr"><span class="nm">${n}</span><span class="sub">${s}</span></div></div>`).join('')}
+  </div>
+  <div class="row"><span class="pill grey">Joining open</span><span class="sm" style="margin-left:auto">Shut it</span></div>
+  <div class="push"></div>
+  <button class="btn btn-sig">Open the room</button>
+</div>`);
+
+F('B','Joining','No password, no account. The bar is one screen and about twenty seconds, because the passive majority will not clear a taller one.');
+
+S('B','B1','Invite landing','F2 &middot; what the link opens to',`
+${sb()}
+<div class="body" style="padding-top:30px">
+  <div class="push"></div>
+  <span class="pill plum">Amit invited you</span>
+  <div class="d1">Goa, probably</div>
+  <p class="p">Long weekend, beaches, nothing over-planned. Around 10&ndash;20k a head.</p>
+  <div class="row" style="margin-top:4px">${avs(['rhea','karan','nidhi','farhan'])}<span class="sm">4 already in</span></div>
+  <div class="push"></div>
+  <button class="btn btn-p">Join the trip</button>
+  <p class="xs" style="text-align:center">No account needed. Takes about twenty seconds.</p>
+</div>`);
+
+S('B','B2','Join','F2 &middot; name and email, nothing else',`
+${sb()}${bar('Join Goa, probably')}
+<div class="body">
+  ${fld('Your name','Ishaan')}
+  ${fld('Email','ishaan@&hellip;',true)}
+  <p class="xs">Email is only for nudges and for getting back in from another phone. There is no password to forget.</p>
+  <div class="push"></div>
+  <button class="btn btn-p">Join</button>
+</div>`);
+
+S('B','B3','Lobby &mdash; member','F2 &middot; waiting for the admin',`
+${sb()}${bar('Goa, probably',{back:false})}
+<div class="body">
+  <div class="push"></div>
+  <div style="text-align:center">
+    <div class="stackav" style="justify-content:center;margin-bottom:14px">${['amit','rhea','karan','nidhi','farhan','ishaan'].map(k=>av(k)).join('')}</div>
+    <div class="h1">You&rsquo;re in, Ishaan</div>
+    <p class="p" style="margin-top:8px">Amit hasn&rsquo;t opened the room yet. It&rsquo;ll unlock for everyone at once, and you&rsquo;ll get an email.</p>
+  </div>
+  <div class="push"></div>
+  <button class="btn btn-g">Change my name</button>
+</div>`);
+
+F('C','Intake, in a thread with the agent','Five questions, mostly taps. This is where the budget goes, in private, because nobody types &ldquo;I can&rsquo;t afford that&rdquo; into a group of eight.');
+
+S('C','C1','Intake &mdash; intro','F4 &middot; fires right after the room opens',`
+${sb()}${bar('Agent',{right:'Only you can see this'})}
+<div class="body">
+  <div class="agent"><div class="hd"><span>AGENT</span></div>
+    <div class="tx">Hi Ishaan. Five questions and I&rsquo;ll stop bothering you. Most of them are taps.</div></div>
+  <div class="agent"><div class="tx">Nothing here goes to the group as-is. Your budget stays between us &mdash; the group only ever sees what the whole party can afford.</div></div>
+  <div class="push"></div>
+  <div class="row"><span class="sm">About 90 seconds</span><span class="sm" style="margin-left:auto">Skip for now</span></div>
+  <button class="btn btn-p">Start</button>
+</div>`);
+
+S('C','C2','Intake &mdash; when you&rsquo;re free','F4 &middot; tri-state, drag to select',`
+${sb()}${bar('Agent',{right:'1 of 5'})}
+<div class="body tight">
+  ${dots(0,5)}
+  <div class="h1">When could you go?</div>
+  <p class="sm">Drag across the days. Tap twice for &ldquo;could work but it&rsquo;s tight&rdquo;.</p>
+  <div class="cal">
+    <div class="hd">November 2026<span class="nav">&lsaquo;&nbsp;&nbsp;&rsaquo;</span></div>
+    <div class="dow">${['M','T','W','T','F','S','S'].map(d=>`<span>${d}</span>`).join('')}</div>
+    <div class="days">${Array.from({length:35},(_,i)=>{const d=i-5;
+      let c=d<1||d>30?'off':'';
+      if(d>=12&&d<=16)c='free'; if(d===17||d===11)c='part'; if(d>=20&&d<=25)c='blok';
+      return `<b class="${c}">${d<1||d>30?'':d}</b>`;}).join('')}</div>
+  </div>
+  <div class="row" style="gap:14px;margin-top:2px">
+    <span class="xs"><b style="color:var(--signal-d)">&#9632;</b> free</span>
+    <span class="xs"><b style="color:var(--warn)">&#9632;</b> tight</span>
+    <span class="xs"><b style="color:var(--stop)">&#9632;</b> can&rsquo;t</span>
+  </div>
+  <div class="push"></div>
+  <button class="btn btn-p">Next</button>
+</div>`);
+
+S('C','C3','Intake &mdash; budget','F4 &middot; private, the differentiator',`
+${sb()}${bar('Agent',{right:'2 of 5'})}
+<div class="body">
+  ${dots(1,5)}
+  <div class="h1">What can you spend?</div>
+  <div class="card" style="border-left:3px solid var(--agent)">
+    <p class="sm"><span class="strong">Nobody sees this number.</span> Not Amit, not the group. It only ever shows up as a ceiling the whole plan has to fit under.</p>
+  </div>
+  <div class="card">
+    <div class="row"><span class="h2">&#8377;14,000</span><span class="sm" style="margin-left:auto">all in, a head</span></div>
+    <div class="bar" style="margin-top:14px"><i style="width:46%"></i></div>
+    <div class="row" style="margin-top:8px"><span class="xs">&#8377;5k</span><span class="xs" style="margin-left:auto">&#8377;40k</span></div>
+  </div>
+  <div class="field"><label>How firm is that?</label>${chips([['Hard ceiling','on'],['Could stretch'],['Flexible']])}</div>
+  <div class="push"></div>
+  <button class="btn btn-p">Next</button>
+</div>`);
+
+S('C','C4','Intake &mdash; where from','F4 &middot; feeds travel-time maths',`
+${sb()}${bar('Agent',{right:'3 of 5'})}
+<div class="body">
+  ${dots(2,5)}
+  <div class="h1">Where are you starting from?</div>
+  ${fld('Departure city','Pune')}
+  <div class="col" style="gap:0">
+    ${['Pune','Mumbai','Nagpur','Bengaluru'].map((c,i)=>`<div class="lrow"><span class="nm">${c}</span>${i===0?'<span class="pill ok" style="margin-left:auto">picked</span>':''}</div>`).join('')}
+  </div>
+  <div class="push"></div>
+  <button class="btn btn-p">Next</button>
+</div>`);
+
+S('C','C5','Intake &mdash; vibe','F4 &middot; soft preferences, weighted not binding',`
+${sb()}${bar('Agent',{right:'4 of 5'})}
+<div class="body">
+  ${dots(3,5)}
+  <div class="h1">What are you actually after?</div>
+  <p class="sm">Pick as many as you like. These get weighed, not obeyed.</p>
+  ${chips([['Beach','on'],['Nightlife','on'],['Good food','on'],['Trekking'],['Cheap'],['Comfortable','on'],['Short travel'],['Somewhere new'],['Water sports'],['Doing nothing'],['Photos'],['Cafes']])}
+  <div class="push"></div>
+  <button class="btn btn-p">Next</button>
+</div>`);
+
+S('C','C6','Intake &mdash; hard nos','F4 &middot; everything here becomes a veto',`
+${sb()}${bar('Agent',{right:'5 of 5'})}
+<div class="body">
+  ${dots(4,5)}
+  <div class="h1">Anything that&rsquo;s a flat no?</div>
+  <p class="sm">These become vetoes. A vote can&rsquo;t override them.</p>
+  ${chips([['No flights','on'],['No overnight buses'],['Vegetarian food must be easy','on'],['Back by Sunday night'],['No trekking']])}
+  ${fld('Anything else','Can&rsquo;t take Friday off',true)}
+  <div class="push"></div>
+  <button class="btn btn-p">Done</button>
+</div>`);
+
+S('C','C7','Intake &mdash; done','F4 &middot; sets the expectation for what happens next',`
+${sb()}${bar('Agent')}
+<div class="body">
+  <div class="push"></div>
+  <div class="stamp" style="align-self:flex-start;font-size:13px">ALL IN</div>
+  <div class="h1">That&rsquo;s everything I needed</div>
+  <p class="p">Two people still haven&rsquo;t filled theirs in. Once they do I&rsquo;ll work out which dates actually overlap and put it to a vote.</p>
+  <div class="card flat">
+    <div class="row"><span class="sm">Intake done</span><span class="sm strong" style="margin-left:auto">4 of 6</span></div>
+    <div class="bar" style="margin-top:10px"><i style="width:66%"></i></div>
+  </div>
+  <div class="push"></div>
+  <button class="btn btn-p">Go to the room</button>
+</div>`);
+</script>
+<script>
+F('D','The room','An asynchronous board, not a chat. Messages land as cards, threads are visible only to the people in them, and the agent never posts twice in a row without a human or a state change in between.');
+
+S('D','D1','Room &mdash; the kickoff','F3 &middot; the moment the admin opens the room',`
+${sb()}${bar('Goa, probably',{back:false,right:'6 people'})}
+<div class="feed">
+  <div class="daysep">TODAY</div>
+  <div class="agent"><div class="hd"><span>AGENT</span></div>
+    <div class="tx">Right. Amit wants a long weekend somewhere beachy, 10&ndash;20k a head, three or four days.</div></div>
+  <div class="agent"><div class="tx">I&rsquo;ve sent each of you five questions in your own thread. Fill those in and I&rsquo;ll work out which dates actually work for everyone. Meanwhile &mdash; argue about where. That&rsquo;s what this room is for.</div>
+    <div class="row"><span class="pill agent">6 threads opened</span></div></div>
+  <div class="push"></div>
+</div>
+<div class="composer"><div class="in">Say something</div><div class="send">&uarr;</div></div>
+${tabs('Room',{You:'5'})}`);
+
+S('D','D2','Room &mdash; in motion','F3, F5 &middot; humans talking, agent quietly filing',`
+${sb()}${bar('Goa, probably',{back:false,right:'6 people'})}
+<div class="feed">
+  <div class="msg">${av('karan','sm')}<div class="bub"><div class="who" style="color:var(--m3)">Karan</div><div class="tx">gokarna &gt; goa, fight me</div></div></div>
+  <div class="msg">${av('rhea','sm')}<div class="bub"><div class="who" style="color:var(--m2)">Rhea</div><div class="tx">i can&rsquo;t do the week of the 20th, cousin&rsquo;s wedding</div></div></div>
+  <div class="receipt"><span class="pill agent">FILED</span><span>Rhea can&rsquo;t travel 20&ndash;25 Nov &middot; hard</span><span class="undo">Undo</span></div>
+  <div class="msg">${av('nidhi','sm')}<div class="bub"><div class="who" style="color:var(--m4)">Nidhi</div><div class="tx">honestly anything with a beach and cheap beer</div></div></div>
+  <div class="msg me"><div class="bub"><div class="tx">gokarna has no direct buses from pune tho</div></div></div>
+  <div class="thread">${avs(['karan','ishaan'])}<span>How we&rsquo;re getting there &middot; 6 replies</span></div>
+  <div class="agent"><div class="hd"><span>AGENT</span></div>
+    <div class="tx">Four of six have given me dates. Karan and Farhan haven&rsquo;t &mdash; I&rsquo;ve nudged them. I&rsquo;ll put dates to a vote once they&rsquo;re in, or Thursday, whichever comes first.</div></div>
+  <div class="push"></div>
+</div>
+<div class="composer"><div class="in">Say something</div><div class="send">&uarr;</div></div>
+${tabs('Room',{Plan:'1'})}`);
+
+S('D','D3','Composer, open','F3, F12 &middot; more than a text box',`
+${sb()}${bar('Goa, probably',{back:false,right:'6 people'})}
+<div class="feed" style="opacity:.35">
+  <div class="msg">${av('nidhi','sm')}<div class="bub"><div class="who">Nidhi</div><div class="tx">anything with a beach and cheap beer</div></div></div>
+</div>
+<div class="scrim"></div>
+<div class="ovl"><div class="push"></div>
+  <div class="sheet"><div class="grab"></div>
+    <div class="input ph" style="min-height:76px">Say something&hellip;</div>
+    <div class="col" style="gap:0">
+      ${[['Drop a link','Instagram, YouTube, a blog. I&rsquo;ll pull the place out of it.'],
+         ['Put something to a vote','Options, a deadline, done.'],
+         ['Start a thread','Only the people you pick can see it.'],
+         ['Ask the agent','Costs, dates, who&rsquo;s said what.']]
+        .map(([n,d])=>`<div class="lrow"><div class="gr"><span class="nm">${n}</span><span class="sub">${d}</span></div><span style="color:var(--ink3)">&rsaquo;</span></div>`).join('')}
+    </div>
+  </div>
+</div>`);
+
+S('D','D4','A thread','F3, D8 &middot; privacy stated, never assumed',`
+${sb()}
+<div class="appbar"><span class="bk">&lsaquo;</span><div><h3>How we&rsquo;re getting there</h3><div class="xs">Karan, Ishaan and you</div></div></div>
+<div class="feed">
+  <div class="card flat" style="padding:10px 13px"><p class="xs">Only the three of you can see this thread. Anything the agent takes from it reaches the group as a number, not a quote.</p></div>
+  <div class="msg">${av('karan','sm')}<div class="bub"><div class="who" style="color:var(--m3)">Karan</div><div class="tx">i can drive, innova, 6 seater. petrol split 6 ways is like 1800 each</div></div></div>
+  <div class="msg me"><div class="bub"><div class="tx">that&rsquo;s way better than the bus honestly</div></div></div>
+  <div class="receipt"><span class="pill agent">FILED</span><span>Road, Karan&rsquo;s car, ~&#8377;1,800 a head</span><span class="undo">Undo</span></div>
+  <div class="agent"><div class="hd"><span>AGENT</span></div><div class="tx">Noted. Should I take this to the room as an option, or keep it here for now?</div>
+    <div class="row"><span class="chip sig">Take it to the room</span><span class="chip">Not yet</span></div></div>
+  <div class="push"></div>
+</div>
+<div class="composer"><div class="in">Reply</div><div class="send">&uarr;</div></div>`);
+
+S('D','D5','Agent voice, all five modes','Spec reference, not a route',`
+${sb()}${bar('Agent messages',{back:false})}
+<div class="feed" style="gap:12px">
+  <div class="xs mono">RECEIPT &mdash; one line, undoable</div>
+  <div class="receipt"><span class="pill agent">FILED</span><span>Nidhi&rsquo;s ceiling is now the lowest in the group</span><span class="undo">Undo</span></div>
+  <div class="xs mono">QUESTION &mdash; only ever in a thread</div>
+  <div class="agent"><div class="hd"><span>AGENT</span></div><div class="tx">You said &ldquo;maybe first week of Dec&rdquo;. Is that the 1st to 7th, or the first weekend?</div>
+    <div class="row"><span class="chip">1&ndash;7</span><span class="chip">The weekend</span></div></div>
+  <div class="xs mono">PROPOSAL &mdash; always votable in place</div>
+  <div class="agent"><div class="hd"><span>AGENT</span></div><div class="tx">Three windows work. 12&ndash;15 Nov keeps everyone. The other two lose someone.</div>
+    <div class="row"><span class="chip sig">See them</span></div></div>
+  <div class="xs mono">NUDGE &mdash; private, never public shaming</div>
+  <div class="agent"><div class="hd"><span>AGENT</span></div><div class="tx">Still need your dates, Farhan. Two taps and I&rsquo;ll leave you alone.</div>
+    <div class="row"><span class="chip">Do it now</span><span class="chip">I&rsquo;m flexible, decide without me</span></div></div>
+  <div class="xs mono">ANNOUNCEMENT &mdash; the loud one, used rarely</div>
+  <div class="locked-banner"><div class="row"><span class="stamp" style="border-color:var(--signal);color:var(--signal)">LOCKED</span></div>
+    <div style="font-family:var(--f-disp);font-size:17px;font-weight:600">12&ndash;15 November</div>
+    <div class="sm" style="color:#C9C7BE">Six in. Karan arrives Thursday night. Next: where.</div></div>
+</div>`);
+
+F('E','The plan','The Trip Brain gets its own tab rather than a drawer. On a 390px screen a drawer is an afterthought, and the state is the point of the product.');
+
+S('E','E1','Plan &mdash; overview','F10 &middot; the live state of the trip',`
+${sb()}${bar('Goa, probably',{back:false,right:'Share'})}
+<div class="body tight">
+  <div class="card">
+    <div class="row"><span class="xs mono">DATES</span><span class="pill ok" style="margin-left:auto">LOCKED</span></div>
+    <div class="h1" style="margin-top:6px">12&ndash;15 Nov</div>
+    <p class="sm" style="margin-top:4px">Six in. Karan arrives Thursday night.</p>
+  </div>
+  <div class="card">
+    <div class="row"><span class="xs mono">WHERE</span><span class="pill warn" style="margin-left:auto">VOTING &middot; 1d 4h</span></div>
+    <div class="h2" style="margin-top:6px">Gokarna leads, 3 of 6</div>
+    <div class="bar" style="margin-top:10px"><i style="width:50%"></i></div>
+  </div>
+  <div class="card">
+    <div class="row"><span class="xs mono">BUDGET</span></div>
+    <div class="h2" style="margin-top:6px">Has to land under &#8377;14,000</div>
+    <p class="sm" style="margin-top:4px">Lowest ceiling in the group. Individual numbers stay private.</p>
+  </div>
+  <div class="card">
+    <div class="row"><span class="xs mono">WHO</span><span class="sm" style="margin-left:auto">6 in, 1 quiet</span></div>
+    <div class="row" style="margin-top:9px">${['amit','rhea','karan','nidhi','farhan','ishaan'].map(k=>av(k,'sm')).join('')}</div>
+  </div>
+  <div class="card line">
+    <div class="row"><span class="xs mono">STILL OPEN</span></div>
+    <p class="sm" style="margin-top:6px">Farhan hasn&rsquo;t given dates &middot; nobody has said how we&rsquo;re getting back &middot; stay not discussed</p>
+  </div>
+</div>
+${tabs('Plan',{Plan:'1'})}`);
+
+S('E','E2','A single fact','F5 &middot; provenance and one-tap correction',`
+${sb()}${bar('Goa, probably',{back:false})}
+<div class="body tight" style="opacity:.3">
+  <div class="card"><div class="h1">12&ndash;15 Nov</div></div>
+</div>
+<div class="scrim"></div>
+<div class="ovl"><div class="push"></div>
+  <div class="sheet"><div class="grab"></div>
+    <div class="row"><span class="pill stop">HARD</span><span class="pill agent">READ FROM A MESSAGE</span></div>
+    <div class="h1">Rhea can&rsquo;t travel 20&ndash;25 Nov</div>
+    <div class="card flat">
+      <p class="sm">&ldquo;i can&rsquo;t do the week of the 20th, cousin&rsquo;s wedding&rdquo;</p>
+      <p class="xs" style="margin-top:7px">Rhea, in the room, Tuesday 4:12pm</p>
+    </div>
+    <div class="col" style="gap:0">
+      <div class="lrow"><span class="nm">Change the dates</span><span style="margin-left:auto;color:var(--ink3)">&rsaquo;</span></div>
+      <div class="lrow"><span class="nm">Make it a soft preference</span><span style="margin-left:auto;color:var(--ink3)">&rsaquo;</span></div>
+      <div class="lrow"><span class="nm" style="color:var(--stop)">This is wrong, delete it</span><span style="margin-left:auto;color:var(--ink3)">&rsaquo;</span></div>
+    </div>
+    <p class="xs">Only Rhea can change her own facts. Corrections beat anything the agent reads, permanently.</p>
+  </div>
+</div>`);
+
+S('E','E3','Who&rsquo;s in','F9 &middot; the silence ladder, visible',`
+${sb()}${bar('Who&rsquo;s in',{right:'Admin'})}
+<div class="body tight">
+  <div class="card">
+    ${[['amit','Amit','Everything in','ok','done','you'],
+       ['rhea','Rhea','Everything in','ok','done',''],
+       ['nidhi','Nidhi','Everything in','ok','done',''],
+       ['ishaan','Ishaan','Everything in','ok','done',''],
+       ['karan','Karan','No budget yet','warn','nudged twice',''],
+       ['farhan','Farhan','Nothing yet','stop','quiet 4 days','']]
+      .map(([k,n,s,p,pl,extra])=>`<div class="lrow">${av(k)}<div class="gr"><span class="nm">${n}${extra?` <span class="xs">&middot; ${extra}</span>`:''}</span><span class="sub">${s}</span></div><span class="pill ${p}">${pl}</span></div>`).join('')}
+  </div>
+  <div class="card" style="border-left:3px solid var(--stop)">
+    <div class="h3">Farhan has gone quiet</div>
+    <p class="sm" style="margin-top:5px">Two nudges, four days, nothing. I&rsquo;m not going to guess on his behalf &mdash; this one needs you.</p>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap">
+      <span class="chip">I&rsquo;ll call him</span><span class="chip">Mark him flexible</span><span class="chip">He&rsquo;s out</span>
+    </div>
+  </div>
+</div>
+${tabs('Plan')}`);
+
+S('E','E4','Paste into WhatsApp','F16 &middot; distribution, not convenience',`
+${sb()}${bar('Share')}
+<div class="body">
+  <p class="sm">Your group is still on WhatsApp and always will be. This is the bit you drop in there.</p>
+  <div class="card" style="border:1px solid var(--line)">
+    <div class="h2">Goa, probably</div>
+    <div class="rule" style="margin:11px 0"></div>
+    <p class="sm"><span class="strong">Dates</span> &nbsp;12&ndash;15 Nov, locked</p>
+    <p class="sm" style="margin-top:6px"><span class="strong">Where</span> &nbsp;Gokarna leading, voting shuts Thursday 6pm</p>
+    <p class="sm" style="margin-top:6px"><span class="strong">Budget</span> &nbsp;under &#8377;14k a head</p>
+    <p class="sm" style="margin-top:6px"><span class="strong">Waiting on</span> &nbsp;Farhan&rsquo;s dates</p>
+    <div class="rule" style="margin:11px 0"></div>
+    <p class="xs mono">caravan.app/j/GOA-4K2</p>
+  </div>
+  <p class="xs">Everything above is what gets copied. Nobody&rsquo;s budget is in it.</p>
+  <div class="push"></div>
+  <div class="row"><button class="btn btn-s">Copy text</button><button class="btn btn-p">Send to WhatsApp</button></div>
+</div>`);
+</script>
+<script>
+F('F','Decisions','The mechanic the whole product rests on. Every decision is a record with options, a deadline and a quorum rule. Silence never decides anything &mdash; it escalates to a nudge, then to the admin.');
+
+S('F','F1','Which dates actually work','F6 &middot; solved in plain code, never by the model',`
+${sb()}${bar('Dates')}
+<div class="body tight">
+  <div class="h1">Three windows work</div>
+  <p class="sm">Worked out from what six people gave me. Nobody&rsquo;s hard nos are broken in any of these.</p>
+  ${[['12&ndash;15 Nov','Everyone','ok','All 6'],['5&ndash;8 Nov','Rhea is out','warn','5 of 6'],['28&ndash;30 Nov','Karan and Nidhi out','warn','4 of 6']]
+    .map(([d,w,p,c],i)=>`<div class="card" style="${i===0?'border:1.5px solid var(--signal-d)':''}">
+      <div class="row"><span class="h2">${d}</span><span class="pill ${p}" style="margin-left:auto">${c}</span></div>
+      <p class="sm" style="margin-top:5px">${w}</p></div>`).join('')}
+  <div class="card flat">
+    <div class="col" style="gap:8px">
+      ${[['amit','Amit','f f f f f f p p b b b b'],['rhea','Rhea','f f f f f f f p b b b b'],['karan','Karan','p p f f f f f f f f p p'],['nidhi','Nidhi','f f f f f f f f b b f f'],['farhan','Farhan','b b f f f f p p f f f f'],['ishaan','Ishaan','f f f f f f f f f p p p']]
+        .map(([k,n,s])=>`<div class="avail"><span class="nm">${n}</span><div class="strip">${s.split(' ').map(c=>`<i class="${c}"></i>`).join('')}</div></div>`).join('')}
+      <div class="row" style="margin-top:2px"><span class="xs mono">1 NOV</span><span class="xs mono" style="margin-left:auto">30 NOV</span></div>
+    </div>
+  </div>
+  <div class="push"></div>
+  <button class="btn btn-p">Put these to a vote</button>
+</div>`);
+
+S('F','F2','A decision, in the feed','F7 &middot; one tap to vote, never a detour',`
+${sb()}${bar('Goa, probably',{back:false,right:'6 people'})}
+<div class="feed">
+  <div class="agent"><div class="hd"><span>AGENT</span></div><div class="tx">Dates are settled. Now the argument you&rsquo;ve all been having anyway.</div></div>
+  <div class="dec">
+    <div class="top"><span class="pill plum">WHERE</span><span class="lbl" style="margin-left:auto">SHUTS THU 6PM &middot; 1d 4h</span></div>
+    <div class="ttl">Where are we going?</div>
+    <div class="opts">
+      <div class="opt win"><div class="bar" style="width:50%"></div><span class="box on">&#10003;</span><span class="nm">Gokarna</span><span class="rt">${avs(['karan','ishaan','amit'])}<span class="sm">3</span></span></div>
+      <div class="opt"><div class="bar" style="width:33%"></div><span class="box"></span><span class="nm">South Goa</span><span class="rt">${avs(['rhea','nidhi'])}<span class="sm">2</span></span></div>
+      <div class="opt"><div class="bar" style="width:0%"></div><span class="box"></span><span class="nm">Malvan</span><span class="rt"><span class="sm">0</span></span></div>
+    </div>
+    <div class="foot"><span>Majority of 6 &middot; Farhan hasn&rsquo;t voted</span></div>
+  </div>
+  <div class="msg">${av('nidhi','sm')}<div class="bub"><div class="who" style="color:var(--m4)">Nidhi</div><div class="tx">malvan is genuinely so underrated but fine</div></div></div>
+  <div class="push"></div>
+</div>
+<div class="composer"><div class="in">Say something</div><div class="send">&uarr;</div></div>
+${tabs('Room',{Plan:'1'})}`);
+
+S('F','F3','Decision, opened up','F7 &middot; depth on demand, plus admin override',`
+${sb()}${bar('Where are we going?',{right:'1d 4h'})}
+<div class="body tight">
+  <div class="card" style="background:var(--ink);color:var(--paper)">
+    <div class="row"><span class="xs mono" style="color:var(--signal)">SHUTS THURSDAY 6:00 PM</span></div>
+    <p class="sm" style="color:#C9C7BE;margin-top:6px">When the clock runs out I announce whatever has the most votes. Anyone who hasn&rsquo;t voted gets nudged first &mdash; I won&rsquo;t count silence as a yes.</p>
+  </div>
+  <div class="card">
+    <div class="lrow"><span class="box on" style="width:19px;height:19px;border-radius:6px;background:var(--plum)"></span><div class="gr"><span class="nm">Gokarna</span><span class="sub">Karan, Ishaan, Amit</span></div><span class="h2">3</span></div>
+    <div class="lrow"><span class="box" style="width:19px;height:19px;border-radius:6px;border:1.5px solid var(--line)"></span><div class="gr"><span class="nm">South Goa</span><span class="sub">Rhea, Nidhi</span></div><span class="h2">2</span></div>
+    <div class="lrow"><span class="box" style="width:19px;height:19px;border-radius:6px;border:1.5px solid var(--line)"></span><div class="gr"><span class="nm">Malvan</span><span class="sub">Nobody yet</span></div><span class="h2">0</span></div>
+  </div>
+  <div class="card line"><div class="row">${av('farhan','sm')}<span class="sm">Farhan hasn&rsquo;t voted &middot; nudged twice</span><span class="pill warn" style="margin-left:auto">quiet</span></div></div>
+  <div class="push"></div>
+  <button class="btn btn-g">Admin: shut it now, or push the deadline</button>
+</div>`);
+
+S('F','F4','Three places, with the reasoning','F8 &middot; the hero. Fires only after the group has actually talked.',`
+${sb()}${bar('Where are we going?',{right:'Redo'})}
+<div class="body tight">
+  <div class="agent"><div class="hd"><span>AGENT</span></div><div class="tx">Built from your dates, the &#8377;14k ceiling, six people leaving from Pune, and roughly forty messages of you lot arguing about beaches.</div></div>
+  <div class="dest">
+    <div class="img"><h4>Gokarna</h4></div>
+    <div class="meta"><div><span class="k">A HEAD</span><span class="v">&#8377;11,200</span></div><div><span class="k">DOOR TO DOOR</span><span class="v">11h road</span></div><div><span class="k">FITS</span><span class="v">6 of 6</span></div></div>
+    <div class="why">
+      <div class="ln good"><b>+</b><span>Under everyone&rsquo;s ceiling with about &#8377;2,800 spare, which is the only option that&rsquo;s true of.</span></div>
+      <div class="ln good"><b>+</b><span>Karan&rsquo;s car covers all six, so no flights and no overnight bus. Both were hard nos.</span></div>
+      <div class="ln bad"><b>&minus;</b><span>Worst for Nidhi. She asked for nightlife and Gokarna shuts early.</span></div>
+    </div>
+  </div>
+  <div class="dest">
+    <div class="img b"><h4>South Goa</h4></div>
+    <div class="meta"><div><span class="k">A HEAD</span><span class="v">&#8377;13,800</span></div><div><span class="k">DOOR TO DOOR</span><span class="v">12h road</span></div><div><span class="k">FITS</span><span class="v">6 of 6</span></div></div>
+    <div class="why">
+      <div class="ln good"><b>+</b><span>Hits every single thing the group asked for. Most-wanted option on preferences alone.</span></div>
+      <div class="ln bad"><b>&minus;</b><span>&#8377;200 under the lowest ceiling. One bad night out and somebody is quietly covering someone.</span></div>
+    </div>
+  </div>
+  <div class="dest">
+    <div class="img c"><h4>Malvan</h4></div>
+    <div class="meta"><div><span class="k">A HEAD</span><span class="v">&#8377;8,400</span></div><div><span class="k">DOOR TO DOOR</span><span class="v">8h road</span></div><div><span class="k">FITS</span><span class="v">5 of 6</span></div></div>
+    <div class="why">
+      <div class="ln good"><b>+</b><span>Cheapest and closest by a mile. Leaves &#8377;5k a head unspent.</span></div>
+      <div class="ln bad"><b>&minus;</b><span>Nobody has ever mentioned it. Two of you wanted somewhere new; four wanted a sure thing.</span></div>
+    </div>
+  </div>
+  <div class="row"><span class="chip">Cheaper</span><span class="chip">Closer</span><span class="chip">Wilder</span><span class="chip">Somewhere new</span></div>
+  <button class="btn btn-p">Put these three to a vote</button>
+</div>`);
+
+S('F','F5','One option, in full','F8 &middot; per-person fit, because the group will ask',`
+${sb()}${bar('Gokarna',{right:'Vote'})}
+<div class="body tight">
+  <div class="dest"><div class="img"><h4>Gokarna</h4></div>
+    <div class="meta"><div><span class="k">A HEAD</span><span class="v">&#8377;11,200</span></div><div><span class="k">DOOR TO DOOR</span><span class="v">11h road</span></div><div><span class="k">NIGHTS</span><span class="v">3</span></div></div>
+  </div>
+  <div class="card">
+    <div class="xs mono" style="margin-bottom:4px">WHERE THE MONEY GOES</div>
+    ${[['Stay, 3 nights','&#8377;4,500'],['Petrol and tolls, split 6','&#8377;1,800'],['Food and drink','&#8377;3,400'],['Scooters and everything else','&#8377;1,500']]
+      .map(([a,b])=>`<div class="lrow"><span class="nm">${a}</span><span class="h3" style="margin-left:auto">${b}</span></div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="xs mono" style="margin-bottom:4px">HOW IT LANDS FOR EACH OF YOU</div>
+    ${[['amit','Amit','Wanted beach and quiet. Good.','ok','fits'],
+       ['rhea','Rhea','Dates clear her wedding week.','ok','fits'],
+       ['karan','Karan','He suggested it. Also driving.','ok','fits'],
+       ['ishaan','Ishaan','Under his ceiling with room.','ok','fits'],
+       ['farhan','Farhan','No preferences on file yet.','grey','unknown'],
+       ['nidhi','Nidhi','Asked for nightlife. Won&rsquo;t get it.','warn','worst fit']]
+      .map(([k,n,s,p,pl])=>`<div class="lrow">${av(k,'sm')}<div class="gr"><span class="nm">${n}</span><span class="sub">${s}</span></div><span class="pill ${p}">${pl}</span></div>`).join('')}
+  </div>
+  <div class="push"></div>
+  <button class="btn btn-p">Vote for Gokarna</button>
+</div>`);
+
+S('F','F6','Locked','F7 &middot; the stamp, and what it unblocks',`
+${sb()}${bar('Goa, probably',{back:false,right:'6 people'})}
+<div class="feed">
+  <div class="locked-banner" style="padding:18px">
+    <div class="row"><span class="stamp" style="border-color:var(--signal);color:var(--signal)">LOCKED</span></div>
+    <div style="font-family:var(--f-disp);font-size:23px;font-weight:700;letter-spacing:-.02em;margin-top:4px">Gokarna, 12&ndash;15 Nov</div>
+    <div class="sm" style="color:#C9C7BE;margin-top:5px">4 of 6 voted for it. Nidhi voted South Goa and I&rsquo;ve told her why she lost. Farhan never voted.</div>
+  </div>
+  <div class="agent"><div class="hd"><span>AGENT</span></div>
+    <div class="tx">Right. Three things now need doing and I&rsquo;ve put them on the list: book a stay, confirm Karan&rsquo;s car, and someone tell Farhan.</div>
+    <div class="row"><span class="chip sig">See the list</span><span class="chip">Draft an itinerary</span></div></div>
+  <div class="msg">${av('nidhi','sm')}<div class="bub"><div class="who" style="color:var(--m4)">Nidhi</div><div class="tx">fine. FINE. but we&rsquo;re doing one proper night out</div></div></div>
+  <div class="receipt"><span class="pill agent">FILED</span><span>Nidhi wants one proper night out &middot; soft</span><span class="undo">Undo</span></div>
+  <div class="push"></div>
+</div>
+<div class="composer"><div class="in">Say something</div><div class="send">&uarr;</div></div>
+${tabs('Room')}`);
+
+S('F','F7','When a veto blocks the winner','F7 &middot; hard constraints beat votes, always',`
+${sb()}${bar('Where are we going?',{right:'Blocked'})}
+<div class="body tight">
+  <div class="card" style="border-left:3px solid var(--stop);background:var(--stop-t)">
+    <div class="row"><span class="pill stop">CAN&rsquo;T LOCK THIS</span></div>
+    <div class="h2" style="margin-top:8px">South Goa won the vote. I&rsquo;m not locking it.</div>
+    <p class="sm" style="margin-top:6px">It comes to &#8377;13,800 a head. Somebody in this group has a hard ceiling below that. A vote doesn&rsquo;t override a hard no, so this needs sorting first.</p>
+  </div>
+  <div class="card">
+    <div class="xs mono" style="margin-bottom:4px">WAYS OUT</div>
+    ${[['Cut it to &#8377;13,000','Cheaper stay, one less night out. I can redo the numbers.'],
+       ['Take the runner-up','Gokarna fits everyone with room to spare.'],
+       ['Whoever&rsquo;s blocked can lift it','Only they can. I won&rsquo;t ask them in the room.']]
+      .map(([n,d])=>`<div class="lrow"><div class="gr"><span class="nm">${n}</span><span class="sub">${d}</span></div><span style="margin-left:auto;color:var(--ink3)">&rsaquo;</span></div>`).join('')}
+  </div>
+  <p class="xs">I haven&rsquo;t named anyone and I won&rsquo;t. Their number stays in their thread.</p>
+  <div class="push"></div>
+  <button class="btn btn-p">Redo it under &#8377;13,000</button>
+</div>`);
+</script>
+<script>
+F('G','After the decision','Everything between a locked destination and actually leaving. Caravan tracks bookings; it never makes them. Inventory APIs are a swamp and would eat the whole build.');
+
+S('G','G1','Itinerary','F11 &middot; drafted by the agent, rearranged by the group',`
+${sb()}${bar('Gokarna',{right:'Edit'})}
+<div class="body tight">
+  <div class="row">${[['Thu','on'],['Fri'],['Sat'],['Sun']].map(([d,o])=>`<span class="chip ${o||''}">${d}</span>`).join('')}</div>
+  <div class="tl">
+    <div class="time">6:00 AM</div><div class="spine"></div>
+    <div class="col" style="flex:1;padding:10px 0">
+      <div class="card"><div class="h3">Leave Pune</div><p class="xs" style="margin-top:3px">Karan&rsquo;s car, 6 of you, roughly 11 hours with stops</p></div>
+    </div>
+  </div>
+  <div class="tl">
+    <div class="time">2:00 PM</div><div class="spine"></div>
+    <div class="col" style="flex:1;padding:10px 0">
+      <div class="card"><div class="h3">Lunch, Kolhapur</div><p class="xs" style="margin-top:3px">Ishaan put this in the room</p></div>
+    </div>
+  </div>
+  <div class="tl">
+    <div class="time">6:30 PM</div><div class="spine"></div>
+    <div class="col" style="flex:1;padding:10px 0">
+      <div class="card"><div class="h3">Check in, Kudle Beach</div><p class="xs" style="margin-top:3px">Not booked yet</p>
+        <div class="row" style="margin-top:9px"><span class="pill warn">needs booking by 2 Nov</span></div></div>
+    </div>
+  </div>
+  <div class="tl">
+    <div class="time">9:00 PM</div><div class="spine"></div>
+    <div class="col" style="flex:1;padding:10px 0">
+      <div class="card line"><div class="h3">Nothing planned</div><p class="xs" style="margin-top:3px">Nidhi wanted one proper night out &mdash; this is the slot for it</p></div>
+    </div>
+  </div>
+</div>
+${tabs('Plan')}`);
+
+S('G','G2','Ideas people dropped','F12 &middot; the reels graveyard, made useful',`
+${sb()}${bar('Ideas',{right:'6'})}
+<div class="body tight">
+  <p class="sm">Everything anyone pasted into the room. Vote and it moves into the plan.</p>
+  ${[['Namaste Cafe, Kudle','instagram.com &middot; from Rhea','4','sig'],
+     ['Half Moon beach trek','youtube.com &middot; from Karan','3',''],
+     ['Om Beach sunrise','instagram.com &middot; from Nidhi','2',''],
+     ['Paradise Beach boat','a blog &middot; from Ishaan','1','']]
+    .map(([n,s,v,c])=>`<div class="card"><div class="row">
+      <div class="gr" style="flex:1"><div class="h3">${n}</div><div class="xs" style="margin-top:3px">${s}</div></div>
+      <span class="chip ${c}">&#9650; ${v}</span></div></div>`).join('')}
+  <div class="card line"><p class="sm">Paste a link in the room and I&rsquo;ll pull the place out of it and stick it here.</p></div>
+</div>
+${tabs('Plan')}`);
+
+S('G','G3','What you still have to do','F13 &middot; yours first, the group&rsquo;s second',`
+${sb()}${bar('Your list',{back:false})}
+<div class="body tight">
+  <div class="card"><div class="row"><div class="ring"><span>3/5</span></div>
+    <div class="gr"><span class="h3">Two things left</span><span class="sub">Both due before 2 November</span></div></div></div>
+  <div class="card">
+    <div class="xs mono" style="margin-bottom:4px">YOURS</div>
+    ${[['Pay Karan for petrol','&#8377;1,800 &middot; due 10 Nov',0],['Carry a government ID','for the hostel',0],['Send Amit your share for the stay','&#8377;4,500 &middot; due 2 Nov',1],['Vote on where','done',1],['Give your dates','done',1]]
+      .map(([n,s,d])=>`<div class="lrow"><span class="tick ${d?'on':''}">&#10003;</span><div class="gr"><span class="nm" style="${d?'color:var(--ink3)':''}">${n}</span><span class="sub">${s}</span></div></div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="xs mono" style="margin-bottom:4px">SOMEBODY&rsquo;S</div>
+    <div class="lrow">${av('karan','sm')}<div class="gr"><span class="nm">Book the stay</span><span class="sub">Karan &middot; due 2 Nov</span></div><span class="pill warn">4 days</span></div>
+    <div class="lrow">${av('amit','sm')}<div class="gr"><span class="nm">Confirm the car</span><span class="sub">Amit &middot; no date</span></div><span class="pill grey">open</span></div>
+  </div>
+</div>
+${tabs('You',{You:'2'})}`);
+
+S('G','G4','Who&rsquo;s booked what','F14 &middot; tracking, not booking',`
+${sb()}${bar('Bookings')}
+<div class="body tight">
+  <div class="card" style="border-left:3px solid var(--warn)">
+    <div class="h3">The stay shuts in 4 days</div>
+    <p class="sm" style="margin-top:5px">Prices on Kudle go up after the 2nd. Karan said he&rsquo;d do it. I&rsquo;ve reminded him twice.</p>
+    <div class="row" style="margin-top:11px"><span class="chip">Nudge Karan</span><span class="chip">Someone else does it</span></div>
+  </div>
+  <div class="card">
+    ${[['Stay, 3 nights','Karan','not yet','warn'],['Car and petrol','Karan','sorted','ok'],['Scooters','nobody','not needed yet','grey']]
+      .map(([n,w,s,p])=>`<div class="lrow"><div class="gr"><span class="nm">${n}</span><span class="sub">${w}</span></div><span class="pill ${p}">${s}</span></div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="xs mono" style="margin-bottom:4px">WHO&rsquo;S PAID AMIT</div>
+    ${[['rhea','Rhea',1],['nidhi','Nidhi',1],['ishaan','Ishaan',1],['karan','Karan',0],['farhan','Farhan',0]]
+      .map(([k,n,d])=>`<div class="lrow">${av(k,'sm')}<span class="nm">${n}</span><span class="pill ${d?'ok':'grey'}" style="margin-left:auto">${d?'paid':'not yet'}</span></div>`).join('')}
+  </div>
+  <p class="xs">Caravan never takes money or makes a booking. It just refuses to let you forget.</p>
+</div>
+${tabs('Plan')}`);
+
+S('G','G5','What it&rsquo;s going to cost','F15 &middot; checked against private ceilings',`
+${sb()}${bar('Cost')}
+<div class="body tight">
+  <div class="card">
+    <div class="xs mono">A HEAD, AS PLANNED</div>
+    <div class="d1" style="margin-top:6px">&#8377;11,200</div>
+    <p class="sm" style="margin-top:5px">Could go to &#8377;12,600 if the nights out get out of hand.</p>
+  </div>
+  <div class="card">
+    <div class="xs mono" style="margin-bottom:9px">AGAINST WHAT PEOPLE CAN SPEND</div>
+    <div class="bar" style="height:13px"><i style="width:70%"></i><i class="over" style="width:9%"></i></div>
+    <div class="row" style="margin-top:9px"><span class="xs">planned</span><span class="xs" style="margin-left:auto">lowest ceiling in the group</span></div>
+    <div class="rule" style="margin:13px 0"></div>
+    <p class="sm"><span class="strong">Everyone clears it.</span> The tightest person has about &#8377;2,800 of room. If the estimate goes past &#8377;14,000 I&rsquo;ll say so before anything gets booked.</p>
+  </div>
+  <div class="card line"><p class="xs">Individual budgets are never shown here, to anyone, including the admin.</p></div>
+</div>
+${tabs('Plan')}`);
+
+S('G','G6','Admin controls','F1 &middot; the admin keeps real power',`
+${sb()}${bar('Trip settings',{right:'Admin'})}
+<div class="body tight">
+  <div class="card">
+    ${[['Joining','open, code GOA-4K2'],['Agent tone','efficient'],['Who can open a vote','anyone'],['Nudges','on, escalates to me after 72h']]
+      .map(([n,s])=>`<div class="lrow"><div class="gr"><span class="nm">${n}</span><span class="sub">${s}</span></div><span style="margin-left:auto;color:var(--ink3)">&rsaquo;</span></div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="xs mono" style="margin-bottom:4px">OVERRIDES</div>
+    ${[['Shut a vote early','It gets announced with your name on it'],['Reopen a locked decision','Everyone gets told'],['Decide on someone&rsquo;s behalf','Logged, and they&rsquo;re told']]
+      .map(([n,d])=>`<div class="lrow"><div class="gr"><span class="nm">${n}</span><span class="sub">${d}</span></div><span style="margin-left:auto;color:var(--ink3)">&rsaquo;</span></div>`).join('')}
+  </div>
+  <p class="xs">Every override is written into the trip&rsquo;s history. The agent runs the process; you can always overrule it, in the open.</p>
+</div>
+${tabs('Plan')}`);
+
+S('G','G7','Nudges and the weekly email','F9 &middot; the silence ladder, end to end',`
+${sb()}${bar('Nudges',{back:false})}
+<div class="body tight">
+  <div class="xs mono">DAY 1 &mdash; IN THEIR THREAD</div>
+  <div class="agent"><div class="hd"><span>AGENT</span></div><div class="tx">Still need your dates, Farhan. Two taps.</div></div>
+  <div class="xs mono">DAY 2 &mdash; WITH A WAY OUT</div>
+  <div class="agent"><div class="hd"><span>AGENT</span></div><div class="tx">Last time I&rsquo;ll ask. If you genuinely don&rsquo;t mind, say so and I&rsquo;ll stop.</div>
+    <div class="row"><span class="chip">Give dates</span><span class="chip sig">I&rsquo;m flexible, decide without me</span></div></div>
+  <div class="xs mono">DAY 3 &mdash; TO THE ADMIN, NOT THE GROUP</div>
+  <div class="card" style="border-left:3px solid var(--stop)"><p class="sm"><span class="strong">Farhan, three days, nothing.</span> I&rsquo;m not going to assume he&rsquo;s fine with whatever. Over to you.</p></div>
+  <div class="xs mono">MILESTONES ONLY, BY EMAIL</div>
+  <div class="mail">
+    <div class="h3">Gokarna, 12&ndash;15 November</div>
+    <p class="sm">Dates and destination are locked. Two things need booking before the 2nd. You owe Amit &#8377;4,500.</p>
+    <div class="rule"></div>
+    <p class="xs">Sent when something is actually decided. Never daily.</p>
+  </div>
+</div>
+${tabs('You',{You:'1'})}`);
+</script>
+
+<script>
+const nav=document.getElementById('nav'), app=document.getElementById('app');
+for(const key of Object.keys(FLOWS)){
+  const f=FLOWS[key], list=SCREENS.filter(s=>s.flow===key);
+
+  const h=document.createElement('h3');
+  h.className='flowhead'; h.id='f'+key; h.textContent=f.title;
+  const d=document.createElement('p'); d.className='flowdesc'; d.innerHTML=f.desc;
+  const g=document.createElement('div'); g.className='grid';
+
+  for(const s of list){
+    const slot=document.createElement('div');
+    slot.className='slot'; slot.id=s.id;
+    slot.innerHTML=`<div class="cap"><i>${s.id}</i><b>${s.name}</b></div>
+      <div class="phone">${s.inner}</div>
+      <p style="color:#75777F;font-size:11.5px;margin-top:9px;line-height:1.5">${s.note}</p>`;
+    g.appendChild(slot);
+  }
+  app.append(h,d,g);
+
+  const nf=document.createElement('div'); nf.className='flow';
+  nf.innerHTML=`<p>${key} &nbsp;${f.title.toUpperCase()}</p>`+
+    list.map(s=>`<a href="#${s.id}">${s.id} &nbsp;${s.name}</a>`).join('');
+  nav.appendChild(nf);
+}
+</script>
+</body>
+</html>
