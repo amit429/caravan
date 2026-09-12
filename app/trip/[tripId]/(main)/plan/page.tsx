@@ -10,7 +10,27 @@ import { DecisionCard } from "@/components/caravan/decision-card";
 import { CreateDatesDecisionButton } from "@/components/caravan/create-dates-decision-button";
 import { GenerateDestinationsButton } from "@/components/caravan/generate-destinations-button";
 import { GenerateItineraryButton } from "@/components/caravan/generate-itinerary-button";
-import type { AvailabilityRow, DecisionRow, FactRow, ItineraryRow, MemberRow, VoteRow } from "@/lib/database.types";
+import { IdeaInbox } from "@/components/caravan/idea-inbox";
+import { PrepChecklist } from "@/components/caravan/prep-checklist";
+import { GenerateChecklistButton } from "@/components/caravan/generate-checklist-button";
+import { BookingTracker } from "@/components/caravan/booking-tracker";
+import { GenerateCostEstimateButton } from "@/components/caravan/generate-cost-estimate-button";
+import { ShareSnapshot } from "@/components/caravan/share-snapshot";
+import type {
+  AvailabilityRow,
+  BookingRow,
+  BookingStatusRow,
+  CostEstimateRow,
+  DecisionRow,
+  FactRow,
+  IdeaRow,
+  IdeaVoteRow,
+  ItineraryRow,
+  MemberRow,
+  TaskRow,
+  TripRow,
+  VoteRow,
+} from "@/lib/database.types";
 
 function formatRange(start: string, end: string) {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
@@ -25,20 +45,50 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
   const caller = await resolveCaller(tripId, supabase);
   if (!caller) notFound();
 
-  const [{ data: members }, { data: facts }, { data: availability }, { data: decisions }, { data: itinerary }] =
-    await Promise.all([
-      supabase.from("members").select().eq("trip_id", tripId).eq("status", "active"),
-      supabase.from("facts").select().eq("trip_id", tripId).is("superseded_by", null),
-      supabase.from("availability").select().eq("trip_id", tripId),
-      supabase.from("decisions").select().eq("trip_id", tripId).order("created_at", { ascending: false }),
-      supabase.from("itineraries").select().eq("trip_id", tripId).maybeSingle(),
-    ]);
+  const [
+    { data: trip },
+    { data: members },
+    { data: facts },
+    { data: availability },
+    { data: decisions },
+    { data: itinerary },
+    { data: ideas },
+    { data: tasks },
+    { data: bookings },
+    { data: costEstimate },
+  ] = await Promise.all([
+    supabase.from("trips").select().eq("id", tripId).single(),
+    supabase.from("members").select().eq("trip_id", tripId).eq("status", "active"),
+    supabase.from("facts").select().eq("trip_id", tripId).is("superseded_by", null),
+    supabase.from("availability").select().eq("trip_id", tripId),
+    supabase.from("decisions").select().eq("trip_id", tripId).order("created_at", { ascending: false }),
+    supabase.from("itineraries").select().eq("trip_id", tripId).maybeSingle(),
+    supabase.from("ideas").select().eq("trip_id", tripId).order("created_at", { ascending: false }),
+    supabase.from("tasks").select().eq("trip_id", tripId),
+    supabase.from("bookings").select().eq("trip_id", tripId).order("created_at", { ascending: false }),
+    supabase.from("cost_estimates").select().eq("trip_id", tripId).maybeSingle(),
+  ]);
 
   const activeMembers = (members ?? []) as MemberRow[];
   const allFacts = (facts ?? []) as FactRow[];
   const allAvailability = (availability ?? []) as AvailabilityRow[];
   const allDecisions = (decisions ?? []) as DecisionRow[];
   const tripItinerary = itinerary as ItineraryRow | null;
+  const allIdeas = (ideas ?? []) as IdeaRow[];
+  const allTasks = (tasks ?? []) as TaskRow[];
+  const allBookings = (bookings ?? []) as BookingRow[];
+  const tripCostEstimate = costEstimate as CostEstimateRow | null;
+  const tripRow = trip as TripRow;
+
+  const ideaIds = allIdeas.map((i) => i.id);
+  const { data: ideaVotesData } = ideaIds.length
+    ? await supabase.from("idea_votes").select().in("idea_id", ideaIds)
+    : { data: [] as IdeaVoteRow[] };
+
+  const bookingIds = allBookings.map((b) => b.id);
+  const { data: bookingStatusData } = bookingIds.length
+    ? await supabase.from("booking_status").select().in("booking_id", bookingIds)
+    : { data: [] as BookingStatusRow[] };
 
   const decisionIds = allDecisions.map((d) => d.id);
   const { data: votesData } = decisionIds.length
@@ -61,7 +111,19 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
   const groupCeiling = groupBudgetCeiling(budgetBands);
   const hasDatesDecision = allDecisions.some((d) => d.type === "DATES");
   const hasDestinationDecision = allDecisions.some((d) => d.type === "DESTINATION");
-  const hasLockedDestination = allDecisions.some((d) => d.type === "DESTINATION" && d.state === "LOCKED");
+  const lockedDestinationDecision = allDecisions.find((d) => d.type === "DESTINATION" && d.state === "LOCKED");
+  const lockedDatesDecision = allDecisions.find((d) => d.type === "DATES" && d.state === "LOCKED");
+  const hasLockedDestination = !!lockedDestinationDecision;
+  const hasLockedDates = !!lockedDatesDecision;
+  const destinationLabel =
+    lockedDestinationDecision?.options.find((o) => o.id === lockedDestinationDecision.locked_option)?.label ?? null;
+  const datesLabel =
+    lockedDatesDecision?.options.find((o) => o.id === lockedDatesDecision.locked_option)?.label ?? null;
+
+  const yourTasks = allTasks.filter((t) => t.member_id === caller.id);
+  const groupTasks = allTasks.filter((t) => t.member_id === null);
+  const checklistTotal = allTasks.length;
+  const checklistDone = allTasks.filter((t) => t.done).length;
 
   const openItems: string[] = [];
   const waitingOnIntake = activeMembers.length - membersWithIntake.size;
@@ -76,6 +138,18 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
 
   return (
     <div className="flex-1 flex flex-col gap-4 overflow-y-auto px-5 pb-8 pt-5 md:px-8">
+      <section className="flex flex-col gap-2">
+        <h3 className="font-mono text-xs text-ink-3">SHARE</h3>
+        <ShareSnapshot
+          tripName={tripRow.name}
+          destinationLabel={destinationLabel}
+          datesLabel={datesLabel}
+          groupCeiling={groupCeiling}
+          checklist={checklistTotal > 0 ? { done: checklistDone, total: checklistTotal } : null}
+          inviteCode={tripRow.invite_code}
+        />
+      </section>
+
       <section className="flex flex-col gap-2">
         <h3 className="font-mono text-xs text-ink-3">PARTY</h3>
         <div className="divide-y divide-line rounded-lg bg-card">
@@ -209,6 +283,68 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
           )}
         </section>
       )}
+
+      {hasLockedDestination && (
+        <section className="flex flex-col gap-2">
+          <h3 className="font-mono text-xs text-ink-3">COST ESTIMATE</h3>
+          {tripCostEstimate ? (
+            <div className="flex flex-col gap-2 rounded-lg bg-card p-3.5">
+              <p className="text-sm">
+                <span className="font-semibold">
+                  &#8377;{tripCostEstimate.min_per_head.toLocaleString("en-IN")}&ndash;
+                  {tripCostEstimate.max_per_head.toLocaleString("en-IN")}
+                </span>{" "}
+                per head for {tripCostEstimate.destination}.
+              </p>
+              <p className="text-xs text-ink-2">{tripCostEstimate.assumptions}</p>
+              {isAdmin && <GenerateCostEstimateButton tripId={tripId} label="Re-estimate" />}
+            </div>
+          ) : isAdmin ? (
+            <div className="rounded-lg bg-card p-3.5">
+              <GenerateCostEstimateButton tripId={tripId} label="Estimate cost" />
+            </div>
+          ) : (
+            <div className="rounded-lg bg-sunk p-4 text-sm text-ink-2">No cost estimate yet.</div>
+          )}
+        </section>
+      )}
+
+      {hasLockedDestination && hasLockedDates && (
+        <section className="flex flex-col gap-2">
+          <h3 className="font-mono text-xs text-ink-3">PREP CHECKLIST</h3>
+          {allTasks.length > 0 ? (
+            <PrepChecklist tripId={tripId} yourTasks={yourTasks} groupTasks={groupTasks} />
+          ) : isAdmin ? (
+            <div className="rounded-lg bg-card p-3.5">
+              <GenerateChecklistButton tripId={tripId} />
+            </div>
+          ) : (
+            <div className="rounded-lg bg-sunk p-4 text-sm text-ink-2">No checklist yet.</div>
+          )}
+        </section>
+      )}
+
+      <section className="flex flex-col gap-2">
+        <h3 className="font-mono text-xs text-ink-3">BOOKING TRACKER</h3>
+        <BookingTracker
+          tripId={tripId}
+          bookings={allBookings}
+          statuses={(bookingStatusData ?? []) as BookingStatusRow[]}
+          members={activeMembers}
+          myMemberId={caller.id}
+          isAdmin={isAdmin}
+        />
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h3 className="font-mono text-xs text-ink-3">IDEA INBOX</h3>
+        <IdeaInbox
+          tripId={tripId}
+          ideas={allIdeas}
+          votes={(ideaVotesData ?? []) as IdeaVoteRow[]}
+          myMemberId={caller.id}
+        />
+      </section>
 
       {openItems.length > 0 && (
         <section className="flex flex-col gap-2">
