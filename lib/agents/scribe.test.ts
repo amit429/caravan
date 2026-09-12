@@ -36,6 +36,8 @@ const member: MemberRow = {
   status: "active",
   device_token_hash: null,
   joined_at: "2026-01-01T00:00:00Z",
+  nudge_tier: 0,
+  flagged_at: null,
 };
 
 const message: MessageRow = {

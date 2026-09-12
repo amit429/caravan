@@ -80,10 +80,22 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
               <span className="flex-1 text-sm font-medium">{m.display_name}</span>
               <span
                 className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-                  membersWithIntake.has(m.id) ? "bg-agent-t text-agent" : "bg-sunk text-ink-3"
+                  membersWithIntake.has(m.id)
+                    ? "bg-agent-t text-agent"
+                    : m.flagged_at
+                      ? "bg-stop-t text-stop"
+                      : m.nudge_tier > 0
+                        ? "bg-warn-t text-warn"
+                        : "bg-sunk text-ink-3"
                 }`}
               >
-                {membersWithIntake.has(m.id) ? "answered" : "waiting"}
+                {membersWithIntake.has(m.id)
+                  ? "answered"
+                  : m.flagged_at
+                    ? "flagged"
+                    : m.nudge_tier > 0
+                      ? "nudged"
+                      : "waiting"}
               </span>
             </div>
           ))}

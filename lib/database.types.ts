@@ -21,6 +21,8 @@ export type MemberRow = {
   status: "active" | "removed";
   device_token_hash: string | null;
   joined_at: string;
+  nudge_tier: 0 | 1 | 2 | 3;
+  flagged_at: string | null;
 };
 
 export type AgentName = "concierge" | "scribe" | "chaser" | "scout" | "planner" | "quartermaster";
@@ -87,6 +89,7 @@ export type DecisionRow = {
   locked_option: string | null;
   rationale: string | null;
   locked_by: string | null;
+  reminded_at: string | null;
   created_at: string;
 };
 
