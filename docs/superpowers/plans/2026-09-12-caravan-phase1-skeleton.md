@@ -1874,7 +1874,7 @@ git commit -m "feat: add shared UI primitives (avatar, chip, card, dots, app bar
 - Create: `app/trips/page.tsx` (A3)
 - Create: `app/trips/new/basics/page.tsx` (A4)
 - Create: `app/trips/new/vibe/page.tsx` (A5)
-- Create: `app/trips/[tripId]/invite/page.tsx` (A6)
+- Create: `app/trips/new/invite/page.tsx` (A6 — lives under the wizard path, not `[tripId]`, since the trip doesn't exist until this step creates it)
 - Create: `app/trips/[tripId]/lobby/page.tsx` (A7)
 - Create: `app/trips/new/new-trip-store.ts` (client-side draft state across the 3-step wizard)
 
@@ -2005,7 +2005,7 @@ export default async function MyTripsPage() {
     <main className="min-h-screen flex flex-col max-w-md mx-auto px-5 pt-6 pb-10 gap-3">
       <h2 className="font-display text-2xl font-semibold mb-2">Your trips</h2>
       {(trips ?? []).map((trip) => (
-        <Link key={trip.id} href={`/trips/${trip.id}/invite`}>
+        <Link key={trip.id} href={`/trips/${trip.id}/lobby`}>
           <Card>
             <div className="flex items-center">
               <span className="font-display text-base font-semibold">{trip.name}</span>
@@ -2294,8 +2294,6 @@ export default function NewTripInvitePage() {
   );
 }
 ```
-
-Delete the placeholder `app/trips/[tripId]/invite/page.tsx` from the file list above — the invite screen lives at `app/trips/new/invite/page.tsx` since it's the wizard's last step and the trip doesn't exist until this step runs. The `A3 My trips` link should point to `/trips/${trip.id}/lobby` instead of `/trips/${trip.id}/invite` — fix that link in Step 3's code before committing.
 
 - [ ] **Step 8: A7 Lobby (admin) with realtime join list**
 
