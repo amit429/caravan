@@ -32,3 +32,57 @@ export type MessageRow = {
   body: string;
   created_at: string;
 };
+
+export type FactCategory = "budget" | "departure_city" | "vibe" | "hard_no";
+
+export type FactRow = {
+  id: string;
+  trip_id: string;
+  member_id: string;
+  category: FactCategory;
+  type: "HARD" | "SOFT";
+  value: unknown;
+  confidence: number;
+  source: "intake" | "manual";
+  superseded_by: string | null;
+  created_at: string;
+};
+
+export type AvailabilityRow = {
+  id: string;
+  trip_id: string;
+  member_id: string;
+  start_date: string;
+  end_date: string;
+  strength: "free" | "partial" | "blocked";
+  created_at: string;
+};
+
+export type DecisionOption = { id: string; label: string };
+
+export type DecisionType = "DATES" | "DESTINATION" | "BUDGET" | "STAY" | "ACTIVITY" | "CUSTOM";
+export type DecisionState = "DRAFT" | "OPEN" | "VOTING" | "LOCKED" | "REOPENED";
+
+export type DecisionRow = {
+  id: string;
+  trip_id: string;
+  type: DecisionType;
+  state: DecisionState;
+  options: DecisionOption[];
+  quorum_rule: string;
+  deadline: string | null;
+  default_on_silence: "none" | "flexible" | "leading_option";
+  locked_option: string | null;
+  rationale: string | null;
+  locked_by: string | null;
+  created_at: string;
+};
+
+export type VoteRow = {
+  id: string;
+  decision_id: string;
+  member_id: string;
+  option_id: string;
+  is_veto: boolean;
+  created_at: string;
+};
