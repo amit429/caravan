@@ -114,6 +114,65 @@ export type ItineraryRow = {
   updated_at: string;
 };
 
+export type IdeaRow = {
+  id: string;
+  trip_id: string;
+  member_id: string;
+  url: string;
+  title: string | null;
+  note: string | null;
+  image_url: string | null;
+  created_at: string;
+};
+
+export type IdeaVoteRow = {
+  id: string;
+  idea_id: string;
+  member_id: string;
+  created_at: string;
+};
+
+export type TaskCategory = "docs" | "booking" | "packing" | "other";
+
+export type TaskRow = {
+  id: string;
+  trip_id: string;
+  member_id: string | null;
+  title: string;
+  category: TaskCategory;
+  due_date: string | null;
+  done: boolean;
+  created_at: string;
+};
+
+export type BookingRow = {
+  id: string;
+  trip_id: string;
+  item: string;
+  deadline: string | null;
+  created_at: string;
+};
+
+export type BookingStatusRow = {
+  id: string;
+  booking_id: string;
+  member_id: string;
+  booked: boolean;
+  updated_at: string;
+};
+
+export type CostEstimateRow = {
+  id: string;
+  trip_id: string;
+  destination: string;
+  min_per_head: number;
+  max_per_head: number;
+  currency: string;
+  assumptions: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AgentRunRow = {
   id: string;
   trip_id: string;

@@ -58,3 +58,25 @@ export const closeDecisionSchema = z.object({
   override: z.boolean().optional().default(false),
 });
 export type CloseDecisionInput = z.infer<typeof closeDecisionSchema>;
+
+export const createIdeaSchema = z.object({
+  url: z.string().trim().url().max(2000),
+});
+export type CreateIdeaInput = z.infer<typeof createIdeaSchema>;
+
+export const createBookingSchema = z.object({
+  item: z.string().trim().min(1).max(80),
+  deadline: isoDate.optional(),
+});
+export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+
+export const bookingStatusSchema = z.object({
+  memberId: z.string().trim().min(1).max(80).optional(),
+  booked: z.boolean(),
+});
+export type BookingStatusInput = z.infer<typeof bookingStatusSchema>;
+
+export const taskStatusSchema = z.object({
+  done: z.boolean(),
+});
+export type TaskStatusInput = z.infer<typeof taskStatusSchema>;
