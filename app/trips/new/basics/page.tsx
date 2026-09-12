@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AppBar } from "@/components/caravan/app-bar";
 import { ProgressDots } from "@/components/caravan/progress-dots";
 import { writeDraft, readDraft } from "@/app/trips/new/new-trip-store";
+import { FlowShell } from "@/components/caravan/flow-shell";
 
 export default function NewTripBasicsPage() {
   const router = useRouter();
@@ -16,9 +17,9 @@ export default function NewTripBasicsPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col max-w-md mx-auto">
+    <FlowShell>
       <AppBar title="New trip" right="1 of 3" />
-      <div className="flex-1 flex flex-col gap-4 px-5">
+      <div className="flex-1 flex flex-col gap-4 px-5 md:px-8">
         <ProgressDots step={0} total={3} />
         <h1 className="font-display text-2xl font-semibold">What are we calling it?</h1>
         <div className="flex flex-col gap-1.5">
@@ -40,7 +41,7 @@ export default function NewTripBasicsPage() {
           />
         </div>
       </div>
-      <div className="px-5 pb-10 pt-4">
+      <div className="px-5 pb-10 pt-4 md:px-8">
         <button
           disabled={!name.trim()}
           onClick={next}
@@ -49,6 +50,6 @@ export default function NewTripBasicsPage() {
           Next
         </button>
       </div>
-    </main>
+    </FlowShell>
   );
 }

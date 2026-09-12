@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { AppBar } from "@/components/caravan/app-bar";
 import { Avatar } from "@/components/caravan/avatar";
+import { FlowShell } from "@/components/caravan/flow-shell";
 import type { MemberRow, TripRow } from "@/lib/database.types";
 
 export default function AdminLobbyPage() {
@@ -65,9 +66,9 @@ export default function AdminLobbyPage() {
   if (!trip) return <main className="p-5 text-ink-2">Loading&hellip;</main>;
 
   return (
-    <main className="min-h-screen flex flex-col max-w-md mx-auto">
+    <FlowShell>
       <AppBar title={trip.name} back={false} right={trip.invite_code} />
-      <div className="flex-1 flex flex-col gap-4 px-5">
+      <div className="flex-1 flex flex-col gap-4 px-5 md:px-8 overflow-y-auto">
         <div className="bg-card rounded-lg text-center p-5">
           <h1 className="font-display text-2xl font-semibold">{members.length} here, room still shut</h1>
           <p className="text-sm text-ink-2 mt-1.5">
@@ -94,11 +95,11 @@ export default function AdminLobbyPage() {
           </button>
         </div>
       </div>
-      <div className="px-5 pb-10 pt-4">
+      <div className="px-5 pb-10 pt-4 md:px-8">
         <button onClick={startTrip} className="w-full py-4 rounded-xl bg-signal text-ink font-semibold">
           Open the room
         </button>
       </div>
-    </main>
+    </FlowShell>
   );
 }

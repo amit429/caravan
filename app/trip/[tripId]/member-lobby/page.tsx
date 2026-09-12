@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { AvatarStack } from "@/components/caravan/avatar";
+import { FlowShell } from "@/components/caravan/flow-shell";
 import type { MemberRow, TripRow } from "@/lib/database.types";
 
 export default function MemberLobbyPage() {
@@ -52,7 +53,7 @@ export default function MemberLobbyPage() {
   const you = members[members.length - 1];
 
   return (
-    <main className="min-h-screen flex flex-col justify-center gap-4 px-5 text-center max-w-md mx-auto">
+    <FlowShell className="justify-center gap-4 px-5 text-center md:px-8">
       <div className="flex justify-center mb-3.5">
         <AvatarStack members={members.map((m, i) => ({ name: m.display_name, colorIndex: i }))} />
       </div>
@@ -61,6 +62,6 @@ export default function MemberLobbyPage() {
         The admin hasn&rsquo;t opened the room yet. It&rsquo;ll unlock for everyone at once, and
         you&rsquo;ll get an email.
       </p>
-    </main>
+    </FlowShell>
   );
 }

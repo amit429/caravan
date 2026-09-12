@@ -57,7 +57,7 @@ export function RoomFeed({
         )}
         {messages.map((m) => (
           <div key={m.id} className="flex gap-2">
-            <div className="bg-card rounded-[4px_15px_15px_15px] px-3.5 py-2.5 max-w-[262px]">
+            <div className="bg-card rounded-[4px_15px_15px_15px] px-3.5 py-2.5 max-w-[262px] md:max-w-[420px]">
               <div className="text-sm">{m.body}</div>
             </div>
           </div>

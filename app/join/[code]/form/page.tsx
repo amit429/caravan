@@ -2,6 +2,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AppBar } from "@/components/caravan/app-bar";
+import { FlowShell } from "@/components/caravan/flow-shell";
 
 export default function JoinFormPage() {
   const { code } = useParams<{ code: string }>();
@@ -29,9 +30,9 @@ export default function JoinFormPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col max-w-md mx-auto">
+    <FlowShell>
       <AppBar title="Join" />
-      <div className="flex-1 flex flex-col gap-4 px-5">
+      <div className="flex-1 flex flex-col gap-4 px-5 md:px-8">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-ink-2">Your name</label>
           <input
@@ -57,7 +58,7 @@ export default function JoinFormPage() {
         </p>
         {error && <p className="text-xs text-stop">{error}</p>}
       </div>
-      <div className="px-5 pb-10 pt-4">
+      <div className="px-5 pb-10 pt-4 md:px-8">
         <button
           disabled={!displayName.trim() || !email.trim() || submitting}
           onClick={submit}
@@ -66,6 +67,6 @@ export default function JoinFormPage() {
           Join
         </button>
       </div>
-    </main>
+    </FlowShell>
   );
 }

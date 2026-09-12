@@ -5,6 +5,7 @@ import { AppBar } from "@/components/caravan/app-bar";
 import { ProgressDots } from "@/components/caravan/progress-dots";
 import { Chip } from "@/components/caravan/chip";
 import { writeDraft, readDraft } from "@/app/trips/new/new-trip-store";
+import { FlowShell } from "@/components/caravan/flow-shell";
 
 const VIBE_OPTIONS = ["Beach", "Mountains", "Party", "Slow", "Road trip", "Food", "Trekking", "Cities"];
 const BUDGET_OPTIONS = ["Under 10k", "10-20k", "20-35k", "Open"];
@@ -31,9 +32,9 @@ export default function NewTripVibePage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col max-w-md mx-auto">
+    <FlowShell>
       <AppBar title="New trip" right="2 of 3" />
-      <div className="flex-1 flex flex-col gap-3 px-5">
+      <div className="flex-1 flex flex-col gap-3 px-5 md:px-8 overflow-y-auto">
         <ProgressDots step={1} total={3} />
         <h1 className="font-display text-2xl font-semibold">Set the starting vibe</h1>
         <p className="text-sm text-ink-2">
@@ -77,11 +78,11 @@ export default function NewTripVibePage() {
           ))}
         </div>
       </div>
-      <div className="px-5 pb-10 pt-4">
+      <div className="px-5 pb-10 pt-4 md:px-8">
         <button onClick={next} className="w-full py-4 rounded-xl bg-plum text-white font-semibold">
           Next
         </button>
       </div>
-    </main>
+    </FlowShell>
   );
 }

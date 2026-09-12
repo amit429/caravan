@@ -11,7 +11,7 @@ const TABS = [
 export function TabBar({ tripId, badges = {} }: { tripId: string; badges?: Partial<Record<string, number>> }) {
   const pathname = usePathname();
   return (
-    <div className="flex border-t border-line bg-card pt-2 px-2 pb-6">
+    <div className="flex border-t border-line bg-card pt-2 px-2 pb-6 md:hidden">
       {TABS.map((tab) => {
         const href = tab.href(tripId);
         const active = pathname === href;

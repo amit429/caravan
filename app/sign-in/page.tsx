@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { AppBar } from "@/components/caravan/app-bar";
+import { FlowShell } from "@/components/caravan/flow-shell";
 
 function SignInContent() {
   const supabase = createBrowserSupabaseClient();
@@ -21,9 +22,9 @@ function SignInContent() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col max-w-md mx-auto">
+    <FlowShell>
       <AppBar title="" />
-      <div className="flex-1 flex flex-col justify-center gap-5 px-5">
+      <div className="flex-1 flex flex-col justify-center gap-5 px-5 md:px-8">
         <h1 className="font-display text-2xl font-semibold">Sign in to start a trip</h1>
         <p className="text-ink-2 text-[15px]">
           Only you need an account. Everyone you invite joins with a name and an email, nothing
@@ -35,7 +36,7 @@ function SignInContent() {
           </p>
         )}
       </div>
-      <div className="flex flex-col gap-4 px-5 pb-10">
+      <div className="flex flex-col gap-4 px-5 pb-10 md:px-8">
         <button
           onClick={signInWithGoogle}
           className="w-full py-4 rounded-xl border border-line font-semibold flex items-center justify-center gap-2"
@@ -46,7 +47,7 @@ function SignInContent() {
           Joining someone else&rsquo;s trip? Just open the link they sent you.
         </p>
       </div>
-    </main>
+    </FlowShell>
   );
 }
 

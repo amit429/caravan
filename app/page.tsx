@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { FlowShell } from "@/components/caravan/flow-shell";
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen flex flex-col justify-end gap-5 px-5 pb-10 pt-6 max-w-md mx-auto">
-      <div className="flex-1" />
+    <FlowShell className="justify-end gap-5 px-5 pb-10 pt-6 md:justify-center md:px-8">
+      <div className="flex-1 md:hidden" />
       <div className="flex items-center gap-2.5">
         <div className="size-11 rounded-2xl bg-plum grid place-items-center text-white font-semibold">C</div>
         <span className="font-display text-lg font-semibold">Caravan</span>
@@ -15,7 +16,7 @@ export default function LandingPage() {
         Share one link. Everyone drops their dates and budget from their own phone. An agent does
         the chasing, the date maths and the deciding.
       </p>
-      <div className="flex-1" />
+      <div className="flex-1 md:hidden" />
       <Link href="/sign-in" className="w-full py-4 rounded-xl bg-plum text-white text-center font-semibold">
         Start a trip
       </Link>
@@ -25,6 +26,6 @@ export default function LandingPage() {
       >
         I have an invite code
       </Link>
-    </main>
+    </FlowShell>
   );
 }

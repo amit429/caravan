@@ -5,6 +5,7 @@ import { AppBar } from "@/components/caravan/app-bar";
 import { ProgressDots } from "@/components/caravan/progress-dots";
 import { Card } from "@/components/caravan/card";
 import { readDraft, clearDraft } from "@/app/trips/new/new-trip-store";
+import { FlowShell } from "@/components/caravan/flow-shell";
 import type { TripRow } from "@/lib/database.types";
 
 export default function NewTripInvitePage() {
@@ -34,9 +35,9 @@ export default function NewTripInvitePage() {
   const link = `${window.location.origin}/join/${trip.invite_code}`;
 
   return (
-    <main className="min-h-screen flex flex-col max-w-md mx-auto">
+    <FlowShell>
       <AppBar title="New trip" right="3 of 3" />
-      <div className="flex-1 flex flex-col gap-4 px-5">
+      <div className="flex-1 flex flex-col gap-4 px-5 md:px-8">
         <ProgressDots step={2} total={3} />
         <h1 className="font-display text-2xl font-semibold">Send them the code</h1>
         <p className="text-sm text-ink-2">No app, no signup. They open the link, type a name, and they are in.</p>
@@ -60,7 +61,7 @@ export default function NewTripInvitePage() {
           </p>
         </Card>
       </div>
-      <div className="px-5 pb-10 pt-4">
+      <div className="px-5 pb-10 pt-4 md:px-8">
         <button
           onClick={() => router.push(`/trips/${trip.id}/lobby`)}
           className="w-full py-4 rounded-xl bg-plum text-white font-semibold"
@@ -68,6 +69,6 @@ export default function NewTripInvitePage() {
           Go to the lobby
         </button>
       </div>
-    </main>
+    </FlowShell>
   );
 }

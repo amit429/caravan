@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { getMemberSession } from "@/lib/auth/session";
+import { FlowShell } from "@/components/caravan/flow-shell";
+import { ClosedGateIllustration } from "@/components/caravan/illustrations";
 
 export default async function InviteLandingPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -23,10 +25,11 @@ export default async function InviteLandingPage({ params }: { params: Promise<{ 
 
   if (!trip.joining_open || trip.status === "closed") {
     return (
-      <main className="min-h-screen flex flex-col justify-center px-5 max-w-md mx-auto text-center gap-3">
+      <FlowShell className="justify-center items-center gap-4 px-8 text-center">
+        <ClosedGateIllustration className="text-ink-3" />
         <h1 className="font-display text-xl font-semibold">This trip isn&rsquo;t taking new members</h1>
         <p className="text-sm text-ink-2">Ask whoever invited you for a fresh link.</p>
-      </main>
+      </FlowShell>
     );
   }
 
@@ -37,19 +40,19 @@ export default async function InviteLandingPage({ params }: { params: Promise<{ 
     .eq("status", "active");
 
   return (
-    <main className="min-h-screen flex flex-col justify-end gap-4 px-5 pb-10 pt-8 max-w-md mx-auto">
-      <div className="flex-1" />
+    <FlowShell className="justify-end gap-4 px-5 pb-10 pt-8 md:justify-center md:px-8">
+      <div className="flex-1 md:hidden" />
       <span className="inline-block w-fit text-xs font-semibold px-2.5 py-1 rounded-full bg-plum-t text-plum">
         You&rsquo;re invited
       </span>
       <h1 className="font-display text-3xl font-bold tracking-tight">{trip.name}</h1>
       {trip.rough_intent && <p className="text-[15px] text-ink-2">{trip.rough_intent}</p>}
       <p className="text-sm text-ink-2">{count ?? 0} already in</p>
-      <div className="flex-1" />
+      <div className="flex-1 md:hidden" />
       <Link href={`/join/${code}/form`} className="w-full py-4 rounded-xl bg-plum text-white text-center font-semibold">
         Join the trip
       </Link>
       <p className="text-xs text-ink-3 text-center">No account needed. Takes about twenty seconds.</p>
-    </main>
+    </FlowShell>
   );
 }
