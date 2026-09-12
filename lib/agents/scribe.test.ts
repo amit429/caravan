@@ -13,6 +13,7 @@ vi.mock("./post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) 
 vi.mock("./model", () => ({
   flashModel: "mock-flash-model",
   estimateCost: () => 0,
+  fastGoogleOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
 }));
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({

@@ -1,6 +1,6 @@
 import { generateObject } from "ai";
 import { z } from "zod";
-import { flashModel, estimateCost } from "./model";
+import { flashModel, estimateCost, fastGoogleOptions } from "./model";
 import { logAgentRun } from "./log-run";
 import { postAgentMessage } from "./post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
@@ -18,6 +18,7 @@ async function passesGate(tripId: string, messageBody: string): Promise<boolean>
       model: flashModel,
       schema: gateSchema,
       prompt: `Does this message contain a travel constraint, date/availability mention, budget mention, destination preference, or a hard "I can't"/"no" statement? Message: "${messageBody}"`,
+      providerOptions: fastGoogleOptions,
     });
     await logAgentRun({
       tripId,
@@ -96,6 +97,7 @@ export async function runScribe(params: { tripId: string; message: MessageRow; a
     result = await generateObject({
       model: flashModel,
       schema: scribeOutputSchema,
+      providerOptions: fastGoogleOptions,
       prompt: buildScribePrompt(params.authorMember, params.message.body),
     });
   } catch (error) {
