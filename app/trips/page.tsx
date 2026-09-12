@@ -4,6 +4,7 @@ import { getAdminUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Card } from "@/components/caravan/card";
 import { CompassIllustration } from "@/components/caravan/illustrations";
+import { AccountMenu } from "@/components/caravan/account-menu";
 
 export default async function MyTripsPage() {
   const admin = await getAdminUser();
@@ -20,7 +21,12 @@ export default async function MyTripsPage() {
 
   return (
     <main className="min-h-screen flex flex-col mx-auto w-full max-w-md md:max-w-2xl px-5 pt-6 pb-10 gap-3 md:px-8">
-      <h2 className="font-display text-2xl font-semibold mb-2">Your trips</h2>
+      <div className="flex items-center mb-2">
+        <h2 className="font-display text-2xl font-semibold">Your trips</h2>
+        <div className="ml-auto">
+          <AccountMenu email={admin.email} />
+        </div>
+      </div>
       {hasTrips ? (
         <div className="flex flex-col gap-3 md:grid md:grid-cols-2 md:gap-4">
           {trips!.map((trip) => (
@@ -48,9 +54,14 @@ export default async function MyTripsPage() {
         </div>
       )}
       <div className="flex-1 md:hidden" />
-      <Link href="/trips/new/basics" className="w-full py-4 rounded-xl bg-plum text-white text-center font-semibold">
-        Start a trip
-      </Link>
+      <div className="flex flex-col gap-2.5">
+        <Link href="/trips/new/basics" className="w-full py-4 rounded-xl bg-plum text-white text-center font-semibold">
+          Start a trip
+        </Link>
+        <Link href="/join" className="w-full py-4 rounded-xl border border-line text-center font-semibold">
+          I have an invite code
+        </Link>
+      </div>
     </main>
   );
 }
