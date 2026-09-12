@@ -34,3 +34,27 @@ export const intakeSchema = z.object({
   hardNos: z.array(z.string().trim().min(1).max(80)).max(20).default([]),
 });
 export type IntakeInput = z.infer<typeof intakeSchema>;
+
+export const createDecisionSchema = z.object({
+  type: z.enum(["DATES", "DESTINATION", "BUDGET", "STAY", "ACTIVITY", "CUSTOM"]),
+  options: z
+    .array(z.object({ id: z.string().trim().min(1).max(40), label: z.string().trim().min(1).max(120) }))
+    .min(2)
+    .max(6),
+  quorumRule: z.string().trim().min(1).max(40).default("simple_majority"),
+  deadline: z.string().datetime().optional(),
+  defaultOnSilence: z.enum(["none", "flexible", "leading_option"]).default("none"),
+});
+export type CreateDecisionInput = z.infer<typeof createDecisionSchema>;
+
+export const voteSchema = z.object({
+  optionId: z.string().trim().min(1).max(40),
+  isVeto: z.boolean().optional().default(false),
+});
+export type VoteInput = z.infer<typeof voteSchema>;
+
+export const closeDecisionSchema = z.object({
+  optionId: z.string().trim().min(1).max(40).optional(),
+  override: z.boolean().optional().default(false),
+});
+export type CloseDecisionInput = z.infer<typeof closeDecisionSchema>;
