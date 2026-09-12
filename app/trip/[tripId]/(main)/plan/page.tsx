@@ -9,7 +9,8 @@ import { Avatar } from "@/components/caravan/avatar";
 import { DecisionCard } from "@/components/caravan/decision-card";
 import { CreateDatesDecisionButton } from "@/components/caravan/create-dates-decision-button";
 import { GenerateDestinationsButton } from "@/components/caravan/generate-destinations-button";
-import type { AvailabilityRow, DecisionRow, FactRow, MemberRow, VoteRow } from "@/lib/database.types";
+import { GenerateItineraryButton } from "@/components/caravan/generate-itinerary-button";
+import type { AvailabilityRow, DecisionRow, FactRow, ItineraryRow, MemberRow, VoteRow } from "@/lib/database.types";
 
 function formatRange(start: string, end: string) {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
@@ -24,17 +25,20 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
   const caller = await resolveCaller(tripId, supabase);
   if (!caller) notFound();
 
-  const [{ data: members }, { data: facts }, { data: availability }, { data: decisions }] = await Promise.all([
-    supabase.from("members").select().eq("trip_id", tripId).eq("status", "active"),
-    supabase.from("facts").select().eq("trip_id", tripId).is("superseded_by", null),
-    supabase.from("availability").select().eq("trip_id", tripId),
-    supabase.from("decisions").select().eq("trip_id", tripId).order("created_at", { ascending: false }),
-  ]);
+  const [{ data: members }, { data: facts }, { data: availability }, { data: decisions }, { data: itinerary }] =
+    await Promise.all([
+      supabase.from("members").select().eq("trip_id", tripId).eq("status", "active"),
+      supabase.from("facts").select().eq("trip_id", tripId).is("superseded_by", null),
+      supabase.from("availability").select().eq("trip_id", tripId),
+      supabase.from("decisions").select().eq("trip_id", tripId).order("created_at", { ascending: false }),
+      supabase.from("itineraries").select().eq("trip_id", tripId).maybeSingle(),
+    ]);
 
   const activeMembers = (members ?? []) as MemberRow[];
   const allFacts = (facts ?? []) as FactRow[];
   const allAvailability = (availability ?? []) as AvailabilityRow[];
   const allDecisions = (decisions ?? []) as DecisionRow[];
+  const tripItinerary = itinerary as ItineraryRow | null;
 
   const decisionIds = allDecisions.map((d) => d.id);
   const { data: votesData } = decisionIds.length
@@ -57,6 +61,7 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
   const groupCeiling = groupBudgetCeiling(budgetBands);
   const hasDatesDecision = allDecisions.some((d) => d.type === "DATES");
   const hasDestinationDecision = allDecisions.some((d) => d.type === "DESTINATION");
+  const hasLockedDestination = allDecisions.some((d) => d.type === "DESTINATION" && d.state === "LOCKED");
 
   const openItems: string[] = [];
   const waitingOnIntake = activeMembers.length - membersWithIntake.size;
@@ -162,6 +167,46 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
               <DecisionCard key={d.id} tripId={tripId} decision={d} votes={votesByDecision.get(d.id) ?? []} isAdmin={isAdmin} />
             ))}
           </div>
+        </section>
+      )}
+
+      {hasLockedDestination && (
+        <section className="flex flex-col gap-2">
+          <h3 className="font-mono text-xs text-ink-3">ITINERARY</h3>
+          {tripItinerary ? (
+            <div className="flex flex-col gap-3">
+              {isAdmin && (
+                <div className="self-start rounded-lg bg-card px-3.5 py-2">
+                  <GenerateItineraryButton tripId={tripId} label="Regenerate itinerary" />
+                </div>
+              )}
+              <div className="flex flex-col gap-3">
+                {tripItinerary.days.map((day) => (
+                  <div key={day.day} className="overflow-hidden rounded-lg border border-line bg-card">
+                    <div className="border-b border-line bg-sunk px-3.5 py-2">
+                      <span className="text-sm font-semibold">
+                        Day {day.day}: {day.title}
+                      </span>
+                    </div>
+                    <div className="divide-y divide-line">
+                      {day.activities.map((a, i) => (
+                        <div key={i} className="flex gap-3 px-3.5 py-2.5">
+                          <span className="w-16 shrink-0 text-xs font-medium text-ink-3">{a.time}</span>
+                          <span className="text-sm">{a.description}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : isAdmin ? (
+            <div className="rounded-lg bg-card p-3.5">
+              <GenerateItineraryButton tripId={tripId} label="Generate itinerary" />
+            </div>
+          ) : (
+            <div className="rounded-lg bg-sunk p-4 text-sm text-ink-2">No itinerary yet.</div>
+          )}
         </section>
       )}
 

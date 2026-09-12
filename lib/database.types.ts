@@ -102,6 +102,18 @@ export type VoteRow = {
   created_at: string;
 };
 
+export type ItineraryActivity = { time: string; description: string };
+export type ItineraryDay = { day: number; date: string | null; title: string; activities: ItineraryActivity[] };
+
+export type ItineraryRow = {
+  id: string;
+  trip_id: string;
+  destination: string;
+  days: ItineraryDay[];
+  created_at: string;
+  updated_at: string;
+};
+
 export type AgentRunRow = {
   id: string;
   trip_id: string;
