@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/auth/session";
-import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Card } from "@/components/caravan/card";
 
 export default async function MyTripsPage() {
   const admin = await getAdminUser();
   if (!admin) redirect("/sign-in");
 
-  const supabase = createServiceSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: trips } = await supabase
     .from("trips")
     .select()

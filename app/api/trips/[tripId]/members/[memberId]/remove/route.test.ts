@@ -5,8 +5,8 @@ const mockTripSingle = vi.fn();
 const mockUpdate = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({ getAdminUser: () => mockGetAdminUser() }));
-vi.mock("@/lib/supabase/service", () => ({
-  createServiceSupabaseClient: () => ({
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabaseClient: () => ({
     from: () => ({
       select: () => ({ eq: () => ({ single: () => mockTripSingle() }) }),
       update: (patch: unknown) => ({ eq: () => mockUpdate(patch) }),

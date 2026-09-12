@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth/session";
-import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function PATCH(
   request: Request,
@@ -13,7 +13,7 @@ export async function PATCH(
   const { tripId } = await params;
   const { action } = await request.json();
 
-  const supabase = createServiceSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: trip, error: fetchError } = await supabase
     .from("trips")
     .select()

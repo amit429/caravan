@@ -8,8 +8,8 @@ vi.mock("@/lib/auth/session", () => ({
   getAdminUser: () => mockGetAdminUser(),
 }));
 
-vi.mock("@/lib/supabase/service", () => ({
-  createServiceSupabaseClient: () => ({
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabaseClient: () => ({
     from: (table: string) => {
       if (table === "trips") {
         return {

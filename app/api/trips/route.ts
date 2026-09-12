@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth/session";
-import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { generateInviteCode } from "@/lib/invite-code";
 import { createTripSchema } from "@/lib/validation";
 
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = createServiceSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   let trip = null;
   let lastError: unknown = null;
@@ -65,7 +65,7 @@ export async function GET() {
   if (!admin) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
-  const supabase = createServiceSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("trips")
     .select()

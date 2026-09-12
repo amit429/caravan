@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth/session";
-import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function POST(
   _request: Request,
@@ -10,7 +10,7 @@ export async function POST(
   if (!admin) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
   const { tripId, memberId } = await params;
-  const supabase = createServiceSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: trip } = await supabase.from("trips").select("admin_user_id").eq("id", tripId).single();
   if (!trip) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (trip.admin_user_id !== admin.id) {
