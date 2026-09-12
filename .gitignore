@@ -19,8 +19,8 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# claude code local settings
-.claude/settings.local.json
+# claude code local settings/session state
+.claude/
 
 # supabase local
 supabase/.branches
