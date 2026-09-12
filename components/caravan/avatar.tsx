@@ -1,7 +1,11 @@
-const MEMBER_COLORS = ["m1", "m2", "m3", "m4", "m5", "m6"] as const;
+// Full literal class names, not built from a template string: Tailwind's build-time
+// scanner only picks up complete class tokens that appear as text in source files, so
+// `` `bg-${color}` `` never generates the CSS rule — it silently renders with no
+// background at all.
+const MEMBER_COLOR_CLASSES = ["bg-m1", "bg-m2", "bg-m3", "bg-m4", "bg-m5", "bg-m6"] as const;
 
 export function memberColorClass(index: number) {
-  return `bg-${MEMBER_COLORS[index % MEMBER_COLORS.length]}`;
+  return MEMBER_COLOR_CLASSES[index % MEMBER_COLOR_CLASSES.length];
 }
 
 export function initials(name: string) {
