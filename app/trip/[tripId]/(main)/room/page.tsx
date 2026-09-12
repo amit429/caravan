@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { resolveCaller } from "@/lib/auth/resolve-caller";
 import { RoomFeed } from "./room-feed";
 
 export default async function RoomPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
   const supabase = createServiceSupabaseClient();
+  const caller = await resolveCaller(tripId, supabase);
+  if (!caller) notFound();
+
   const { data: trip } = await supabase.from("trips").select().eq("id", tripId).single();
   if (!trip) notFound();
 

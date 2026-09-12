@@ -1,15 +1,164 @@
+import { notFound } from "next/navigation";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { resolveCaller } from "@/lib/auth/resolve-caller";
+import { getAdminUser } from "@/lib/auth/session";
+import { computeTopDateWindows } from "@/lib/date-solver";
+import { groupBudgetCeiling } from "@/lib/budget";
 import { MapRouteIllustration } from "@/components/caravan/illustrations";
+import { Avatar } from "@/components/caravan/avatar";
+import { DecisionCard } from "@/components/caravan/decision-card";
+import { CreateDatesDecisionButton } from "@/components/caravan/create-dates-decision-button";
+import type { AvailabilityRow, DecisionRow, FactRow, MemberRow, VoteRow } from "@/lib/database.types";
 
-export default function PlanPage() {
+function formatRange(start: string, end: string) {
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
+  const s = new Date(`${start}T00:00:00Z`).toLocaleDateString(undefined, opts);
+  const e = new Date(`${end}T00:00:00Z`).toLocaleDateString(undefined, opts);
+  return `${s} – ${e}`;
+}
+
+export default async function PlanPage({ params }: { params: Promise<{ tripId: string }> }) {
+  const { tripId } = await params;
+  const supabase = createServiceSupabaseClient();
+  const caller = await resolveCaller(tripId, supabase);
+  if (!caller) notFound();
+
+  const [{ data: members }, { data: facts }, { data: availability }, { data: decisions }] = await Promise.all([
+    supabase.from("members").select().eq("trip_id", tripId).eq("status", "active"),
+    supabase.from("facts").select().eq("trip_id", tripId).is("superseded_by", null),
+    supabase.from("availability").select().eq("trip_id", tripId),
+    supabase.from("decisions").select().eq("trip_id", tripId).order("created_at", { ascending: false }),
+  ]);
+
+  const activeMembers = (members ?? []) as MemberRow[];
+  const allFacts = (facts ?? []) as FactRow[];
+  const allAvailability = (availability ?? []) as AvailabilityRow[];
+  const allDecisions = (decisions ?? []) as DecisionRow[];
+
+  const decisionIds = allDecisions.map((d) => d.id);
+  const { data: votesData } = decisionIds.length
+    ? await supabase.from("votes").select().in("decision_id", decisionIds)
+    : { data: [] as VoteRow[] };
+  const votesByDecision = new Map<string, VoteRow[]>();
+  for (const v of (votesData ?? []) as VoteRow[]) {
+    const list = votesByDecision.get(v.decision_id) ?? [];
+    list.push(v);
+    votesByDecision.set(v.decision_id, list);
+  }
+
+  const isAdmin = !!(await getAdminUser());
+  const membersWithIntake = new Set(allFacts.map((f) => f.member_id));
+  const dateWindows = computeTopDateWindows(
+    allAvailability,
+    activeMembers.map((m) => m.id)
+  );
+  const budgetBands = allFacts.filter((f) => f.category === "budget").map((f) => (f.value as { band: string }).band);
+  const groupCeiling = groupBudgetCeiling(budgetBands);
+  const hasDatesDecision = allDecisions.some((d) => d.type === "DATES");
+
+  const openItems: string[] = [];
+  const waitingOnIntake = activeMembers.length - membersWithIntake.size;
+  if (waitingOnIntake > 0) {
+    openItems.push(`${waitingOnIntake} of ${activeMembers.length} haven't answered the 5 questions yet`);
+  }
+  if (dateWindows.length > 0 && !hasDatesDecision) {
+    openItems.push("Dates haven't been put to a vote yet");
+  }
+
+  const nothingYet = allFacts.length === 0 && allDecisions.length === 0;
+
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 text-center">
-      <MapRouteIllustration className="text-agent" />
-      <div className="flex flex-col gap-1.5">
-        <h2 className="font-display text-lg font-semibold">Nothing to plan yet</h2>
-        <p className="text-sm text-ink-2 max-w-[280px]">
-          Once the group starts talking, dates, budget, and destination will show up here.
-        </p>
-      </div>
+    <div className="flex-1 flex flex-col gap-4 overflow-y-auto px-5 pb-8 pt-5 md:px-8">
+      <section className="flex flex-col gap-2">
+        <h3 className="font-mono text-xs text-ink-3">PARTY</h3>
+        <div className="divide-y divide-line rounded-lg bg-card">
+          {activeMembers.map((m, i) => (
+            <div key={m.id} className="flex items-center gap-2.5 px-3.5 py-2.5">
+              <Avatar name={m.display_name} colorIndex={i} size="sm" />
+              <span className="flex-1 text-sm font-medium">{m.display_name}</span>
+              <span
+                className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+                  membersWithIntake.has(m.id) ? "bg-agent-t text-agent" : "bg-sunk text-ink-3"
+                }`}
+              >
+                {membersWithIntake.has(m.id) ? "answered" : "waiting"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h3 className="font-mono text-xs text-ink-3">DATES</h3>
+        {dateWindows.length === 0 ? (
+          <div className="rounded-lg bg-sunk p-4 text-sm text-ink-2">Nobody&rsquo;s shared their dates yet.</div>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-line bg-card">
+            {dateWindows.map((w, i) => (
+              <div key={i} className="border-t border-line px-3.5 py-2.5 first:border-t-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">{formatRange(w.startDate, w.endDate)}</span>
+                  <span className="ml-auto text-xs text-ink-3">
+                    {w.membersIn.length + w.membersPartial.length}/{activeMembers.length} in
+                  </span>
+                </div>
+              </div>
+            ))}
+            {isAdmin && !hasDatesDecision && (
+              <div className="border-t border-line px-3.5 py-2.5">
+                <CreateDatesDecisionButton tripId={tripId} windows={dateWindows} />
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h3 className="font-mono text-xs text-ink-3">BUDGET</h3>
+        <div className="rounded-lg bg-card p-3.5">
+          {groupCeiling ? (
+            <p className="text-sm">
+              Plan needs to land under <span className="font-semibold">&#8377;{groupCeiling.toLocaleString("en-IN")}</span> a
+              head.
+            </p>
+          ) : (
+            <p className="text-sm text-ink-2">No budgets shared yet.</p>
+          )}
+        </div>
+      </section>
+
+      {allDecisions.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h3 className="font-mono text-xs text-ink-3">DECISIONS</h3>
+          <div className="flex flex-col gap-3">
+            {allDecisions.map((d) => (
+              <DecisionCard key={d.id} tripId={tripId} decision={d} votes={votesByDecision.get(d.id) ?? []} isAdmin={isAdmin} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {openItems.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h3 className="font-mono text-xs text-ink-3">OPEN ITEMS</h3>
+          <div className="divide-y divide-line rounded-lg bg-card">
+            {openItems.map((item, i) => (
+              <p key={i} className="px-3.5 py-2.5 text-sm">
+                {item}
+              </p>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {nothingYet && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-6 text-center">
+          <MapRouteIllustration className="text-agent" />
+          <p className="max-w-[260px] text-sm text-ink-2">
+            Once the group starts answering, dates, budget, and decisions will show up here.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
