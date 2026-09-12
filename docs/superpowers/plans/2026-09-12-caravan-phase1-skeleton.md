@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Next.js 15 App Router, TypeScript strict mode, Tailwind v4, shadcn/ui — PRD §12.2.
+- Next.js 15+ App Router, TypeScript strict mode, Tailwind v4, shadcn/ui — PRD §12.2. `create-next-app@latest` landed on Next.js 16.3.5/React 19.2 during Task 1; accepted since every route in this plan already uses the async-`params` App Router convention shared by 15 and 16 (ledgered ruling, Task 1).
 - No LLM calls, no Inngest, no agent-authored messages, no threads, no facts/decisions/voting — this phase is F1/F2 plus a no-AI subset of F3 only (spec §2).
 - Mobile-first: every screen is built and verified at 390×844 first (PRD D9).
 - Members never get a Supabase Auth account. Their session is exclusively the signed JWT cookie (spec §3).
