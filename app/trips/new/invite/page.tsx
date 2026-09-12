@@ -31,8 +31,7 @@ export default function NewTripInvitePage() {
   if (error) return <main className="p-5 text-stop">{error}</main>;
   if (!trip) return <main className="p-5 text-ink-2">Creating your trip&hellip;</main>;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  const link = `${siteUrl}/join/${trip.invite_code}`;
+  const link = `${window.location.origin}/join/${trip.invite_code}`;
 
   return (
     <main className="min-h-screen flex flex-col max-w-md mx-auto">

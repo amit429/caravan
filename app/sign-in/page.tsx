@@ -12,7 +12,11 @@ function SignInContent() {
   async function signInWithGoogle() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` },
+      // Must match the origin the user is actually on — the PKCE code verifier
+      // cookie is scoped to that origin, and this project has more than one
+      // valid Vercel domain. A hardcoded env var here breaks sign-in on any
+      // domain other than the one it names.
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
   }
 
