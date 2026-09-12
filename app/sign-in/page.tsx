@@ -1,9 +1,13 @@
 "use client";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { AppBar } from "@/components/caravan/app-bar";
 
-export default function SignInPage() {
+function SignInContent() {
   const supabase = createBrowserSupabaseClient();
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
 
   async function signInWithGoogle() {
     await supabase.auth.signInWithOAuth({
@@ -21,6 +25,11 @@ export default function SignInPage() {
           Only you need an account. Everyone you invite joins with a name and an email, nothing
           else.
         </p>
+        {error && (
+          <p className="text-sm text-stop bg-stop-t rounded-md p-3">
+            Couldn&rsquo;t sign you in: {error}. Please try again.
+          </p>
+        )}
       </div>
       <div className="flex flex-col gap-4 px-5 pb-10">
         <button
@@ -34,5 +43,13 @@ export default function SignInPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInContent />
+    </Suspense>
   );
 }
