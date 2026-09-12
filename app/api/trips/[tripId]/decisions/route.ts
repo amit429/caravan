@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { createDecisionSchema } from "@/lib/validation";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
 // Listing is dual-auth (admin or member both view decisions on Plan/Room) so it
 // goes through the service client like messages/intake. Creating a decision is
@@ -60,5 +61,6 @@ export async function POST(
     .select()
     .single();
   if (error) return NextResponse.json({ error: "could_not_create_decision" }, { status: 500 });
+  await broadcastTripChange(tripId);
   return NextResponse.json({ decision }, { status: 201 });
 }

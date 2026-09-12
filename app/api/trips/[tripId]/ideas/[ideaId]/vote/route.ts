@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
 // Idea votes are a simple toggleable upvote (not the veto/lock machinery
 // decisions use) — one tap adds it, a second tap removes it.
@@ -23,9 +24,11 @@ export async function POST(
 
   if (existing) {
     await supabase.from("idea_votes").delete().eq("id", existing.id);
+    await broadcastTripChange(tripId);
     return NextResponse.json({ voted: false });
   }
 
   await supabase.from("idea_votes").insert({ idea_id: ideaId, member_id: caller!.id });
+  await broadcastTripChange(tripId);
   return NextResponse.json({ voted: true });
 }

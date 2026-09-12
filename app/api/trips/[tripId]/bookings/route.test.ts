@@ -4,6 +4,9 @@ const mockResolveCaller = vi.fn();
 const mockGetAdminUser = vi.fn();
 const mockSelect = vi.fn();
 const mockInsert = vi.fn();
+const mockBroadcast = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/auth/resolve-caller", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/resolve-caller")>("@/lib/auth/resolve-caller");
@@ -28,6 +31,7 @@ beforeEach(() => {
   mockGetAdminUser.mockReset();
   mockSelect.mockReset();
   mockInsert.mockReset();
+  mockBroadcast.mockReset();
 });
 
 describe("GET /api/trips/[tripId]/bookings", () => {
@@ -66,5 +70,6 @@ describe("POST /api/trips/[tripId]/bookings", () => {
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({ trip_id: "trip-1", item: "Flight", deadline: "2026-11-01" })
     );
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 });

@@ -3,6 +3,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const mockResolveCaller = vi.fn();
 const mockGetAdminUser = vi.fn();
 const mockUpsert = vi.fn();
+const mockBroadcast = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/auth/resolve-caller", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/resolve-caller")>("@/lib/auth/resolve-caller");
@@ -29,6 +32,7 @@ beforeEach(() => {
   mockResolveCaller.mockReset();
   mockGetAdminUser.mockReset().mockResolvedValue(null);
   mockUpsert.mockReset().mockResolvedValue({ data: { booked: true }, error: null });
+  mockBroadcast.mockReset();
 });
 
 describe("PATCH /api/trips/[tripId]/bookings/[bookingId]/status", () => {
@@ -46,6 +50,7 @@ describe("PATCH /api/trips/[tripId]/bookings/[bookingId]/status", () => {
       { booking_id: "booking-1", member_id: "m1", booked: true, updated_at: expect.any(String) },
       { onConflict: "booking_id,member_id" }
     );
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 
   it("blocks a member from setting someone else's status", async () => {

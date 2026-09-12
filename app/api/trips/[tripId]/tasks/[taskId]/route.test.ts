@@ -4,6 +4,9 @@ const mockResolveCaller = vi.fn();
 const mockGetAdminUser = vi.fn();
 const mockSingle = vi.fn();
 const mockUpdate = vi.fn();
+const mockBroadcast = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/auth/resolve-caller", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/resolve-caller")>("@/lib/auth/resolve-caller");
@@ -32,6 +35,7 @@ beforeEach(() => {
   mockGetAdminUser.mockReset().mockResolvedValue(null);
   mockSingle.mockReset();
   mockUpdate.mockReset().mockResolvedValue({ data: { id: "task-1", done: true }, error: null });
+  mockBroadcast.mockReset();
 });
 
 describe("PATCH /api/trips/[tripId]/tasks/[taskId]", () => {
@@ -47,6 +51,7 @@ describe("PATCH /api/trips/[tripId]/tasks/[taskId]", () => {
     const res = await PATCH(req({ done: true }), { params });
     expect(res.status).toBe(200);
     expect(mockUpdate).toHaveBeenCalledWith({ done: true });
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 
   it("blocks a member from toggling someone else's task", async () => {

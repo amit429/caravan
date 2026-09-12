@@ -6,6 +6,9 @@ const mockTripSingle = vi.fn();
 const mockMemberMaybeSingle = vi.fn();
 const mockInsertSingle = vi.fn();
 const mockAfter = vi.fn();
+const mockBroadcast = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
   getAdminUser: () => mockGetAdminUser(),
@@ -53,6 +56,7 @@ beforeEach(() => {
   mockMemberMaybeSingle.mockReset();
   mockInsertSingle.mockReset();
   mockAfter.mockReset();
+  mockBroadcast.mockReset();
 });
 
 function postRequest(body: unknown) {
@@ -98,5 +102,9 @@ describe("POST /api/trips/[tripId]/messages", () => {
     });
     const res = await POST(postRequest({ body: "hi" }), { params: Promise.resolve({ tripId: "trip-1" }) });
     expect(res.status).toBe(201);
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1", {
+      type: "message",
+      message: { id: "msg-1", trip_id: "trip-1", body: "hi", author_id: "member-1" },
+    });
   });
 });

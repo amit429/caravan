@@ -3,6 +3,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const mockGetAdminUser = vi.fn();
 const mockTripSingle = vi.fn();
 const mockUpdate = vi.fn();
+const mockBroadcast = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({ getAdminUser: () => mockGetAdminUser() }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -21,6 +24,7 @@ beforeEach(() => {
   mockTripSingle.mockReset();
   mockUpdate.mockReset();
   mockUpdate.mockResolvedValue({ error: null });
+  mockBroadcast.mockReset();
 });
 
 describe("POST /api/trips/[tripId]/members/[memberId]/remove", () => {
@@ -41,5 +45,6 @@ describe("POST /api/trips/[tripId]/members/[memberId]/remove", () => {
     });
     expect(res.status).toBe(200);
     expect(mockUpdate).toHaveBeenCalledWith({ status: "removed" });
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 });

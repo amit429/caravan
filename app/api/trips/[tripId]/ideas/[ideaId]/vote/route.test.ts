@@ -4,6 +4,9 @@ const mockResolveCaller = vi.fn();
 const mockMaybeSingle = vi.fn();
 const mockDelete = vi.fn();
 const mockInsert = vi.fn();
+const mockBroadcast = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/auth/resolve-caller", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/resolve-caller")>("@/lib/auth/resolve-caller");
@@ -28,6 +31,7 @@ beforeEach(() => {
   mockMaybeSingle.mockReset();
   mockDelete.mockReset().mockResolvedValue({ error: null });
   mockInsert.mockReset().mockResolvedValue({ error: null });
+  mockBroadcast.mockReset();
 });
 
 describe("POST /api/trips/[tripId]/ideas/[ideaId]/vote", () => {
@@ -45,6 +49,7 @@ describe("POST /api/trips/[tripId]/ideas/[ideaId]/vote", () => {
     const body = await res.json();
     expect(body).toEqual({ voted: true });
     expect(mockInsert).toHaveBeenCalledWith({ idea_id: "idea-1", member_id: "m1" });
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 
   it("removes the vote when the caller already voted (toggle)", async () => {
@@ -55,5 +60,6 @@ describe("POST /api/trips/[tripId]/ideas/[ideaId]/vote", () => {
     const body = await res.json();
     expect(body).toEqual({ voted: false });
     expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 });

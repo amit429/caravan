@@ -18,13 +18,19 @@ export function RoomFeed({
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
+    // Broadcast, not postgres_changes: members authenticate via a custom JWT
+    // (spec §10), not Supabase Auth, so they have no auth.uid() and
+    // postgres_changes' RLS-gated realtime never reaches them — only the
+    // admin would see live messages. The server broadcasts the exact row on
+    // this channel after every insert (see lib/realtime/broadcast), so both
+    // audiences append it the same way.
     const channel = supabase
-      .channel(`room:${tripId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `trip_id=eq.${tripId}` },
-        (payload) => setMessages((cur) => [...cur, payload.new as MessageRow])
-      )
+      .channel(`trip:${tripId}`)
+      .on("broadcast", { event: "change" }, ({ payload }) => {
+        if (payload?.type === "message") {
+          setMessages((cur) => [...cur, payload.message as MessageRow]);
+        }
+      })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);

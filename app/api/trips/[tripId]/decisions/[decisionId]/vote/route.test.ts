@@ -4,6 +4,9 @@ const mockGetAdminUser = vi.fn();
 const mockGetMemberSession = vi.fn();
 const mockDecisionSingle = vi.fn();
 const mockUpsert = vi.fn();
+const mockBroadcast = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
   getAdminUser: () => mockGetAdminUser(),
@@ -53,6 +56,7 @@ beforeEach(() => {
   mockGetMemberSession.mockReset();
   mockDecisionSingle.mockReset();
   mockUpsert.mockReset();
+  mockBroadcast.mockReset();
 });
 
 describe("POST /api/trips/[tripId]/decisions/[decisionId]/vote", () => {
@@ -98,5 +102,6 @@ describe("POST /api/trips/[tripId]/decisions/[decisionId]/vote", () => {
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({ decision_id: "decision-1", member_id: "member-1", option_id: "a", is_veto: true })
     );
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 });

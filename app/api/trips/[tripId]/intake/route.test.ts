@@ -4,6 +4,9 @@ const mockGetAdminUser = vi.fn();
 const mockGetMemberSession = vi.fn();
 const mockInsertAvailability = vi.fn();
 const mockInsertFacts = vi.fn();
+const mockBroadcast = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
   getAdminUser: () => mockGetAdminUser(),
@@ -73,6 +76,7 @@ beforeEach(() => {
   mockGetMemberSession.mockReset();
   mockInsertAvailability.mockReset().mockResolvedValue({ error: null });
   mockInsertFacts.mockReset().mockResolvedValue({ error: null });
+  mockBroadcast.mockReset();
 });
 
 describe("POST /api/trips/[tripId]/intake", () => {
@@ -110,5 +114,6 @@ describe("POST /api/trips/[tripId]/intake", () => {
     expect(factRows).toContainEqual(
       expect.objectContaining({ category: "budget", type: "SOFT", value: { band: "10-20k" } })
     );
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 });

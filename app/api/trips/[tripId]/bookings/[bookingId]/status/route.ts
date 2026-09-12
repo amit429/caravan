@@ -3,6 +3,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { getAdminUser } from "@/lib/auth/session";
 import { bookingStatusSchema } from "@/lib/validation";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
 export async function PATCH(
   request: Request,
@@ -34,5 +35,6 @@ export async function PATCH(
     .select()
     .single();
   if (error) return NextResponse.json({ error: "could_not_update_status" }, { status: 500 });
+  await broadcastTripChange(tripId);
   return NextResponse.json({ status });
 }

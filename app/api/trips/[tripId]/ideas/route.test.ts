@@ -4,6 +4,9 @@ const mockResolveCaller = vi.fn();
 const mockExtract = vi.fn();
 const mockSelect = vi.fn();
 const mockInsert = vi.fn();
+const mockBroadcast = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/auth/resolve-caller", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/resolve-caller")>("@/lib/auth/resolve-caller");
@@ -33,6 +36,7 @@ beforeEach(() => {
   mockExtract.mockReset();
   mockSelect.mockReset();
   mockInsert.mockReset();
+  mockBroadcast.mockReset();
 });
 
 describe("GET /api/trips/[tripId]/ideas", () => {
@@ -82,5 +86,6 @@ describe("POST /api/trips/[tripId]/ideas", () => {
         image_url: "https://x.com/p.jpg",
       })
     );
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 });

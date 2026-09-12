@@ -2,6 +2,7 @@ import { NextResponse, after } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { runScribe } from "@/lib/agents/scribe";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
 export async function GET(
   _request: Request,
@@ -57,6 +58,10 @@ export async function POST(
     .select()
     .single();
   if (error) return NextResponse.json({ error: "could_not_post_message" }, { status: 500 });
+
+  // Broadcast (not postgres_changes) so members receive it live too — see
+  // lib/realtime/broadcast for why postgres_changes can't reach them.
+  await broadcastTripChange(tripId, { type: "message", message });
 
   // Extraction runs after the response is sent — the member's message posts
   // instantly, Scribe's gate+extract calls never block it (spec §8.1 message

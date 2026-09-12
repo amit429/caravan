@@ -3,6 +3,7 @@ import { getAdminUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { closeDecisionSchema } from "@/lib/validation";
 import { pickWinningOption, tallyVotes } from "@/lib/tally-votes";
+import { postAgentMessage } from "@/lib/agents/post-agent-message";
 import type { DecisionOption } from "@/lib/database.types";
 
 // Manual close (Phase 2 has no Chaser cron yet — the deadline is stored and
@@ -40,7 +41,7 @@ export async function POST(
   const options = decision.options as DecisionOption[];
   const { vetoedOptions } = tallyVotes(votes ?? []);
 
-  let winningOptionId = parsed.data.optionId ?? pickWinningOption(options, votes ?? []);
+  const winningOptionId = parsed.data.optionId ?? pickWinningOption(options, votes ?? []);
   if (!winningOptionId) {
     return NextResponse.json({ error: "no_viable_option" }, { status: 400 });
   }
@@ -73,5 +74,15 @@ export async function POST(
     .select()
     .single();
   if (error) return NextResponse.json({ error: "could_not_lock_decision" }, { status: 500 });
+
+  const winningLabel = options.find((o) => o.id === winningOptionId)?.label ?? winningOptionId;
+  await postAgentMessage({
+    tripId,
+    agentName: "concierge",
+    body: parsed.data.override
+      ? `Locked: ${winningLabel}, by admin override.`
+      : `Locked: ${winningLabel}.`,
+  });
+
   return NextResponse.json({ decision: updated });
 }

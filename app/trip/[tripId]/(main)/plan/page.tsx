@@ -16,6 +16,7 @@ import { GenerateChecklistButton } from "@/components/caravan/generate-checklist
 import { BookingTracker } from "@/components/caravan/booking-tracker";
 import { GenerateCostEstimateButton } from "@/components/caravan/generate-cost-estimate-button";
 import { ShareSnapshot } from "@/components/caravan/share-snapshot";
+import { RealtimeRefresh } from "@/components/caravan/realtime-refresh";
 import type {
   AvailabilityRow,
   BookingRow,
@@ -138,6 +139,7 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
 
   return (
     <div className="flex-1 flex flex-col gap-4 overflow-y-auto px-5 pb-8 pt-5 md:px-8">
+      <RealtimeRefresh tripId={tripId} />
       <section className="flex flex-col gap-2">
         <h3 className="font-mono text-xs text-ink-3">SHARE</h3>
         <ShareSnapshot

@@ -2,6 +2,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const mockGetAdminUser = vi.fn();
 const mockInsertDecision = vi.fn();
+const mockBroadcast = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
   getAdminUser: () => mockGetAdminUser(),
@@ -51,6 +54,7 @@ function postRequest(body: unknown) {
 beforeEach(() => {
   mockGetAdminUser.mockReset();
   mockInsertDecision.mockReset();
+  mockBroadcast.mockReset();
 });
 
 describe("POST /api/trips/[tripId]/decisions", () => {
@@ -79,5 +83,6 @@ describe("POST /api/trips/[tripId]/decisions", () => {
     expect(mockInsertDecision).toHaveBeenCalledWith(
       expect.objectContaining({ trip_id: "trip-1", type: "DATES", state: "OPEN" })
     );
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 });

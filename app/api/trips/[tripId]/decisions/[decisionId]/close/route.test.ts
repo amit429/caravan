@@ -4,6 +4,9 @@ const mockGetAdminUser = vi.fn();
 const mockDecisionSingle = vi.fn();
 const mockVotesSelect = vi.fn();
 const mockUpdate = vi.fn();
+const mockPostAgentMessage = vi.fn();
+
+vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
   getAdminUser: () => mockGetAdminUser(),
@@ -53,6 +56,7 @@ beforeEach(() => {
   mockDecisionSingle.mockReset();
   mockVotesSelect.mockReset();
   mockUpdate.mockReset();
+  mockPostAgentMessage.mockReset();
 });
 
 describe("POST /api/trips/[tripId]/decisions/[decisionId]/close", () => {
@@ -84,6 +88,9 @@ describe("POST /api/trips/[tripId]/decisions/[decisionId]/close", () => {
     const res = await POST(postRequest(), { params });
     expect(res.status).toBe(200);
     expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ state: "LOCKED", locked_option: "goa" }));
+    expect(mockPostAgentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ tripId: "trip-1", agentName: "concierge", body: expect.stringContaining("Goa") })
+    );
   });
 
   it("blocks locking a vetoed option without override", async () => {

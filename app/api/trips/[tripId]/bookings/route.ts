@@ -3,6 +3,7 @@ import { getAdminUser } from "@/lib/auth/session";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { createBookingSchema } from "@/lib/validation";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
 export async function GET(
   _request: Request,
@@ -46,5 +47,6 @@ export async function POST(
     .select()
     .single();
   if (error) return NextResponse.json({ error: "could_not_create_booking" }, { status: 500 });
+  await broadcastTripChange(tripId);
   return NextResponse.json({ booking }, { status: 201 });
 }

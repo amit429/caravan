@@ -3,6 +3,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const mockTripSingle = vi.fn();
 const mockMemberMaybeSingle = vi.fn();
 const mockMemberInsertSingle = vi.fn();
+const mockBroadcast = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
@@ -33,6 +36,7 @@ beforeEach(() => {
   mockTripSingle.mockReset();
   mockMemberMaybeSingle.mockReset();
   mockMemberInsertSingle.mockReset();
+  mockBroadcast.mockReset();
 });
 
 function joinRequest(body: unknown) {
@@ -73,6 +77,7 @@ describe("POST /api/join/[code]", () => {
     });
     expect(res.status).toBe(200);
     expect(mockMemberInsertSingle).not.toHaveBeenCalled();
+    expect(mockBroadcast).not.toHaveBeenCalled();
     const setCookie = res.headers.get("set-cookie");
     expect(setCookie).toContain("caravan_member_token=signed-token");
   });
@@ -89,5 +94,6 @@ describe("POST /api/join/[code]", () => {
     });
     expect(res.status).toBe(200);
     expect(mockMemberInsertSingle).toHaveBeenCalled();
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 });

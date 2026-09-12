@@ -3,6 +3,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { getAdminUser } from "@/lib/auth/session";
 import { taskStatusSchema } from "@/lib/validation";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
 // Members can only toggle their own task (or an unassigned group task);
 // the admin can toggle anyone's — same shape as the vote/close split elsewhere.
@@ -42,5 +43,6 @@ export async function PATCH(
     .select()
     .single();
   if (error) return NextResponse.json({ error: "could_not_update_task" }, { status: 500 });
+  await broadcastTripChange(tripId);
   return NextResponse.json({ task: updated });
 }

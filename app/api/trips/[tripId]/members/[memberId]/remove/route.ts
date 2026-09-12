@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
 export async function POST(
   _request: Request,
@@ -19,5 +20,6 @@ export async function POST(
 
   const { error } = await supabase.from("members").update({ status: "removed" }).eq("id", memberId);
   if (error) return NextResponse.json({ error: "update_failed" }, { status: 500 });
+  await broadcastTripChange(tripId);
   return NextResponse.json({ ok: true });
 }

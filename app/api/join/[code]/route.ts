@@ -3,6 +3,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { joinTripSchema } from "@/lib/validation";
 import { signMemberToken } from "@/lib/auth/member-jwt";
 import { MEMBER_TOKEN_COOKIE } from "@/lib/auth/session";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
 export async function GET(
   _request: Request,
@@ -75,6 +76,10 @@ export async function POST(
 
   if (!member) {
     return NextResponse.json({ error: "could_not_join" }, { status: 500 });
+  }
+
+  if (!existingMember) {
+    await broadcastTripChange(trip.id);
   }
 
   const token = await signMemberToken({ tripId: trip.id, memberId: member.id });

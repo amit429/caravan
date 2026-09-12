@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { intakeSchema } from "@/lib/validation";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
 export async function GET(
   _request: Request,
@@ -92,5 +93,6 @@ export async function POST(
     return NextResponse.json({ error: "could_not_save_facts" }, { status: 500 });
   }
 
+  await broadcastTripChange(tripId);
   return NextResponse.json({ ok: true }, { status: 201 });
 }

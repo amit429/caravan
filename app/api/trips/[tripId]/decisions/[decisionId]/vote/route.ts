@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { voteSchema } from "@/lib/validation";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
 export async function POST(
   request: Request,
@@ -46,5 +47,6 @@ export async function POST(
     .select()
     .single();
   if (error) return NextResponse.json({ error: "could_not_save_vote" }, { status: 500 });
+  await broadcastTripChange(tripId);
   return NextResponse.json({ vote });
 }
