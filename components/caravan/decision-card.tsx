@@ -81,39 +81,52 @@ export function DecisionCard({
           const isVetoed = vetoed.has(opt.id);
           const isWinner = decision.locked_option === opt.id;
           return (
-            <div
-              key={opt.id}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 border-t border-line ${isWinner ? "bg-signal/20" : ""}`}
-            >
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium">{opt.label}</span>
-                {isVetoed && <span className="ml-1.5 text-[10px] font-semibold text-stop">hard no</span>}
-                {isWinner && <span className="ml-1.5 text-[10px] font-semibold text-signal-d">locked</span>}
-              </div>
-              <span className="text-xs text-ink-3">{count}</span>
-              {decision.state !== "LOCKED" && (
-                <>
-                  <button
-                    disabled={pending}
-                    onClick={() => vote(opt.id, false)}
-                    className="text-xs font-semibold text-plum px-2.5 py-1.5 rounded-full border border-line"
-                  >
-                    Vote
-                  </button>
-                  <button
-                    disabled={pending}
-                    onClick={() => vote(opt.id, true)}
-                    title="This doesn't work for me at all"
-                    className="text-xs text-ink-3"
-                  >
-                    &#128683;
-                  </button>
-                  {isAdmin && (
-                    <button disabled={pending} onClick={() => lock(opt.id)} className="text-xs font-semibold text-ink-2 underline">
-                      Lock
+            <div key={opt.id} className={`flex flex-col gap-1.5 px-3.5 py-2.5 border-t border-line ${isWinner ? "bg-signal/20" : ""}`}>
+              <div className="flex items-center gap-2.5">
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium">{opt.label}</span>
+                  {isVetoed && <span className="ml-1.5 text-[10px] font-semibold text-stop">hard no</span>}
+                  {isWinner && <span className="ml-1.5 text-[10px] font-semibold text-signal-d">locked</span>}
+                </div>
+                <span className="text-xs text-ink-3">{count}</span>
+                {decision.state !== "LOCKED" && (
+                  <>
+                    <button
+                      disabled={pending}
+                      onClick={() => vote(opt.id, false)}
+                      className="text-xs font-semibold text-plum px-2.5 py-1.5 rounded-full border border-line"
+                    >
+                      Vote
                     </button>
-                  )}
-                </>
+                    <button
+                      disabled={pending}
+                      onClick={() => vote(opt.id, true)}
+                      title="This doesn't work for me at all"
+                      className="text-xs text-ink-3"
+                    >
+                      &#128683;
+                    </button>
+                    {isAdmin && (
+                      <button disabled={pending} onClick={() => lock(opt.id)} className="text-xs font-semibold text-ink-2 underline">
+                        Lock
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+              {opt.meta && (
+                <div className="flex flex-col gap-1 pl-0.5">
+                  <div className="flex gap-3 text-[11px] text-ink-3">
+                    <span>{opt.meta.costPerHead} / head</span>
+                    <span>{opt.meta.travelTime}</span>
+                  </div>
+                  <p className="text-xs text-ink-2">
+                    <span className="text-signal-d font-semibold">+</span> {opt.meta.whyFits}
+                  </p>
+                  <p className="text-xs text-ink-2">
+                    <span className="text-stop font-semibold">&minus;</span> {opt.meta.whoFitsWorst}
+                  </p>
+                </div>
               )}
             </div>
           );

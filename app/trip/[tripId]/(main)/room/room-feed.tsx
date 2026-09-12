@@ -55,13 +55,25 @@ export function RoomFeed({
         {messages.length === 0 && (
           <div className="bg-sunk rounded-lg p-4 text-sm text-ink-2">Trip started &mdash; say hello.</div>
         )}
-        {messages.map((m) => (
-          <div key={m.id} className="flex gap-2">
-            <div className="bg-card rounded-[4px_15px_15px_15px] px-3.5 py-2.5 max-w-[262px] md:max-w-[420px]">
-              <div className="text-sm">{m.body}</div>
+        {messages.map((m) =>
+          m.author_type === "agent" ? (
+            <div
+              key={m.id}
+              className="border-l-[2.5px] border-agent bg-agent-t rounded-r-2xl px-3.5 py-3 flex flex-col gap-1.5 max-w-[300px] md:max-w-[460px]"
+            >
+              <span className="font-mono text-[11px] font-semibold tracking-wide text-agent uppercase">
+                {m.agent_name}
+              </span>
+              <span className="text-sm text-ink">{m.body}</span>
             </div>
-          </div>
-        ))}
+          ) : (
+            <div key={m.id} className="flex gap-2">
+              <div className="bg-card rounded-[4px_15px_15px_15px] px-3.5 py-2.5 max-w-[262px] md:max-w-[420px]">
+                <div className="text-sm">{m.body}</div>
+              </div>
+            </div>
+          )
+        )}
       </div>
       <div className="border-t border-line bg-card px-3.5 py-2.5 pb-5 flex gap-2.5 items-center">
         <input

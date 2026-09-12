@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
+import { runScribe } from "@/lib/agents/scribe";
 
 export async function GET(
   _request: Request,
@@ -56,5 +57,16 @@ export async function POST(
     .select()
     .single();
   if (error) return NextResponse.json({ error: "could_not_post_message" }, { status: 500 });
+
+  // Extraction runs after the response is sent — the member's message posts
+  // instantly, Scribe's gate+extract calls never block it (spec §8.1 message
+  // trigger, simplified to per-message since real debouncing needs a queue).
+  after(async () => {
+    const { data: authorMember } = await supabase.from("members").select().eq("id", callerMemberId).single();
+    if (authorMember) {
+      await runScribe({ tripId, message, authorMember });
+    }
+  });
+
   return NextResponse.json({ message }, { status: 201 });
 }

@@ -8,6 +8,7 @@ import { MapRouteIllustration } from "@/components/caravan/illustrations";
 import { Avatar } from "@/components/caravan/avatar";
 import { DecisionCard } from "@/components/caravan/decision-card";
 import { CreateDatesDecisionButton } from "@/components/caravan/create-dates-decision-button";
+import { GenerateDestinationsButton } from "@/components/caravan/generate-destinations-button";
 import type { AvailabilityRow, DecisionRow, FactRow, MemberRow, VoteRow } from "@/lib/database.types";
 
 function formatRange(start: string, end: string) {
@@ -55,6 +56,7 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
   const budgetBands = allFacts.filter((f) => f.category === "budget").map((f) => (f.value as { band: string }).band);
   const groupCeiling = groupBudgetCeiling(budgetBands);
   const hasDatesDecision = allDecisions.some((d) => d.type === "DATES");
+  const hasDestinationDecision = allDecisions.some((d) => d.type === "DESTINATION");
 
   const openItems: string[] = [];
   const waitingOnIntake = activeMembers.length - membersWithIntake.size;
@@ -126,6 +128,19 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
           )}
         </div>
       </section>
+
+      {!hasDestinationDecision && (
+        <section className="flex flex-col gap-2">
+          <h3 className="font-mono text-xs text-ink-3">DESTINATION</h3>
+          {isAdmin ? (
+            <div className="rounded-lg bg-card p-3.5">
+              <GenerateDestinationsButton tripId={tripId} />
+            </div>
+          ) : (
+            <div className="rounded-lg bg-sunk p-4 text-sm text-ink-2">Nobody&rsquo;s put together options yet.</div>
+          )}
+        </section>
+      )}
 
       {allDecisions.length > 0 && (
         <section className="flex flex-col gap-2">

@@ -23,13 +23,17 @@ export type MemberRow = {
   joined_at: string;
 };
 
+export type AgentName = "concierge" | "scribe" | "chaser" | "scout" | "planner" | "quartermaster";
+
 export type MessageRow = {
   id: string;
   trip_id: string;
   lane: "group";
-  author_type: "member";
+  author_type: "member" | "agent";
   author_id: string | null;
+  agent_name: AgentName | null;
   body: string;
+  metadata: Record<string, unknown>;
   created_at: string;
 };
 
@@ -43,7 +47,8 @@ export type FactRow = {
   type: "HARD" | "SOFT";
   value: unknown;
   confidence: number;
-  source: "intake" | "manual";
+  source: "intake" | "manual" | "extract";
+  source_message_id: string | null;
   superseded_by: string | null;
   created_at: string;
 };
@@ -58,7 +63,14 @@ export type AvailabilityRow = {
   created_at: string;
 };
 
-export type DecisionOption = { id: string; label: string };
+export type DestinationOptionMeta = {
+  costPerHead: string;
+  travelTime: string;
+  whyFits: string;
+  whoFitsWorst: string;
+};
+
+export type DecisionOption = { id: string; label: string; meta?: DestinationOptionMeta };
 
 export type DecisionType = "DATES" | "DESTINATION" | "BUDGET" | "STAY" | "ACTIVITY" | "CUSTOM";
 export type DecisionState = "DRAFT" | "OPEN" | "VOTING" | "LOCKED" | "REOPENED";
@@ -84,5 +96,19 @@ export type VoteRow = {
   member_id: string;
   option_id: string;
   is_veto: boolean;
+  created_at: string;
+};
+
+export type AgentRunRow = {
+  id: string;
+  trip_id: string;
+  agent: AgentName;
+  trigger: string;
+  input_tokens: number;
+  output_tokens: number;
+  cost: number;
+  latency_ms: number;
+  outcome: "success" | "error" | "skipped";
+  error_message: string | null;
   created_at: string;
 };
