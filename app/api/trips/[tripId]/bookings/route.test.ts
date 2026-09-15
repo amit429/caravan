@@ -5,6 +5,7 @@ const mockGetAdminUser = vi.fn();
 const mockSelect = vi.fn();
 const mockInsert = vi.fn();
 const mockBroadcast = vi.fn();
+const mockTripSingle = vi.fn();
 
 vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
@@ -15,10 +16,13 @@ vi.mock("@/lib/auth/resolve-caller", async () => {
 vi.mock("@/lib/auth/session", () => ({ getAdminUser: () => mockGetAdminUser() }));
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
-    from: () => ({
-      select: () => ({ eq: () => ({ order: () => mockSelect() }) }),
-      insert: (row: unknown) => ({ select: () => ({ single: () => mockInsert(row) }) }),
-    }),
+    from: (table: string) => {
+      if (table === "trips") return { select: () => ({ eq: () => ({ maybeSingle: () => mockTripSingle() }) }) };
+      return {
+        select: () => ({ eq: () => ({ order: () => mockSelect() }) }),
+        insert: (row: unknown) => ({ select: () => ({ single: () => mockInsert(row) }) }),
+      };
+    },
   }),
 }));
 
@@ -32,6 +36,7 @@ beforeEach(() => {
   mockSelect.mockReset();
   mockInsert.mockReset();
   mockBroadcast.mockReset();
+  mockTripSingle.mockReset().mockResolvedValue({ data: { admin_user_id: "admin-1" }, error: null });
 });
 
 describe("GET /api/trips/[tripId]/bookings", () => {
@@ -56,6 +61,15 @@ describe("POST /api/trips/[tripId]/bookings", () => {
       params,
     });
     expect(res.status).toBe(401);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects an admin who doesn't own this trip", async () => {
+    mockGetAdminUser.mockResolvedValue({ id: "admin-2", email: "other@example.com" });
+    const res = await POST(new Request("http://localhost", { method: "POST", body: JSON.stringify({ item: "Flight" }) }), {
+      params,
+    });
+    expect(res.status).toBe(403);
     expect(mockInsert).not.toHaveBeenCalled();
   });
 

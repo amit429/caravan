@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAdminUser } from "@/lib/auth/session";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
+import { resolveCaller, callerAuthError, requireTripOwner } from "@/lib/auth/resolve-caller";
 import { createBookingSchema } from "@/lib/validation";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
@@ -30,17 +29,17 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tripId: string }> }
 ) {
-  const admin = await getAdminUser();
-  if (!admin) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
-
   const { tripId } = await params;
+  const supabase = createServiceSupabaseClient();
+  const owner = await requireTripOwner(tripId, supabase);
+  if ("error" in owner) return owner.error;
+
   const body = await request.json();
   const parsed = createBookingSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = createServiceSupabaseClient();
   const { data: booking, error } = await supabase
     .from("bookings")
     .insert({ trip_id: tripId, item: parsed.data.item, deadline: parsed.data.deadline ?? null })

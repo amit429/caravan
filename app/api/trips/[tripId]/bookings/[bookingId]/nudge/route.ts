@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAdminUser } from "@/lib/auth/session";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { requireTripOwner } from "@/lib/auth/resolve-caller";
 import { postAgentMessage } from "@/lib/agents/post-agent-message";
 import { buildNudgeMessage } from "@/lib/bookings/nudge-message";
 import type { MemberRow } from "@/lib/database.types";
@@ -9,13 +9,12 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ tripId: string; bookingId: string }> }
 ) {
-  const admin = await getAdminUser();
-  if (!admin) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
-
   const { tripId, bookingId } = await params;
   const supabase = createServiceSupabaseClient();
+  const owner = await requireTripOwner(tripId, supabase);
+  if ("error" in owner) return owner.error;
 
-  const { data: booking } = await supabase.from("bookings").select().eq("id", bookingId).single();
+  const { data: booking } = await supabase.from("bookings").select().eq("id", bookingId).eq("trip_id", tripId).single();
   if (!booking) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const [{ data: members }, { data: statuses }] = await Promise.all([

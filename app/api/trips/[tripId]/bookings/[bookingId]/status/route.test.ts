@@ -4,6 +4,7 @@ const mockResolveCaller = vi.fn();
 const mockGetAdminUser = vi.fn();
 const mockUpsert = vi.fn();
 const mockBroadcast = vi.fn();
+const mockBookingLookup = vi.fn();
 
 vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
@@ -14,9 +15,14 @@ vi.mock("@/lib/auth/resolve-caller", async () => {
 vi.mock("@/lib/auth/session", () => ({ getAdminUser: () => mockGetAdminUser() }));
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
-    from: () => ({
-      upsert: (row: unknown, opts: unknown) => ({ select: () => ({ single: () => mockUpsert(row, opts) }) }),
-    }),
+    from: (table: string) => {
+      if (table === "bookings") {
+        return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: () => mockBookingLookup() }) }) }) };
+      }
+      return {
+        upsert: (row: unknown, opts: unknown) => ({ select: () => ({ single: () => mockUpsert(row, opts) }) }),
+      };
+    },
   }),
 }));
 
@@ -33,6 +39,7 @@ beforeEach(() => {
   mockGetAdminUser.mockReset().mockResolvedValue(null);
   mockUpsert.mockReset().mockResolvedValue({ data: { booked: true }, error: null });
   mockBroadcast.mockReset();
+  mockBookingLookup.mockReset().mockResolvedValue({ data: { id: "booking-1" }, error: null });
 });
 
 describe("PATCH /api/trips/[tripId]/bookings/[bookingId]/status", () => {
@@ -40,6 +47,14 @@ describe("PATCH /api/trips/[tripId]/bookings/[bookingId]/status", () => {
     mockResolveCaller.mockResolvedValue(null);
     const res = await PATCH(req({ booked: true }), { params });
     expect(res.status).toBe(401);
+  });
+
+  it("rejects a booking that doesn't belong to this trip", async () => {
+    mockResolveCaller.mockResolvedValue({ id: "m1", status: "active" });
+    mockBookingLookup.mockResolvedValue({ data: null, error: null });
+    const res = await PATCH(req({ booked: true }), { params });
+    expect(res.status).toBe(404);
+    expect(mockUpsert).not.toHaveBeenCalled();
   });
 
   it("lets a member set their own status", async () => {

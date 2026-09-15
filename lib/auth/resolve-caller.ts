@@ -43,3 +43,21 @@ export function callerAuthError(caller: CallerLookup) {
   if (caller.status === "removed") return NextResponse.json({ error: "removed" }, { status: 403 });
   return null;
 }
+
+export type TripOwnerResult = { admin: { id: string; email: string } } | { error: ReturnType<typeof NextResponse.json> };
+
+// Admin-only routes that go through the service-role client (which bypasses RLS
+// entirely) must check ownership themselves — RLS-backed routes get this for free
+// from the "admin manages own trip X" policies, but service-role ones don't.
+// Being *an* admin only proves you own *some* trip, not this one.
+export async function requireTripOwner(
+  tripId: string,
+  supabase: ReturnType<typeof createServiceSupabaseClient>
+): Promise<TripOwnerResult> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: NextResponse.json({ error: "unauthenticated" }, { status: 401 }) };
+  const { data: trip } = await supabase.from("trips").select("admin_user_id").eq("id", tripId).maybeSingle();
+  if (!trip) return { error: NextResponse.json({ error: "not_found" }, { status: 404 }) };
+  if (trip.admin_user_id !== admin.id) return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
+  return { admin };
+}

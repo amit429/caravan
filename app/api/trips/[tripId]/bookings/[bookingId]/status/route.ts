@@ -21,6 +21,9 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const { data: booking } = await supabase.from("bookings").select("id").eq("id", bookingId).eq("trip_id", tripId).maybeSingle();
+  if (!booking) return NextResponse.json({ error: "not_found" }, { status: 404 });
+
   const targetMemberId = parsed.data.memberId ?? caller!.id;
   if (targetMemberId !== caller!.id && !(await getAdminUser())) {
     return NextResponse.json({ error: "not_your_status" }, { status: 403 });
