@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { BottomSheet } from "@/components/caravan/bottom-sheet";
 import { Avatar } from "@/components/caravan/avatar";
 import { FACT_CATEGORY_LABEL, formatFactValue } from "@/lib/facts/format-fact";
-import type { FactRow } from "@/lib/database.types";
+import { vibeEmoji } from "@/lib/facts/vibe-emoji";
+import type { FactRow, MemberRow } from "@/lib/database.types";
 
 const SOURCE_LABEL: Record<FactRow["source"], string> = {
   intake: "from the five questions",
@@ -12,21 +13,49 @@ const SOURCE_LABEL: Record<FactRow["source"], string> = {
   manual: "added manually",
 };
 
-export function FactsList({
+function categoryChipClass(category: FactRow["category"]) {
+  if (category === "hard_no") return "bg-stop-t text-stop";
+  if (category === "vibe") return "bg-plum-t text-plum";
+  return "bg-sunk text-ink-2";
+}
+
+function categoryEmoji(fact: FactRow) {
+  if (fact.category === "departure_city") return "📍";
+  if (fact.category === "hard_no") return "🚫";
+  if (fact.category === "vibe") {
+    const tags = (fact.value as { tags?: string[] }).tags;
+    return tags && tags.length === 1 ? vibeEmoji(tags[0]) : "✨";
+  }
+  return "";
+}
+
+// Plan links here instead of showing one flat cross-member list (the old
+// layout, undifferentiated rows for a 6-person group, read as noise) —
+// grouped by person, each category rendered as its own set of colorful
+// chips, and a category simply doesn't appear for someone who has nothing
+// filed in it (no "Hard nos: none" placeholder rows).
+export function MemberFactsBoard({
   tripId,
+  members,
   facts,
-  memberNames,
   myMemberId,
 }: {
   tripId: string;
+  members: MemberRow[];
   facts: FactRow[];
-  memberNames: Map<string, { name: string; colorIndex: number }>;
   myMemberId: string;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<FactRow | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pending, setPending] = useState(false);
+
+  const factsByMember = new Map<string, FactRow[]>();
+  for (const f of facts) {
+    const list = factsByMember.get(f.member_id) ?? [];
+    list.push(f);
+    factsByMember.set(f.member_id, list);
+  }
 
   async function soften() {
     if (!selected) return;
@@ -56,32 +85,37 @@ export function FactsList({
     setConfirmingDelete(false);
   }
 
-  if (facts.length === 0) {
-    return <p className="text-sm text-ink-2">Nothing filed yet.</p>;
-  }
-
   const isMine = selected?.member_id === myMemberId;
 
   return (
     <>
-      <div className="divide-y divide-line rounded-lg bg-card">
-        {facts.map((f) => {
-          const who = memberNames.get(f.member_id);
+      <div className="flex flex-col gap-3">
+        {members.map((m, i) => {
+          const memberFacts = factsByMember.get(m.id) ?? [];
           return (
-            <button
-              key={f.id}
-              onClick={() => setSelected(f)}
-              className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-sunk"
-            >
-              <Avatar name={who?.name ?? "?"} colorIndex={who?.colorIndex ?? 0} size="xs" />
-              <div className="min-w-0 flex-1">
-                <span className="text-sm font-medium">{formatFactValue(f.value)}</span>
-                <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-ink-3">
-                  <span>{FACT_CATEGORY_LABEL[f.category]}</span>
-                  {f.type === "HARD" && <span className="font-semibold text-stop">HARD</span>}
-                </div>
+            <div key={m.id} className="flex flex-col gap-3 rounded-lg bg-card p-4">
+              <div className="flex items-center gap-2.5">
+                <Avatar name={m.display_name} colorIndex={i} />
+                <span className="font-display text-base font-semibold">{m.display_name}</span>
               </div>
-            </button>
+              {memberFacts.length === 0 ? (
+                <p className="text-xs text-ink-3">Hasn&rsquo;t answered yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {memberFacts.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => setSelected(f)}
+                      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-transform active:scale-95 ${categoryChipClass(f.category)}`}
+                    >
+                      <span>{categoryEmoji(f)}</span>
+                      {formatFactValue(f.value)}
+                      {f.type === "HARD" && <span className="font-semibold">HARD</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -116,7 +150,8 @@ export function FactsList({
               </div>
               <h2 className="font-display text-lg font-semibold">{formatFactValue(selected.value)}</h2>
               <p className="text-xs text-ink-3">
-                {memberNames.get(selected.member_id)?.name ?? "Someone"}, {FACT_CATEGORY_LABEL[selected.category].toLowerCase()}
+                {members.find((m) => m.id === selected.member_id)?.display_name ?? "Someone"},{" "}
+                {FACT_CATEGORY_LABEL[selected.category].toLowerCase()}
               </p>
               {isMine ? (
                 <div className="flex flex-col gap-0.5 pt-1">
@@ -141,7 +176,7 @@ export function FactsList({
                 </div>
               ) : (
                 <p className="pt-1 text-xs text-ink-3">
-                  Only {memberNames.get(selected.member_id)?.name ?? "they"} can change this.
+                  Only {members.find((m) => m.id === selected.member_id)?.display_name ?? "they"} can change this.
                 </p>
               )}
             </div>
