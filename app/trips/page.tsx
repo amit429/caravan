@@ -20,7 +20,7 @@ export default async function MyTripsPage() {
   const hasTrips = (trips ?? []).length > 0;
 
   return (
-    <main className="min-h-screen flex flex-col mx-auto w-full max-w-md md:max-w-2xl px-5 pt-6 pb-10 gap-3 md:px-8">
+    <main className="min-h-dvh flex flex-col mx-auto w-full max-w-md md:max-w-2xl px-5 pt-6 pb-10 gap-3 md:px-8">
       <div className="flex items-center mb-2">
         <h2 className="font-display text-2xl font-semibold">Your trips</h2>
         <div className="ml-auto">

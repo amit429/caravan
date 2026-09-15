@@ -10,7 +10,7 @@ export default async function TripLayout({
 }) {
   const { tripId } = await params;
   return (
-    <div className="min-h-screen flex flex-col bg-paper md:flex-row">
+    <div className="min-h-dvh flex flex-col bg-paper md:flex-row">
       <SidebarNav tripId={tripId} />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-hidden md:max-w-2xl">
         <div className="flex-1 flex flex-col overflow-hidden">{children}</div>
