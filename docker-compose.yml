@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        # Build-time only — see Dockerfile for why these two specifically
+        # need to be args instead of just env vars at runtime.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    ports:
+      - "3000:3000"
+    # Same file used for `npm run dev` — server-only secrets (service role
+    # key, Gemini key, Tavily, Inngest) are read at runtime, not build time,
+    # so env_file alone covers them. The NEXT_PUBLIC_* build args above still
+    # need to resolve from somewhere too — pass this same file to the
+    # `docker compose` command itself: `docker compose --env-file .env.local up --build`.
+    env_file:
+      - .env.local
+    restart: unless-stopped

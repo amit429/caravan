@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "docker:build": "docker compose --env-file .env.local build",
+    "docker:up": "docker compose --env-file .env.local up --build"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.69",

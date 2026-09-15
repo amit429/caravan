@@ -24,6 +24,7 @@
 - [The agents](#the-agents)
 - [Database schema](#database-schema)
 - [Getting started](#getting-started)
+- [Docker](#docker)
 - [Project structure](#project-structure)
 - [Testing](#testing)
 - [Deployment](#deployment)
@@ -169,6 +170,7 @@ Caravan's product thesis rests on three bets:
 | Background jobs | **Inngest** | Cron-driven Chaser sweep (deadline nudges/auto-lock), every 30 minutes |
 | Validation | **Zod 4** | Every mutating API route parses its body through a schema in `lib/validation.ts` |
 | Testing | **Vitest** | 253 tests across 54 files — pure logic and API routes are unit-tested; no component/E2E layer yet |
+| Containerization | **Docker** (multi-stage, standalone output) | Optional — Vercel needs none of this; see [Docker](#docker) |
 
 ---
 
@@ -513,6 +515,41 @@ npm run build      # production build
 
 ---
 
+## Docker
+
+Only the Next.js app itself is containerized — Supabase (Postgres/Auth/Realtime) stays an external hosted project either way, Docker or not, so there's no local Postgres container to wire up here. Everything under [Getting started](#getting-started) still applies; you still need a real Supabase project, a Gemini key, `.env.local` filled in, and migrations run against it.
+
+The `Dockerfile` is a 3-stage build (`deps` → `builder` → `runner`) that ends in a `node server.js` runtime, not a full `node_modules` + `next start` — [`next.config.ts`](next.config.ts) sets `output: "standalone"`, which traces exactly which dependencies each route needs and copies only those into the final image. Verified locally: **~300MB**, serves traffic immediately on start.
+
+**One real gotcha, handled for you:** `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` get inlined into the client JS bundle *at build time* — unlike every other env var this app uses (service role key, Gemini, Tavily, Inngest), which are read at runtime. So those two specifically have to be passed as Docker **build args**, not just runtime `-e`/`env_file` vars, or the client bundle silently ships with empty values. Both the `Dockerfile` and `docker-compose.yml` are already wired for this — you don't need to do anything differently, just make sure they're set in whichever env file you point at.
+
+### With Docker Compose (recommended)
+
+```bash
+npm run docker:up          # build + run, reading .env.local for both build args and runtime env
+# or directly:
+docker compose --env-file .env.local up --build
+```
+
+The app is then up at `http://localhost:3000`.
+
+### With plain Docker
+
+```bash
+docker build \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+  --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
+  -t caravan .
+
+docker run -p 3000:3000 --env-file .env.local caravan
+```
+
+### Deploying the image
+
+Push the built image to any registry (Docker Hub, GHCR, ECR, ...) and run it on any container host (Fly.io, Railway, Cloud Run, ECS, a plain VM with `docker run`, ...). Set the same server-only env vars from [Getting started](#getting-started) on the host at runtime, and rebuild whenever `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` change (they're baked in, not reconfigurable post-build). If you deploy this way instead of to Vercel, you're also responsible for pointing an [Inngest](#5-inngest--where-the-cron-setup-goes) app at wherever `/api/inngest` ends up publicly reachable — that part doesn't change based on how the container itself is hosted.
+
+---
+
 ## Project structure
 
 ```
@@ -556,12 +593,16 @@ npm test
 
 ## Deployment
 
-Built for [Vercel](https://vercel.com):
+Two supported paths — same underlying app either way, same Supabase project, same env vars.
+
+**Vercel** (no Docker involved — this is what `output: "standalone"` in `next.config.ts` is orthogonal to; Vercel builds the app its own way regardless):
 
 1. Import the repo, set the environment variables above in the Vercel dashboard.
 2. Point `NEXT_PUBLIC_SUPABASE_URL` / keys at your production Supabase project (run migrations there too).
 3. Add your production URL's `/auth/callback` (`https://<your-domain>/auth/callback`) to Supabase's **Authentication → URL Configuration** allowed redirects — the Google Cloud Console side doesn't change per-deployment, it always points at Supabase's own callback (see [§3 above](#3-google-oauth--where-the-client-idsecret-actually-live)).
 4. Set `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` and point an Inngest app at `/api/inngest` (see [§5 above](#5-inngest--where-the-cron-setup-goes)) so the Chaser sweep actually fires every 30 minutes in production.
+
+**Any container host** (Fly.io, Railway, Cloud Run, ECS, a bare VM, ...) — build the image per [Docker](#docker), then follow the same 4 steps above; nothing about Supabase, Google OAuth, or Inngest setup changes based on how the app itself is hosted.
 
 ---
 

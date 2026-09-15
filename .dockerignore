@@ -1,0 +1,18 @@
+node_modules
+.next
+.git
+.gitignore
+
+# secrets — env vars go in at build/run time, never baked in via COPY
+.env
+.env.local
+.env*.local
+
+# not needed inside the image
+docs
+*.md
+.vscode
+.idea
+.DS_Store
+coverage
+npm-debug.log*
