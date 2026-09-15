@@ -3,7 +3,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
+import { BottomSheet } from "@/components/caravan/bottom-sheet";
 import type { DecisionRow, VoteRow } from "@/lib/database.types";
+
+type Block = { optionId: string; message: string };
 
 export function DecisionCard({
   tripId,
@@ -20,6 +23,7 @@ export function DecisionCard({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [block, setBlock] = useState<Block | null>(null);
 
   const counts = new Map<string, number>();
   const vetoed = new Set<string>();
@@ -49,13 +53,24 @@ export function DecisionCard({
     setPending(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      if (body.error === "hard_constraint_blocks_option" && window.confirm(`${body.message} Lock it anyway?`)) {
-        await lock(optionId, true);
+      if (body.error === "hard_constraint_blocks_option") {
+        setBlock({ optionId, message: body.message ?? "Someone marked this option as a hard no." });
       }
       return;
     }
+    setBlock(null);
     router.refresh();
   }
+
+  // F7: the runner-up is whichever non-vetoed option has the most votes,
+  // excluding the one that just got blocked — the same "most votes wins"
+  // rule the close route already applies, just computed here to name the
+  // actual alternative instead of leaving the admin to work it out.
+  const runnerUp = block
+    ? [...decision.options]
+        .filter((o) => o.id !== block.optionId && !vetoed.has(o.id))
+        .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0))[0]
+    : null;
 
   return (
     <div className="bg-card rounded-lg border border-line overflow-hidden">
@@ -132,6 +147,49 @@ export function DecisionCard({
           );
         })}
       </div>
+
+      <BottomSheet open={!!block} onClose={() => setBlock(null)}>
+        {block && (
+          <div className="flex flex-col gap-3">
+            <span className="w-fit rounded-full bg-stop-t px-2.5 py-1 text-[10px] font-semibold text-stop">
+              CAN&rsquo;T LOCK THIS
+            </span>
+            <h2 className="font-display text-lg font-semibold">
+              {decision.options.find((o) => o.id === block.optionId)?.label} won the vote. I&rsquo;m not locking it.
+            </h2>
+            <p className="text-sm text-ink-2">{block.message}</p>
+            <div className="flex flex-col gap-0.5 pt-1">
+              {runnerUp && (
+                <button
+                  disabled={pending}
+                  onClick={() => lock(runnerUp.id)}
+                  className="flex items-center justify-between py-2.5 text-left text-sm font-medium disabled:opacity-40"
+                >
+                  <span>
+                    Take the runner-up
+                    <span className="block text-xs font-normal text-ink-3">
+                      {runnerUp.label} — {counts.get(runnerUp.id) ?? 0} votes, no hard no against it
+                    </span>
+                  </span>
+                  <span className="text-ink-3">&rsaquo;</span>
+                </button>
+              )}
+              <button
+                disabled={pending}
+                onClick={() => lock(block.optionId, true)}
+                className="flex items-center justify-between py-2.5 text-left text-sm font-medium text-stop disabled:opacity-40"
+              >
+                <span>
+                  Lock it anyway
+                  <span className="block text-xs font-normal text-ink-3">Overrides the hard no. Logged with your name on it.</span>
+                </span>
+                <span className="text-ink-3">&rsaquo;</span>
+              </button>
+            </div>
+            <p className="text-xs text-ink-3">I haven&rsquo;t named who&rsquo;s blocked, and won&rsquo;t. Their reason stays in their own fact.</p>
+          </div>
+        )}
+      </BottomSheet>
     </div>
   );
 }
