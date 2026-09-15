@@ -48,14 +48,15 @@ type ScoutResult = { ok: true } | { ok: false; reason: string };
 // generic (spec D2 — never propose from thin constraints).
 export async function runScout(tripId: string): Promise<ScoutResult> {
   const supabase = createServiceSupabaseClient();
-  const [{ data: members }, { data: facts }] = await Promise.all([
+  const [{ data: trip }, { data: members }, { data: facts }] = await Promise.all([
+    supabase.from("trips").select("name, rough_intent, vibe").eq("id", tripId).single(),
     supabase.from("members").select().eq("trip_id", tripId).eq("status", "active"),
     supabase.from("facts").select().eq("trip_id", tripId).is("superseded_by", null),
   ]);
 
   const allFacts = (facts ?? []) as FactRow[];
-  const budgetBands = allFacts.filter((f) => f.category === "budget").map((f) => (f.value as { band: string }).band);
-  const groupCeiling = groupBudgetCeiling(budgetBands);
+  const budgetAmounts = allFacts.filter((f) => f.category === "budget").map((f) => (f.value as { amount: number }).amount);
+  const groupCeiling = groupBudgetCeiling(budgetAmounts);
   if (!groupCeiling) {
     return { ok: false, reason: "Need at least one budget answer before suggesting anywhere real." };
   }
@@ -65,19 +66,31 @@ export async function runScout(tripId: string): Promise<ScoutResult> {
       allFacts.filter((f) => f.category === "departure_city").map((f) => (f.value as { city: string }).city)
     ),
   ];
+  // The admin's own words at trip creation ("Bali 2027", "friends' trip to
+  // Bali") are real signal too, not just the intake facts — without this,
+  // Scout only ever sees the aggregated group answers and can end up
+  // suggesting somewhere with zero relation to what the trip was actually
+  // pitched as, purely because nobody's intake happened to mention it.
+  const roughIntent = (trip?.rough_intent as string | null)?.trim();
+  const creationVibe = (trip?.vibe as string[] | null) ?? [];
   const vibeTags = [
-    ...new Set(allFacts.filter((f) => f.category === "vibe").flatMap((f) => (f.value as { tags: string[] }).tags)),
+    ...new Set([
+      ...creationVibe,
+      ...allFacts.filter((f) => f.category === "vibe").flatMap((f) => (f.value as { tags: string[] }).tags),
+    ]),
   ];
   const hardNos = allFacts
     .filter((f) => f.category === "hard_no")
     .flatMap((f) => (f.value as { items: string[] }).items);
 
-  const searchQuery = `budget group trip ideas ${vibeTags.join(" ")} under ₹${groupCeiling} per person from ${
+  const searchQuery = `${roughIntent ?? ""} budget group trip ideas ${vibeTags.join(" ")} under ₹${groupCeiling} per person from ${
     departureCities.join(" or ") || "India"
   }`;
   const searchContext = await searchTavily(searchQuery);
 
-  const prompt = `Suggest exactly 3 destination options for a group trip. Party size: ${(members ?? []).length}. Group budget ceiling: ₹${groupCeiling} per head — do not exceed this in any option. Departure cities: ${
+  const prompt = `Suggest exactly 3 destination options for a group trip${trip?.name ? ` called "${trip.name}"` : ""}.${
+    roughIntent ? ` What the trip was originally pitched as: "${roughIntent}" — weigh this as a real, strong signal, not a suggestion to ignore.` : ""
+  } Party size: ${(members ?? []).length}. Group budget ceiling: ₹${groupCeiling} per head — do not exceed this in any option, even if it rules out somewhere the trip name or pitch points toward. Departure cities: ${
     departureCities.join(", ") || "unspecified"
   }. Vibe: ${vibeTags.join(", ") || "unspecified"}. Hard constraints that must never be violated by any option: ${
     hardNos.join("; ") || "none"

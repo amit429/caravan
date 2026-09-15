@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const mockGenerateObject = vi.fn();
 const mockLogAgentRun = vi.fn();
 const mockPostAgentMessage = vi.fn();
+const mockTripSelect = vi.fn();
 const mockMembersSelect = vi.fn();
 const mockFactsSelect = vi.fn();
 const mockDecisionsInsert = vi.fn();
@@ -14,6 +15,7 @@ vi.mock("./model", () => ({ flashModel: "mock-flash-model", estimateCost: () => 
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
     from: (table: string) => {
+      if (table === "trips") return { select: () => ({ eq: () => ({ single: () => mockTripSelect() }) }) };
       if (table === "members") return { select: () => ({ eq: () => ({ eq: () => mockMembersSelect() }) }) };
       if (table === "facts") return { select: () => ({ eq: () => ({ is: () => mockFactsSelect() }) }) };
       if (table === "decisions") return { insert: (row: unknown) => mockDecisionsInsert(row) };
@@ -37,6 +39,7 @@ beforeEach(() => {
   mockLogAgentRun.mockReset();
   mockPostAgentMessage.mockReset();
   mockDecisionsInsert.mockReset().mockResolvedValue({ error: null });
+  mockTripSelect.mockReset().mockResolvedValue({ data: { name: "Goa, probably", rough_intent: null, vibe: [] }, error: null });
   mockMembersSelect.mockReset().mockResolvedValue({ data: [{ id: "m1" }, { id: "m2" }], error: null });
   mockFactsSelect.mockReset();
 });
@@ -52,7 +55,7 @@ describe("runScout", () => {
   it("generates and stores 3 destination options once a budget exists", async () => {
     mockFactsSelect.mockResolvedValue({
       data: [
-        { category: "budget", value: { band: "10-20k" } },
+        { category: "budget", value: { amount: 15000 } },
         { category: "departure_city", value: { city: "Pune" } },
         { category: "vibe", value: { tags: ["Beach"] } },
         { category: "hard_no", value: { items: ["No overnight buses"] } },
@@ -84,11 +87,25 @@ describe("runScout", () => {
   });
 
   it("returns a graceful error instead of throwing when the model call fails", async () => {
-    mockFactsSelect.mockResolvedValue({ data: [{ category: "budget", value: { band: "10-20k" } }], error: null });
+    mockFactsSelect.mockResolvedValue({ data: [{ category: "budget", value: { amount: 15000 } }], error: null });
     mockGenerateObject.mockRejectedValue(new Error("rate limited"));
     const result = await runScout("trip-1");
     expect(result.ok).toBe(false);
     expect(mockDecisionsInsert).not.toHaveBeenCalled();
     expect(mockLogAgentRun).toHaveBeenCalledWith(expect.objectContaining({ outcome: "error" }));
+  });
+
+  it("weighs the trip's original name/pitch, not just aggregated intake facts", async () => {
+    mockTripSelect.mockResolvedValue({
+      data: { name: "Bali 2027", rough_intent: "Friends trip to Bali", vibe: ["Beach"] },
+      error: null,
+    });
+    mockFactsSelect.mockResolvedValue({ data: [{ category: "budget", value: { amount: 15000 } }], error: null });
+    mockGenerateObject.mockResolvedValue({ object: threeOptions, usage: { inputTokens: 100, outputTokens: 200 } });
+
+    await runScout("trip-1");
+    const prompt = mockGenerateObject.mock.calls[0][0].prompt as string;
+    expect(prompt).toContain("Bali 2027");
+    expect(prompt).toContain("Friends trip to Bali");
   });
 });
