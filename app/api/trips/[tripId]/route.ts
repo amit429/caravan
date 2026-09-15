@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
+import { resolveCaller, callerAuthError, requireTripOwner } from "@/lib/auth/resolve-caller";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 import { postAgentMessage } from "@/lib/agents/post-agent-message";
 import { buildKickoffMessage } from "@/lib/trips/kickoff-message";
@@ -95,4 +95,24 @@ export async function PATCH(
   }
 
   return NextResponse.json({ error: "unknown_action" }, { status: 400 });
+}
+
+// Every child table (members, messages, facts, decisions, ideas, bookings,
+// cost_estimates, threads, agent_runs, ...) has `on delete cascade` back to
+// trips.id, so a hard delete here is a genuine one-shot teardown — no
+// orphaned rows anywhere. There's no soft-delete/undo for this on purpose:
+// it's the one truly destructive admin action in the app, guarded by a
+// destructive confirm sheet client-side.
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ tripId: string }> }
+) {
+  const { tripId } = await params;
+  const supabase = createServiceSupabaseClient();
+  const owner = await requireTripOwner(tripId, supabase);
+  if ("error" in owner) return owner.error;
+
+  const { error } = await supabase.from("trips").delete().eq("id", tripId);
+  if (error) return NextResponse.json({ error: "delete_failed" }, { status: 500 });
+  return NextResponse.json({ ok: true });
 }
