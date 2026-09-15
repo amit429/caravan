@@ -5,6 +5,8 @@ const mockGenerateObject = vi.fn();
 const mockLogAgentRun = vi.fn();
 const mockPostAgentMessage = vi.fn();
 const mockFactsInsert = vi.fn();
+const mockFactsInsertResult = vi.fn();
+const mockFactsUpdate = vi.fn();
 const mockAvailabilityInsert = vi.fn();
 
 vi.mock("ai", () => ({ generateObject: (...args: unknown[]) => mockGenerateObject(...args) }));
@@ -18,7 +20,17 @@ vi.mock("./model", () => ({
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
     from: (table: string) => {
-      if (table === "facts") return { insert: (row: unknown) => mockFactsInsert(row) };
+      if (table === "facts") {
+        return {
+          insert: (row: unknown) => {
+            mockFactsInsert(row);
+            return { select: () => ({ single: () => mockFactsInsertResult() }) };
+          },
+          update: (patch: unknown) => ({
+            eq: () => ({ eq: () => ({ eq: () => ({ is: () => ({ neq: () => mockFactsUpdate(patch) }) }) }) }),
+          }),
+        };
+      }
       if (table === "availability") return { insert: (row: unknown) => mockAvailabilityInsert(row) };
       throw new Error(`unexpected table ${table}`);
     },
@@ -61,7 +73,9 @@ beforeEach(() => {
   mockGenerateObject.mockReset();
   mockLogAgentRun.mockReset();
   mockPostAgentMessage.mockReset();
-  mockFactsInsert.mockReset().mockResolvedValue({ error: null });
+  mockFactsInsert.mockReset();
+  mockFactsInsertResult.mockReset().mockResolvedValue({ data: { id: "fact-new-1" }, error: null });
+  mockFactsUpdate.mockReset().mockResolvedValue({ error: null });
   mockAvailabilityInsert.mockReset().mockResolvedValue({ error: null });
 });
 
@@ -154,6 +168,52 @@ describe("runScribe", () => {
     expect(mockPostAgentMessage).toHaveBeenCalledWith(
       expect.objectContaining({ tripId: "trip-1", agentName: "scribe", body: expect.stringContaining("Nov 20-25") })
     );
+  });
+
+  it("supersedes a member's prior budget fact when a newer one is filed by chat", async () => {
+    mockGenerateObject
+      .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
+      .mockResolvedValueOnce({
+        object: {
+          extractions: [
+            {
+              kind: "fact",
+              memberId: "member-1",
+              category: "budget",
+              type: "SOFT",
+              value: { band: "20-35k" },
+              confidence: 0.9,
+              rationale: "Karan's budget is actually 20-35k now",
+            },
+          ],
+        },
+        usage: usage(),
+      });
+    await runScribe({ tripId: "trip-1", message, authorMember: member });
+    expect(mockFactsUpdate).toHaveBeenCalledWith({ superseded_by: "fact-new-1" });
+  });
+
+  it("does not supersede anything for additive categories like hard_no", async () => {
+    mockGenerateObject
+      .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
+      .mockResolvedValueOnce({
+        object: {
+          extractions: [
+            {
+              kind: "fact",
+              memberId: "member-1",
+              category: "hard_no",
+              type: "HARD",
+              value: { text: "no camping" },
+              confidence: 0.9,
+              rationale: "Karan: no camping",
+            },
+          ],
+        },
+        usage: usage(),
+      });
+    await runScribe({ tripId: "trip-1", message, authorMember: member });
+    expect(mockFactsUpdate).not.toHaveBeenCalled();
   });
 
   it("forwards threadId so a thread-origin extraction's receipt stays in that thread", async () => {

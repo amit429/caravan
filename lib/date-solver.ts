@@ -42,9 +42,15 @@ function enumerateDays(start: string, end: string): string[] {
   return days;
 }
 
-// member_id -> day (iso) -> worst-case status submitted for that day.
-function buildStatusMap(availability: AvailabilityRow[]): Map<string, Map<string, Status>> {
-  const map = new Map<string, Map<string, Status>>();
+// member_id -> day (iso) -> status submitted for that day. A member's
+// intake calendar submission wipes and replaces their prior rows wholesale
+// (see intake route), but a later chat correction ("actually I can't make
+// the 5th" — or the reverse, "turns out I can now") is scribed as a new,
+// separate row alongside the calendar data. Whichever statement is newer
+// wins, in either direction; only when two rows were filed at the exact
+// same instant do we fall back to the more restrictive one as a tie-break.
+function buildStatusMap(availability: AvailabilityRow[]): Map<string, Map<string, { strength: Status; createdAt: string }>> {
+  const map = new Map<string, Map<string, { strength: Status; createdAt: string }>>();
   for (const row of availability) {
     let perDay = map.get(row.member_id);
     if (!perDay) {
@@ -53,8 +59,11 @@ function buildStatusMap(availability: AvailabilityRow[]): Map<string, Map<string
     }
     for (const day of enumerateDays(row.start_date, row.end_date)) {
       const existing = perDay.get(day);
-      if (!existing || STATUS_RANK[row.strength] > STATUS_RANK[existing]) {
-        perDay.set(day, row.strength);
+      const isNewer = !existing || row.created_at > existing.createdAt;
+      const isTiedButWorse =
+        existing && row.created_at === existing.createdAt && STATUS_RANK[row.strength] > STATUS_RANK[existing.strength];
+      if (isNewer || isTiedButWorse) {
+        perDay.set(day, { strength: row.strength, createdAt: row.created_at });
       }
     }
   }
@@ -100,7 +109,7 @@ export function computeTopDateWindows(
       let hasMissing = false;
 
       for (const day of windowDays) {
-        const status = perDay?.get(day);
+        const status = perDay?.get(day)?.strength;
         if (!status) hasMissing = true;
         else if (status === "blocked") hasBlocked = true;
         else if (status === "partial") hasPartial = true;
@@ -119,16 +128,41 @@ export function computeTopDateWindows(
     candidates.push({ startDate: windowStart, endDate: windowEnd, membersIn, membersPartial, membersOut, score });
   }
 
-  candidates.sort((a, b) => b.score - a.score || (a.startDate < b.startDate ? -1 : 1));
+  // Sliding a fixed-length window one day at a time across a long, evenly-free
+  // stretch produces dozens of candidates with identical attendance — e.g. a
+  // group that's wide open for two weeks straight yields the same "everyone's
+  // in" outcome at every offset. Surfacing each as its own vote option isn't 3
+  // real choices, it's the same good news chopped into arbitrary consecutive
+  // slices (the literal bug report this fixes: 27 Feb–2 Mar / 3–6 / 7–10 out
+  // of one continuous free run). Collapse consecutive candidates with the same
+  // score and the same attendance into a single run, so an option only shows
+  // up again when something about it is actually different.
+  // Candidates are already date-adjacent by construction (the offset loop
+  // above advances one day at a time), so it's enough to compare each one
+  // to the immediately preceding candidate — not to the frozen start of
+  // whatever run is currently open — to tell whether it's still the same
+  // stretch or a genuinely new one.
+  const runs: DateWindow[] = [];
+  let previousCandidate: DateWindow | null = null;
+  for (const candidate of candidates) {
+    const continuesRun = previousCandidate && previousCandidate.score === candidate.score && sameMembers(previousCandidate, candidate);
+    if (!continuesRun) runs.push(candidate); // first offset of a new run represents the whole stretch
+    previousCandidate = candidate;
+  }
+
+  runs.sort((a, b) => b.score - a.score || (a.startDate < b.startDate ? -1 : 1));
 
   const results: DateWindow[] = [];
-  for (const candidate of candidates) {
-    const overlapsExisting = results.some(
-      (r) => !(candidate.endDate < r.startDate || candidate.startDate > r.endDate)
-    );
-    if (!overlapsExisting) results.push(candidate);
+  for (const run of runs) {
+    const overlapsExisting = results.some((r) => !(run.endDate < r.startDate || run.startDate > r.endDate));
+    if (!overlapsExisting) results.push(run);
     if (results.length === 3) break;
   }
 
   return results;
+}
+
+function sameMembers(a: DateWindow, b: DateWindow): boolean {
+  const key = (w: DateWindow) => [...w.membersIn].sort().join(",") + "|" + [...w.membersPartial].sort().join(",");
+  return key(a) === key(b);
 }

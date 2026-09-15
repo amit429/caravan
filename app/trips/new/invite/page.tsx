@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppBar } from "@/components/caravan/app-bar";
 import { ProgressDots } from "@/components/caravan/progress-dots";
 import { Card } from "@/components/caravan/card";
@@ -12,8 +12,17 @@ export default function NewTripInvitePage() {
   const router = useRouter();
   const [trip, setTrip] = useState<TripRow | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // This effect fires a mutating POST — without a guard, anything that
+  // causes it to run twice (React StrictMode's dev-mode double-invoke,
+  // a remount from fast back/forward navigation) silently creates a second,
+  // identical trip. Ref, not state, so the guard is set synchronously
+  // before the fetch goes out, closing the window a second effect run could
+  // slip through.
+  const submitted = useRef(false);
 
   useEffect(() => {
+    if (submitted.current) return;
+    submitted.current = true;
     const draft = readDraft();
     fetch("/api/trips", {
       method: "POST",

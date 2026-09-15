@@ -144,16 +144,38 @@ export async function runScribe(params: {
 
   for (const item of applied) {
     if (item.kind === "fact") {
-      await supabase.from("facts").insert({
-        trip_id: params.tripId,
-        member_id: item.memberId,
-        category: item.category,
-        type: item.type,
-        value: item.value,
-        confidence: item.confidence,
-        source: "extract",
-        source_message_id: params.message.id,
-      });
+      const { data: inserted } = await supabase
+        .from("facts")
+        .insert({
+          trip_id: params.tripId,
+          member_id: item.memberId,
+          category: item.category,
+          type: item.type,
+          value: item.value,
+          confidence: item.confidence,
+          source: "extract",
+          source_message_id: params.message.id,
+        })
+        .select("id")
+        .single();
+
+      // Budget and departure city are "what's true right now" answers — a
+      // later chat correction should replace the group's picture (an intake
+      // resubmission already does this by hard-deleting; a chat mention uses
+      // the softer superseded_by link so the old answer stays visible as
+      // provenance). Hard-nos and vibe tags are additive signal instead —
+      // each new mention adds a constraint/preference, it doesn't retract
+      // the last one — so those are left alone.
+      if (inserted && (item.category === "budget" || item.category === "departure_city")) {
+        await supabase
+          .from("facts")
+          .update({ superseded_by: inserted.id })
+          .eq("trip_id", params.tripId)
+          .eq("member_id", item.memberId)
+          .eq("category", item.category)
+          .is("superseded_by", null)
+          .neq("id", inserted.id);
+      }
     } else {
       await supabase.from("availability").insert({
         trip_id: params.tripId,

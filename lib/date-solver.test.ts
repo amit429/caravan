@@ -83,6 +83,41 @@ describe("computeTopDateWindows", () => {
     expect(windows[0].membersPartial).not.toContain("m2");
   });
 
+  it("collapses one long evenly-free stretch into a single option instead of chopping it into 3 slices", () => {
+    // The reported bug: a member marks 27 Feb – 7 Mar free and 8–10 Mar
+    // tight. Sliding a 4-day window across that span used to yield 3
+    // arbitrary consecutive slices (27 Feb–2 Mar / 3–6 Mar / 7–10 Mar) that
+    // were really just one continuous "everyone's free" run restated.
+    const availability = [
+      avail("m1", "2026-02-27", "2026-03-07", "free"),
+      avail("m1", "2026-03-08", "2026-03-10", "partial"),
+    ];
+    const windows = computeTopDateWindows(availability, ["m1"], 4);
+    expect(windows).toHaveLength(2);
+    expect(windows[0].startDate).toBe("2026-02-27");
+    expect(windows[0].membersIn).toEqual(["m1"]);
+    expect(windows[1].membersPartial).toEqual(["m1"]);
+  });
+
+  it("lets a later-filed availability row win over an earlier one for the same day, in either direction", () => {
+    // Span pinned to exactly the window length so there's only one possible
+    // window — isolates the recency resolution itself from window selection.
+    const olderFree = avail("m1", "2026-11-01", "2026-11-04", "free");
+    const newerBlocked = { ...avail("m1", "2026-11-03", "2026-11-03", "blocked"), created_at: "2026-01-02T00:00:00Z" };
+    const blocked = computeTopDateWindows([olderFree, newerBlocked], ["m1"], 4);
+    // A chat "actually I can't make it" filed after the calendar submission
+    // should win, even though "blocked" would normally lose to a wider
+    // "free" submission under a worst-case merge — it's not about which
+    // status is worse, it's about which is newer.
+    expect(blocked[0].membersOut).toContain("m1");
+
+    // And a still-newer "actually I can now" reverses it again.
+    const newerFree = { ...avail("m1", "2026-11-03", "2026-11-03", "free"), created_at: "2026-01-03T00:00:00Z" };
+    const reversed = computeTopDateWindows([olderFree, newerBlocked, newerFree], ["m1"], 4);
+    expect(reversed[0].membersOut).not.toContain("m1");
+    expect(reversed[0].membersIn).toContain("m1");
+  });
+
   it("returns at most 3 windows and never two that overlap", () => {
     const windows = computeTopDateWindows([avail("m1", "2026-11-01", "2026-11-30")], ["m1"], 3);
     expect(windows.length).toBeLessThanOrEqual(3);
