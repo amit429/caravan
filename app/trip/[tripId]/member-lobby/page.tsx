@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { AvatarStack } from "@/components/caravan/avatar";
 import { FlowShell } from "@/components/caravan/flow-shell";
+import { Skeleton } from "@/components/caravan/skeleton";
 import type { MemberRow } from "@/lib/database.types";
 
 type LobbyTrip = { id: string; name: string; status: string };
@@ -43,13 +44,22 @@ export default function MemberLobbyPage() {
     };
   }, [tripId, router]);
 
-  if (!trip) return <main className="p-5 text-ink-2">Loading&hellip;</main>;
+  if (!trip) {
+    return (
+      <FlowShell className="justify-center gap-4 px-5 text-center md:px-8">
+        <Skeleton className="mx-auto size-11 rounded-full" />
+        <Skeleton className="mx-auto h-7 w-40" />
+        <Skeleton className="mx-auto h-4 w-full max-w-[280px]" />
+        <Skeleton className="mx-auto h-4 w-2/3 max-w-[220px]" />
+      </FlowShell>
+    );
+  }
 
   const you = members[members.length - 1];
 
   return (
     <FlowShell className="justify-center gap-4 px-5 text-center md:px-8">
-      <div className="flex justify-center mb-3.5">
+      <div className="flex justify-center mb-3.5 animate-in fade-in zoom-in-95 duration-300">
         <AvatarStack members={members.map((m, i) => ({ name: m.display_name, colorIndex: i }))} />
       </div>
       <h1 className="font-display text-2xl font-semibold">You&rsquo;re in{you ? `, ${you.display_name}` : ""}</h1>

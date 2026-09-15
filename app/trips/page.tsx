@@ -33,8 +33,9 @@ export default async function MyTripsPage() {
             <Link
               key={trip.id}
               href={trip.status === "lobby" ? `/trips/${trip.id}/lobby` : `/trip/${trip.id}/room`}
+              className="block transition-transform active:scale-[0.98]"
             >
-              <Card>
+              <Card className="transition-colors hover:bg-sunk">
                 <div className="flex items-center">
                   <span className="font-display text-base font-semibold">{trip.name}</span>
                   <span className="ml-auto text-[10px] font-medium px-2 py-1 rounded-full bg-sunk text-ink-2">
