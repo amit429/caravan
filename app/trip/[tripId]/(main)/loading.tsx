@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/caravan/skeleton";
 
 export default function TripShellLoading() {
   return (
-    <div className="min-h-dvh flex flex-col bg-paper md:flex-row">
+    <div className="h-dvh flex flex-col bg-paper md:flex-row">
       <div className="hidden md:flex md:w-60 md:shrink-0 md:flex-col md:gap-1 md:border-r md:border-line md:bg-card md:px-4 md:py-6">
         <div className="flex items-center gap-2.5 px-2 pb-6">
           <Skeleton className="size-8 rounded-xl" />

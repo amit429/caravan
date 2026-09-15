@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import type { IdeaRow, IdeaVoteRow } from "@/lib/database.types";
 
 export function IdeaInbox({
@@ -8,11 +9,13 @@ export function IdeaInbox({
   ideas,
   votes,
   myMemberId,
+  isAdmin = false,
 }: {
   tripId: string;
   ideas: IdeaRow[];
   votes: IdeaVoteRow[];
   myMemberId: string;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const [url, setUrl] = useState("");
@@ -46,6 +49,12 @@ export function IdeaInbox({
 
   async function vote(ideaId: string) {
     await fetch(`/api/trips/${tripId}/ideas/${ideaId}/vote`, { method: "POST" });
+    router.refresh();
+  }
+
+  async function remove(ideaId: string) {
+    if (!window.confirm("Delete this idea?")) return;
+    await fetch(`/api/trips/${tripId}/ideas/${ideaId}`, { method: "DELETE" });
     router.refresh();
   }
 
@@ -83,14 +92,25 @@ export function IdeaInbox({
                 </a>
                 {idea.note && <p className="text-xs text-ink-2">{idea.note}</p>}
               </div>
-              <button
-                onClick={() => vote(idea.id)}
-                className={`h-fit shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                  votedByMe.has(idea.id) ? "border-plum bg-plum text-white" : "border-line text-ink-2"
-                }`}
-              >
-                &#9650; {countsByIdea.get(idea.id) ?? 0}
-              </button>
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                <button
+                  onClick={() => vote(idea.id)}
+                  className={`h-fit rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                    votedByMe.has(idea.id) ? "border-plum bg-plum text-white" : "border-line text-ink-2"
+                  }`}
+                >
+                  &#9650; {countsByIdea.get(idea.id) ?? 0}
+                </button>
+                {(idea.member_id === myMemberId || isAdmin) && (
+                  <button
+                    onClick={() => remove(idea.id)}
+                    aria-label="Delete idea"
+                    className="text-ink-3 transition-colors hover:text-stop"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

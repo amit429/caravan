@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import type { BookingRow, BookingStatusRow, MemberRow } from "@/lib/database.types";
 
 function BookingItem({
@@ -41,10 +42,28 @@ function BookingItem({
     router.refresh();
   }
 
+  async function remove() {
+    if (!window.confirm(`Stop tracking "${booking.item}"?`)) return;
+    setPending(true);
+    await fetch(`/api/trips/${tripId}/bookings/${booking.id}`, { method: "DELETE" });
+    setPending(false);
+    router.refresh();
+  }
+
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-line bg-card p-3">
       <div className="flex items-center gap-2">
         <span className="flex-1 text-sm font-semibold">{booking.item}</span>
+        {isAdmin && (
+          <button
+            disabled={pending}
+            onClick={remove}
+            aria-label={`Delete ${booking.item}`}
+            className="text-ink-3 transition-colors hover:text-stop disabled:opacity-40"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        )}
         {booking.deadline && (
           <span className="text-[10px] font-mono text-ink-3">
             by {new Date(`${booking.deadline}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })}

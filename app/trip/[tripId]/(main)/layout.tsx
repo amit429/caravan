@@ -18,7 +18,14 @@ export default async function TripLayout({
   if (!trip) notFound();
 
   return (
-    <div className="min-h-dvh flex flex-col bg-paper md:flex-row">
+    // h-dvh, not min-h-dvh: this shell has real internal scroll regions
+    // (chat feed, Plan's sections) with the tab bar pinned below them.
+    // min-height only sets a floor, so once content grew taller than the
+    // viewport the whole page scrolled — tab bar included — instead of just
+    // the region meant to scroll. A fixed height forces every flex-1 child
+    // in this chain to a definite height, so overflow is contained where
+    // each page already puts its own overflow-y-auto.
+    <div className="h-dvh flex flex-col bg-paper md:flex-row">
       <SidebarNav tripId={tripId} tripName={trip.name} />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-hidden md:max-w-2xl">
         {/* The only way back to /trips used to be the phone's back button —

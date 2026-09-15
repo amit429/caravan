@@ -345,6 +345,7 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
           ideas={allIdeas}
           votes={(ideaVotesData ?? []) as IdeaVoteRow[]}
           myMemberId={caller.id}
+          isAdmin={isAdmin}
         />
       </section>
 

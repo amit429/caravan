@@ -4,6 +4,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
+import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { buildKickoffMessage } from "@/lib/trips/kickoff-message";
 
 // Dual-auth: the member lobby needs this before the trip goes active, when the
 // only realtime channel members can hear is the broadcast one (see
@@ -71,6 +73,11 @@ export async function PATCH(
       .select()
       .single();
     if (error) return NextResponse.json({ error: "update_failed" }, { status: 500 });
+    await postAgentMessage({
+      tripId,
+      agentName: "concierge",
+      body: buildKickoffMessage({ rough_intent: trip.rough_intent, vibe: trip.vibe, budget_hint: trip.budget_hint }),
+    });
     await broadcastTripChange(tripId);
     return NextResponse.json({ trip: data });
   }
