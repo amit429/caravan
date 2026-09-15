@@ -85,3 +85,8 @@ export const threadMessageSchema = z.object({
   body: z.string().trim().min(1).max(2000),
 });
 export type ThreadMessageInput = z.infer<typeof threadMessageSchema>;
+
+export const factUpdateSchema = z.object({
+  type: z.literal("SOFT"),
+});
+export type FactUpdateInput = z.infer<typeof factUpdateSchema>;

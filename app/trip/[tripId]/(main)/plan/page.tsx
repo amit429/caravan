@@ -17,6 +17,7 @@ import { BookingTracker } from "@/components/caravan/booking-tracker";
 import { GenerateCostEstimateButton } from "@/components/caravan/generate-cost-estimate-button";
 import { ShareSnapshot } from "@/components/caravan/share-snapshot";
 import { RealtimeRefresh } from "@/components/caravan/realtime-refresh";
+import { FactsList } from "@/components/caravan/facts-list";
 import type {
   AvailabilityRow,
   BookingRow,
@@ -137,6 +138,12 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
 
   const nothingYet = allFacts.length === 0 && allDecisions.length === 0;
 
+  // Budget is never listed individually anywhere, even here — only the
+  // aggregated group ceiling above is ever shown (spec: "individual budgets
+  // are never shown here, to anyone, including the admin").
+  const shareableFacts = allFacts.filter((f) => f.category !== "budget");
+  const memberNames = new Map(activeMembers.map((m, i) => [m.id, { name: m.display_name, colorIndex: i }]));
+
   return (
     <div className="flex-1 flex flex-col gap-4 overflow-y-auto px-5 pb-8 pt-5 md:px-8">
       <RealtimeRefresh tripId={tripId} />
@@ -221,6 +228,13 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
           )}
         </div>
       </section>
+
+      {shareableFacts.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h3 className="font-mono text-xs text-ink-3">FACTS</h3>
+          <FactsList tripId={tripId} facts={shareableFacts} memberNames={memberNames} myMemberId={caller.id} />
+        </section>
+      )}
 
       {!hasDestinationDecision && (
         <section className="flex flex-col gap-2">
