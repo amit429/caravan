@@ -1,10 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { Compass } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { AvatarStack } from "@/components/caravan/avatar";
 import { FlowShell } from "@/components/caravan/flow-shell";
 import { Skeleton } from "@/components/caravan/skeleton";
+import { AmbientGlow } from "@/components/caravan/ambient-glow";
 import type { MemberRow } from "@/lib/database.types";
 
 type LobbyTrip = { id: string; name: string; status: string };
@@ -80,11 +83,16 @@ export default function MemberLobbyPage() {
 
   if (!trip) {
     return (
-      <FlowShell className="justify-center gap-4 px-5 text-center md:px-8">
-        <Skeleton className="mx-auto size-11 rounded-full" />
-        <Skeleton className="mx-auto h-7 w-40" />
-        <Skeleton className="mx-auto h-4 w-full max-w-[280px]" />
-        <Skeleton className="mx-auto h-4 w-2/3 max-w-[220px]" />
+      <FlowShell className="gap-4 px-5 md:px-8">
+        <div className="flex items-center px-0 pt-4">
+          <Skeleton className="h-6 w-24 rounded-full" />
+        </div>
+        <div className="flex-1 flex flex-col justify-center gap-4 text-center">
+          <Skeleton className="mx-auto size-11 rounded-full" />
+          <Skeleton className="mx-auto h-7 w-40" />
+          <Skeleton className="mx-auto h-4 w-full max-w-[280px]" />
+          <Skeleton className="mx-auto h-4 w-2/3 max-w-[220px]" />
+        </div>
       </FlowShell>
     );
   }
@@ -92,15 +100,37 @@ export default function MemberLobbyPage() {
   const you = members[members.length - 1];
 
   return (
-    <FlowShell className="justify-center gap-4 px-5 text-center md:px-8">
-      <div className="flex justify-center mb-3.5 animate-in fade-in zoom-in-95 duration-300">
-        <AvatarStack members={members.map((m, i) => ({ name: m.display_name, colorIndex: i }))} />
+    <FlowShell className="relative overflow-hidden">
+      <AmbientGlow />
+      <div className="relative flex items-center px-5 pt-4 md:px-8">
+        <Link
+          href="/trips"
+          className="flex items-center gap-1.5 rounded-full py-1.5 pl-1.5 pr-3 text-xs font-semibold text-plum transition-colors active:bg-plum-t"
+        >
+          <span className="grid size-6 place-items-center rounded-full bg-plum-t">
+            <Compass className="size-3.5" />
+          </span>
+          My trips
+        </Link>
       </div>
-      <h1 className="font-display text-2xl font-semibold">You&rsquo;re in{you ? `, ${you.display_name}` : ""}</h1>
-      <p className="text-[15px] text-ink-2">
-        The admin hasn&rsquo;t opened the room yet. It&rsquo;ll unlock for everyone at once, and
-        you&rsquo;ll get an email.
-      </p>
+      <div className="relative flex flex-1 flex-col justify-center gap-4 px-6 text-center md:px-8">
+        <div className="mb-1 flex justify-center animate-in fade-in zoom-in-95 duration-300">
+          <AvatarStack members={members.map((m, i) => ({ name: m.display_name, colorIndex: i }))} />
+        </div>
+        <p className="font-mono text-[11px] uppercase tracking-wide text-ink-3">{trip.name}</p>
+        <h1 className="font-display text-2xl font-semibold">You&rsquo;re in{you ? `, ${you.display_name}` : ""}</h1>
+        <p className="text-[15px] text-ink-2">
+          The admin hasn&rsquo;t opened the room yet. It&rsquo;ll unlock for everyone at once, and
+          you&rsquo;ll get an email.
+        </p>
+        <div className="mx-auto flex items-center gap-1.5 text-xs text-ink-3">
+          <span className="relative flex size-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-signal-d opacity-75 motion-reduce:hidden" />
+            <span className="relative inline-flex size-1.5 rounded-full bg-signal-d" />
+          </span>
+          {members.length} {members.length === 1 ? "person" : "people"} waiting
+        </div>
+      </div>
     </FlowShell>
   );
 }

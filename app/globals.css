@@ -44,6 +44,14 @@ body {
   font-family: var(--font-ui);
 }
 
+/* Slow ambient drift for background decoration blobs (see AmbientGlow) —
+   small enough that nobody consciously notices it moving, just that the
+   screen feels alive rather than static. */
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(10px, -14px) scale(1.08); }
+}
+
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);

@@ -1,11 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { Compass, Copy, Check } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
-import { AppBar } from "@/components/caravan/app-bar";
 import { Avatar } from "@/components/caravan/avatar";
 import { FlowShell } from "@/components/caravan/flow-shell";
 import { Skeleton } from "@/components/caravan/skeleton";
+import { EmptyState } from "@/components/caravan/empty-state";
+import { LobbyIllustration } from "@/components/caravan/illustrations";
+import { AmbientGlow } from "@/components/caravan/ambient-glow";
+import { Switch } from "@/components/caravan/switch";
+import { formatTimeAgo } from "@/lib/format-time-ago";
 import type { MemberRow, TripRow } from "@/lib/database.types";
 
 export default function AdminLobbyPage() {
@@ -13,6 +19,7 @@ export default function AdminLobbyPage() {
   const router = useRouter();
   const [trip, setTrip] = useState<TripRow | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
@@ -32,7 +39,8 @@ export default function AdminLobbyPage() {
         .from("members")
         .select()
         .eq("trip_id", tripId)
-        .eq("status", "active");
+        .eq("status", "active")
+        .order("joined_at", { ascending: true });
       setMembers(memberData ?? []);
     }
     load();
@@ -63,6 +71,7 @@ export default function AdminLobbyPage() {
   }
 
   async function toggleJoining() {
+    if (!trip) return;
     const res = await fetch(`/api/trips/${tripId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -74,15 +83,26 @@ export default function AdminLobbyPage() {
     }
   }
 
+  async function copyCode() {
+    if (!trip) return;
+    await navigator.clipboard.writeText(`${window.location.origin}/join/${trip.invite_code}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   if (!trip) {
     return (
       <FlowShell>
-        <div className="flex items-center gap-3 px-5 pt-1 pb-3">
-          <Skeleton className="h-6 w-32" />
+        <div className="flex items-center gap-3 px-5 pt-4 pb-3 md:px-8">
+          <Skeleton className="h-6 w-24 rounded-full" />
+          <Skeleton className="ml-auto h-6 w-20 rounded-full" />
+        </div>
+        <div className="flex flex-col items-center gap-2 px-5 pb-5 md:px-8">
+          <Skeleton className="h-7 w-40" />
         </div>
         <div className="flex-1 flex flex-col gap-4 px-5 md:px-8">
-          <Skeleton className="h-20 w-full rounded-lg" />
           <Skeleton className="h-24 w-full rounded-lg" />
+          <Skeleton className="h-16 w-full rounded-lg" />
         </div>
         <div className="px-5 pb-10 pt-4 md:px-8">
           <Skeleton className="h-14 w-full rounded-xl" />
@@ -91,39 +111,95 @@ export default function AdminLobbyPage() {
     );
   }
 
+  const ctaCopy =
+    members.length === 0
+      ? "Open the room anyway"
+      : members.length === 1
+        ? "Open it — it's just you and me"
+        : "Open the room";
+
   return (
     <FlowShell>
-      <AppBar title={trip.name} back={false} right={trip.invite_code} />
-      <div className="flex-1 flex flex-col gap-4 px-5 md:px-8 overflow-y-auto">
-        <div className="bg-card rounded-lg text-center p-5">
-          <h1 className="font-display text-2xl font-semibold">{members.length} here, room still shut</h1>
-          <p className="text-sm text-ink-2 mt-1.5">
-            Open it when you think enough people have turned up.
-          </p>
-        </div>
-        <div className="bg-card rounded-lg divide-y divide-line">
-          {members.map((m, i) => (
-            <div key={m.id} className="flex items-center gap-2.5 py-3 px-4">
-              <Avatar name={m.display_name} colorIndex={i} />
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">{m.display_name}</span>
-                <span className="text-[11.5px] text-ink-3">{m.role === "admin" ? "you, admin" : "joined"}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center">
-          <span className="text-[10.5px] font-semibold px-2.5 py-1 rounded-full bg-sunk text-ink-2">
-            {trip.joining_open ? "Joining open" : "Joining closed"}
-          </span>
-          <button onClick={toggleJoining} className="ml-auto text-sm text-ink-2 underline">
-            {trip.joining_open ? "Shut it" : "Reopen it"}
+      <div className="relative overflow-hidden">
+        <AmbientGlow />
+        <div className="relative flex items-center gap-2 px-5 pt-4 pb-1 md:px-8">
+          <Link
+            href="/trips"
+            className="flex items-center gap-1.5 rounded-full py-1.5 pl-1.5 pr-3 text-xs font-semibold text-plum transition-colors active:bg-plum-t"
+          >
+            <span className="grid size-6 place-items-center rounded-full bg-plum-t">
+              <Compass className="size-3.5" />
+            </span>
+            My trips
+          </Link>
+          <button
+            onClick={copyCode}
+            className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1.5 font-mono text-[11px] text-ink-2 transition-colors active:bg-sunk"
+          >
+            {copied ? <Check className="size-3.5 text-agent" /> : <Copy className="size-3.5" />}
+            {trip.invite_code}
           </button>
         </div>
+        <div className="relative flex flex-col items-center gap-2 px-6 pb-5 pt-3 text-center">
+          <h1 className="font-display text-2xl font-semibold">{trip.name}</h1>
+          <div className="flex items-center gap-1.5 text-xs text-ink-2">
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-signal-d opacity-75 motion-reduce:hidden" />
+              <span className="relative inline-flex size-2 rounded-full bg-signal-d" />
+            </span>
+            Room&rsquo;s still shut &mdash; open it whenever you&rsquo;re ready
+          </div>
+        </div>
       </div>
-      <div className="px-5 pb-10 pt-4 md:px-8">
-        <button onClick={startTrip} className="w-full py-4 rounded-xl bg-signal text-ink font-semibold">
-          Open the room
+
+      <div className="flex-1 flex flex-col gap-4 px-5 md:px-8 overflow-y-auto">
+        {members.length === 0 ? (
+          <EmptyState
+            icon={<LobbyIllustration size={96} />}
+            title="Nobody's here yet"
+            body="Send the code around — this screen updates the second someone joins."
+          />
+        ) : (
+          <div className="flex flex-col gap-3 rounded-lg bg-card p-4">
+            <div className="flex items-center justify-between">
+              <span className="font-display text-base font-semibold">
+                {members.length} {members.length === 1 ? "person" : "people"} here
+              </span>
+            </div>
+            <div className="flex flex-col gap-3">
+              {members.map((m, i) => (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-1 duration-300"
+                >
+                  <Avatar name={m.display_name} colorIndex={i} />
+                  <span className="text-sm font-medium">{m.display_name}</span>
+                  <span className="ml-auto text-[11.5px] text-ink-3">
+                    {m.role === "admin" ? "you, admin" : formatTimeAgo(m.joined_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mb-2 flex items-center justify-between rounded-lg bg-card px-4 py-3.5">
+          <div>
+            <div className="text-sm font-medium">{trip.joining_open ? "Joining open" : "Joining closed"}</div>
+            <div className="mt-0.5 text-xs text-ink-3">
+              {trip.joining_open ? "New people can still hop in on the code" : "Nobody new can join right now"}
+            </div>
+          </div>
+          <Switch checked={trip.joining_open} onChange={toggleJoining} label="Toggle joining" />
+        </div>
+      </div>
+
+      <div className="px-5 pb-10 pt-3 md:px-8">
+        <button
+          onClick={startTrip}
+          className="w-full rounded-xl bg-signal py-4 font-semibold text-ink shadow-lg shadow-signal/30 transition-transform active:scale-[0.98]"
+        >
+          {ctaCopy}
         </button>
       </div>
     </FlowShell>

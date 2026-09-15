@@ -100,6 +100,21 @@ export function ReceiptIllustration({ className = "", size = 112 }: Illustration
   );
 }
 
+// An open doorway with a couple of balloons drifting by it — "the room's
+// still shut, but people are gathering outside."
+export function LobbyIllustration({ className = "", size = 112 }: IllustrationProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" className={className} {...base}>
+      <path d="M28 84 V40 a20 20 0 0 1 40 0 V84" />
+      <path d="M18 84 H78" />
+      <circle cx="68" cy="20" r="9" />
+      <path d="M68 29 Q66 38 70 44" />
+      <circle cx="19" cy="30" r="7" />
+      <path d="M19 37 Q21 44 17 50" />
+    </svg>
+  );
+}
+
 // A clipboard with one item checked off — "nothing on the list yet."
 export function ChecklistIllustration({ className = "", size = 112 }: IllustrationProps) {
   return (
