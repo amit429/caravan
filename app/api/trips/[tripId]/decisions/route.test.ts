@@ -3,8 +3,10 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const mockGetAdminUser = vi.fn();
 const mockInsertDecision = vi.fn();
 const mockBroadcast = vi.fn();
+const mockPostAgentMessage = vi.fn();
 
 vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
+vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
   getAdminUser: () => mockGetAdminUser(),
@@ -55,6 +57,7 @@ beforeEach(() => {
   mockGetAdminUser.mockReset();
   mockInsertDecision.mockReset();
   mockBroadcast.mockReset();
+  mockPostAgentMessage.mockReset();
 });
 
 describe("POST /api/trips/[tripId]/decisions", () => {
@@ -75,7 +78,7 @@ describe("POST /api/trips/[tripId]/decisions", () => {
   it("creates a decision in the OPEN state", async () => {
     mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "amit@example.com" });
     mockInsertDecision.mockResolvedValue({
-      data: { id: "decision-1", trip_id: "trip-1", state: "OPEN", options: validDecision.options },
+      data: { id: "decision-1", trip_id: "trip-1", type: "DATES", state: "OPEN", options: validDecision.options, deadline: null },
       error: null,
     });
     const res = await POST(postRequest(validDecision), { params: Promise.resolve({ tripId: "trip-1" }) });
@@ -84,5 +87,8 @@ describe("POST /api/trips/[tripId]/decisions", () => {
       expect.objectContaining({ trip_id: "trip-1", type: "DATES", state: "OPEN" })
     );
     expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
+    expect(mockPostAgentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ tripId: "trip-1", agentName: "concierge", body: expect.stringContaining("New vote") })
+    );
   });
 });

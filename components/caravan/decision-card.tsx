@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
 import type { DecisionRow, VoteRow } from "@/lib/database.types";
 
@@ -9,11 +10,13 @@ export function DecisionCard({
   decision,
   votes,
   isAdmin,
+  showDetailLink = true,
 }: {
   tripId: string;
   decision: DecisionRow;
   votes: VoteRow[];
   isAdmin: boolean;
+  showDetailLink?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -64,8 +67,13 @@ export function DecisionCard({
           </span>
         )}
       </div>
-      <div className="px-3.5 pb-2.5 pt-1 font-display text-base font-semibold">
-        {DECISION_TYPE_TITLE[decision.type] ?? decision.type}
+      <div className="flex items-center gap-2 px-3.5 pb-2.5 pt-1">
+        <span className="font-display text-base font-semibold">{DECISION_TYPE_TITLE[decision.type] ?? decision.type}</span>
+        {showDetailLink && (
+          <Link href={`/trip/${tripId}/decisions/${decision.id}`} className="ml-auto text-xs font-medium text-plum">
+            Details
+          </Link>
+        )}
       </div>
       <div className="flex flex-col">
         {decision.options.map((opt) => {
