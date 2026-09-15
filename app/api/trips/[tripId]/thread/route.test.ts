@@ -4,6 +4,8 @@ const mockResolveCaller = vi.fn();
 const mockEnsureThread = vi.fn();
 const mockLoadThread = vi.fn();
 const mockRunScribe = vi.fn();
+const mockAnswerTripQuestion = vi.fn();
+const mockPostAgentMessage = vi.fn();
 const mockBroadcast = vi.fn();
 const mockAfter = vi.fn();
 const mockInsertSingle = vi.fn();
@@ -13,6 +15,8 @@ vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unkn
 vi.mock("@/lib/threads/ensure-thread", () => ({ ensureThread: (...args: unknown[]) => mockEnsureThread(...args) }));
 vi.mock("@/lib/threads/load-thread", () => ({ loadThread: (...args: unknown[]) => mockLoadThread(...args) }));
 vi.mock("@/lib/agents/scribe", () => ({ runScribe: (...args: unknown[]) => mockRunScribe(...args) }));
+vi.mock("@/lib/agents/answer-question", () => ({ answerTripQuestion: (...args: unknown[]) => mockAnswerTripQuestion(...args) }));
+vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 
 vi.mock("@/lib/auth/resolve-caller", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/resolve-caller")>("@/lib/auth/resolve-caller");
@@ -49,6 +53,8 @@ beforeEach(() => {
   mockEnsureThread.mockReset().mockResolvedValue("thread-1");
   mockLoadThread.mockReset().mockResolvedValue({ threadId: "thread-1", messages: [] });
   mockRunScribe.mockReset();
+  mockAnswerTripQuestion.mockReset().mockResolvedValue("The cost estimate is 11k-14k a head.");
+  mockPostAgentMessage.mockReset();
   mockBroadcast.mockReset();
   mockAfter.mockReset();
   mockInsertSingle.mockReset();
@@ -123,5 +129,18 @@ describe("POST /api/trips/[tripId]/thread", () => {
     expect(mockRunScribe).toHaveBeenCalledWith(
       expect.objectContaining({ tripId: "trip-1", threadId: "thread-1" })
     );
+  });
+
+  it("answers instead of running Scribe when intent is 'ask'", async () => {
+    mockResolveCaller.mockResolvedValue({ id: "m1", status: "active" });
+    mockInsertSingle.mockResolvedValue({ data: { id: "msg-1", body: "What's the cost estimate?" }, error: null });
+    await POST(postRequest({ body: "What's the cost estimate?", intent: "ask" }), { params });
+    const deferred = mockAfter.mock.calls[0][0] as () => Promise<void>;
+    await deferred();
+    expect(mockAnswerTripQuestion).toHaveBeenCalledWith("trip-1", "What's the cost estimate?");
+    expect(mockPostAgentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ tripId: "trip-1", agentName: "concierge", threadId: "thread-1", body: "The cost estimate is 11k-14k a head." })
+    );
+    expect(mockRunScribe).not.toHaveBeenCalled();
   });
 });

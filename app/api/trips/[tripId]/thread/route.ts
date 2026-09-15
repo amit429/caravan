@@ -4,6 +4,8 @@ import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { ensureThread } from "@/lib/threads/ensure-thread";
 import { loadThread } from "@/lib/threads/load-thread";
 import { runScribe } from "@/lib/agents/scribe";
+import { answerTripQuestion } from "@/lib/agents/answer-question";
+import { postAgentMessage } from "@/lib/agents/post-agent-message";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 import { threadMessageSchema } from "@/lib/validation";
 
@@ -60,15 +62,23 @@ export async function POST(
 
   await broadcastTripChange(tripId, { type: "thread_message", threadId, message });
 
-  // Same fire-and-forget pattern as the group message route — extraction
-  // never blocks the member's send, and a thread-origin fact's receipt goes
-  // back into this same thread (see postAgentMessage), never the group lane.
-  after(async () => {
-    const { data: authorMember } = await supabase.from("members").select().eq("id", callerMemberId).single();
-    if (authorMember) {
-      await runScribe({ tripId, message, authorMember, threadId });
-    }
-  });
+  // Same fire-and-forget pattern as the group message route — nothing here
+  // blocks the member's send. "Ask the agent" (D3) skips Scribe entirely: a
+  // question isn't a fact statement, and running both would double the LLM
+  // calls for no reason.
+  if (parsed.data.intent === "ask") {
+    after(async () => {
+      const answer = await answerTripQuestion(tripId, parsed.data.body);
+      await postAgentMessage({ tripId, agentName: "concierge", body: answer, threadId });
+    });
+  } else {
+    after(async () => {
+      const { data: authorMember } = await supabase.from("members").select().eq("id", callerMemberId).single();
+      if (authorMember) {
+        await runScribe({ tripId, message, authorMember, threadId });
+      }
+    });
+  }
 
   return NextResponse.json({ message }, { status: 201 });
 }

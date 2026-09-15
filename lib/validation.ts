@@ -83,6 +83,7 @@ export type TaskStatusInput = z.infer<typeof taskStatusSchema>;
 
 export const threadMessageSchema = z.object({
   body: z.string().trim().min(1).max(2000),
+  intent: z.enum(["chat", "ask"]).optional().default("chat"),
 });
 export type ThreadMessageInput = z.infer<typeof threadMessageSchema>;
 

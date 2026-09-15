@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SendHorizontal } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Avatar } from "@/components/caravan/avatar";
+import { ComposerBar } from "@/components/caravan/composer-bar";
 import type { MemberRow, MessageRow } from "@/lib/database.types";
 
 export function RoomFeed({
@@ -10,15 +10,15 @@ export function RoomFeed({
   initialMessages,
   members,
   myMemberId,
+  isAdmin,
 }: {
   tripId: string;
   initialMessages: MessageRow[];
   members: MemberRow[];
   myMemberId: string;
+  isAdmin: boolean;
 }) {
   const [messages, setMessages] = useState<MessageRow[]>(initialMessages);
-  const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
 
   const memberByIdx = useMemo(() => {
@@ -52,19 +52,6 @@ export function RoomFeed({
   useEffect(() => {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
   }, [messages.length]);
-
-  async function send() {
-    const body = draft.trim();
-    if (!body || sending) return;
-    setDraft("");
-    setSending(true);
-    await fetch(`/api/trips/${tripId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
-    });
-    setSending(false);
-  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -113,23 +100,7 @@ export function RoomFeed({
           );
         })}
       </div>
-      <div className="border-t border-line bg-card px-3.5 py-2.5 pb-5 flex gap-2.5 items-center">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder="Say something"
-          className="flex-1 bg-sunk rounded-full px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-plum/30"
-        />
-        <button
-          onClick={send}
-          disabled={sending || !draft.trim()}
-          className="size-9 rounded-full bg-plum text-white grid place-items-center transition-transform active:scale-90 disabled:opacity-40"
-          aria-label="Send"
-        >
-          <SendHorizontal className="size-4" />
-        </button>
-      </div>
+      <ComposerBar tripId={tripId} isAdmin={isAdmin} />
     </div>
   );
 }
