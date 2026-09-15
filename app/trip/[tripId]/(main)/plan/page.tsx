@@ -7,7 +7,6 @@ import { MapRouteIllustration } from "@/components/caravan/illustrations";
 import { Avatar } from "@/components/caravan/avatar";
 import { DecisionCard } from "@/components/caravan/decision-card";
 import { CreateDatesDecisionButton } from "@/components/caravan/create-dates-decision-button";
-import { GenerateDestinationsButton } from "@/components/caravan/generate-destinations-button";
 import { GenerateItineraryButton } from "@/components/caravan/generate-itinerary-button";
 import { PrepChecklist } from "@/components/caravan/prep-checklist";
 import { GenerateChecklistButton } from "@/components/caravan/generate-checklist-button";
@@ -129,6 +128,12 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
   const shareableFacts = allFacts.filter((f) => f.category !== "budget");
   const memberNames = new Map(activeMembers.map((m, i) => [m.id, { name: m.display_name, colorIndex: i }]));
 
+  // DESTINATION decisions get their own page (the three-options-with-reasoning
+  // hero was the single biggest thing crowding this page) — everything else
+  // (DATES, CUSTOM votes) still shows inline since those are quick single-card
+  // decisions, not a whole screen's worth of content.
+  const otherDecisions = allDecisions.filter((d) => d.type !== "DESTINATION");
+
   return (
     <div className="flex-1 flex flex-col gap-4 overflow-y-auto px-5 pb-8 pt-5 md:px-8">
       <RealtimeRefresh tripId={tripId} />
@@ -221,24 +226,18 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
         </section>
       )}
 
-      {!hasDestinationDecision && (
-        <section className="flex flex-col gap-2">
-          <h3 className="font-mono text-xs text-ink-3">DESTINATION</h3>
-          {isAdmin ? (
-            <div className="rounded-lg bg-card p-3.5">
-              <GenerateDestinationsButton tripId={tripId} />
-            </div>
-          ) : (
-            <div className="rounded-lg bg-sunk p-4 text-sm text-ink-2">Nobody&rsquo;s put together options yet.</div>
-          )}
-        </section>
-      )}
+      <SummaryLinkCard
+        href={`/trip/${tripId}/destination`}
+        label="WHERE"
+        title={destinationLabel ?? (hasDestinationDecision ? "Voting now" : "Not decided yet")}
+        subtitle={hasLockedDestination ? "Locked" : hasDestinationDecision ? "Three options, tap to vote" : "Nobody's put together options yet"}
+      />
 
-      {allDecisions.length > 0 && (
+      {otherDecisions.length > 0 && (
         <section className="flex flex-col gap-2">
           <h3 className="font-mono text-xs text-ink-3">DECISIONS</h3>
           <div className="flex flex-col gap-3">
-            {allDecisions.map((d) => (
+            {otherDecisions.map((d) => (
               <DecisionCard key={d.id} tripId={tripId} decision={d} votes={votesByDecision.get(d.id) ?? []} isAdmin={isAdmin} />
             ))}
           </div>
