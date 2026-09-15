@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, Settings } from "lucide-react";
-import { TabBar } from "@/components/caravan/tab-bar";
-import { SidebarNav } from "@/components/caravan/sidebar-nav";
+import { TabBar } from "@/components/caravan/layout/tab-bar";
+import { SidebarNav } from "@/components/caravan/layout/sidebar-nav";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { getAuthUser } from "@/lib/auth/session";
 

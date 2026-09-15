@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { generateInviteCode } from "@/lib/invite-code";
+import { generateInviteCode } from "@/lib/trips/invite-code";
 import { createTripSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {

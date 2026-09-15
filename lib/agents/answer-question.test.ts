@@ -8,8 +8,8 @@ const mockTasksSelect = vi.fn();
 const mockBookingsSelect = vi.fn();
 
 vi.mock("ai", () => ({ generateText: (...args: unknown[]) => mockGenerateText(...args) }));
-vi.mock("./log-run", () => ({ logAgentRun: (...args: unknown[]) => mockLogAgentRun(...args) }));
-vi.mock("./model", () => ({ flashModel: "mock-flash-model", estimateCost: () => 0 }));
+vi.mock("./runtime/log-run", () => ({ logAgentRun: (...args: unknown[]) => mockLogAgentRun(...args) }));
+vi.mock("./runtime/model", () => ({ flashModel: "mock-flash-model", estimateCost: () => 0 }));
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
     from: (table: string) => {

@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useRef, useState } from "react";
-import { BottomSheet } from "@/components/caravan/bottom-sheet";
+import { BottomSheet } from "@/components/caravan/primitives/bottom-sheet";
 
 type ConfirmState = { title: string; body?: string; destructive?: boolean };
 

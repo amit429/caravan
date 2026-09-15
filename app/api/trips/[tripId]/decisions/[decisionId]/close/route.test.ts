@@ -6,7 +6,7 @@ const mockVotesSelect = vi.fn();
 const mockUpdate = vi.fn();
 const mockPostAgentMessage = vi.fn();
 
-vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
+vi.mock("@/lib/agents/runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
   getAuthUser: () => mockGetAdminUser(),

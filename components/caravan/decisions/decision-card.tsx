@@ -3,9 +3,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
-import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
-import { BottomSheet } from "@/components/caravan/bottom-sheet";
-import { useConfirm } from "@/components/caravan/use-confirm";
+import { DECISION_TYPE_TITLE } from "@/lib/decisions/decision-titles";
+import { BottomSheet } from "@/components/caravan/primitives/bottom-sheet";
+import { useConfirm } from "@/components/caravan/shared/use-confirm";
 import type { DecisionRow, VoteRow } from "@/lib/database.types";
 
 type Block = { optionId: string; message: string };

@@ -2,9 +2,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
-import { useConfirm } from "@/components/caravan/use-confirm";
-import { EmptyState } from "@/components/caravan/empty-state";
-import { SuitcaseIllustration } from "@/components/caravan/illustrations";
+import { useConfirm } from "@/components/caravan/shared/use-confirm";
+import { EmptyState } from "@/components/caravan/primitives/empty-state";
+import { SuitcaseIllustration } from "@/components/caravan/primitives/illustrations";
 import type { BookingRow, BookingStatusRow, MemberRow } from "@/lib/database.types";
 
 function BookingItem({

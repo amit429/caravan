@@ -1,5 +1,5 @@
-import { FlowShell } from "@/components/caravan/flow-shell";
-import { Skeleton } from "@/components/caravan/skeleton";
+import { FlowShell } from "@/components/caravan/primitives/flow-shell";
+import { Skeleton } from "@/components/caravan/primitives/skeleton";
 
 export default function JoinCompleteLoading() {
   return (

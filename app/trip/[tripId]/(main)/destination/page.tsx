@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { DecisionCard } from "@/components/caravan/decision-card";
-import { GenerateDestinationsButton } from "@/components/caravan/generate-destinations-button";
-import { EmptyState } from "@/components/caravan/empty-state";
-import { CompassIllustration } from "@/components/caravan/illustrations";
+import { DecisionCard } from "@/components/caravan/decisions/decision-card";
+import { GenerateDestinationsButton } from "@/components/caravan/generate/generate-destinations-button";
+import { EmptyState } from "@/components/caravan/primitives/empty-state";
+import { CompassIllustration } from "@/components/caravan/primitives/illustrations";
 import type { DecisionRow, VoteRow } from "@/lib/database.types";
 
 // F4/F8 (docs/design/screens.html): the hero moment — three places with real

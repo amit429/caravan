@@ -1,8 +1,8 @@
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 import { isPastDeadline, needsDeadlineReminder, nextNudgeTier } from "@/lib/agents/chaser-rules";
-import { pickWinningOption } from "@/lib/tally-votes";
+import { pickWinningOption } from "@/lib/decisions/tally-votes";
 import type { DecisionRow, FactRow, MemberRow } from "@/lib/database.types";
 
 const DECISION_TITLES: Record<string, string> = {

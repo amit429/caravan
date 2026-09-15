@@ -4,7 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError, requireTripOwner } from "@/lib/auth/resolve-caller";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
-import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import { buildKickoffMessage } from "@/lib/trips/kickoff-message";
 import { MIN_MEMBERS_TO_OPEN } from "@/lib/trips/constants";
 

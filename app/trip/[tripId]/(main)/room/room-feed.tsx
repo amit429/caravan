@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
-import { Avatar } from "@/components/caravan/avatar";
-import { ComposerBar } from "@/components/caravan/composer-bar";
+import { Avatar } from "@/components/caravan/primitives/avatar";
+import { ComposerBar } from "@/components/caravan/room/composer-bar";
 import type { MemberRow, MessageRow } from "@/lib/database.types";
 
 export function RoomFeed({

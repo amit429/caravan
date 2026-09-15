@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { closeDecisionSchema } from "@/lib/validation";
-import { pickWinningOption, tallyVotes } from "@/lib/tally-votes";
-import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { pickWinningOption, tallyVotes } from "@/lib/decisions/tally-votes";
+import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import type { DecisionOption } from "@/lib/database.types";
 
 // Manual close (Phase 2 has no Chaser cron yet — the deadline is stored and

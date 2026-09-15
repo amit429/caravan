@@ -16,7 +16,7 @@ const mockCostEstimateSelect = vi.fn();
 
 vi.mock("@/lib/agents/scout", () => ({ runScout: (...args: unknown[]) => mockRunScout(...args) }));
 vi.mock("@/lib/agents/cost-estimator", () => ({ runCostEstimator: (...args: unknown[]) => mockRunCostEstimator(...args) }));
-vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
+vi.mock("@/lib/agents/runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({

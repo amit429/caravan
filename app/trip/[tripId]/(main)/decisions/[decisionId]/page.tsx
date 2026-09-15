@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
-import { DecisionCard } from "@/components/caravan/decision-card";
-import { Avatar } from "@/components/caravan/avatar";
+import { DECISION_TYPE_TITLE } from "@/lib/decisions/decision-titles";
+import { DecisionCard } from "@/components/caravan/decisions/decision-card";
+import { Avatar } from "@/components/caravan/primitives/avatar";
 import type { DecisionRow, MemberRow, VoteRow } from "@/lib/database.types";
 
 export default async function DecisionDetailPage({

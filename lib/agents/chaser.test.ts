@@ -9,7 +9,7 @@ const mockFactsSelect = vi.fn();
 const mockMembersUpdate = vi.fn();
 const mockBroadcast = vi.fn();
 
-vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
+vi.mock("@/lib/agents/runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/supabase/service", () => ({

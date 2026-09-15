@@ -2,8 +2,8 @@ import { redirect, notFound } from "next/navigation";
 import { getAuthUser } from "@/lib/auth/session";
 import { joinTripAsMember } from "@/lib/trips/join-as-member";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { FlowShell } from "@/components/caravan/flow-shell";
-import { ClosedGateIllustration } from "@/components/caravan/illustrations";
+import { FlowShell } from "@/components/caravan/primitives/flow-shell";
+import { ClosedGateIllustration } from "@/components/caravan/primitives/illustrations";
 
 // Lands here straight out of the Google OAuth callback (see
 // JoinWithGoogleButton's `next` param) with a real session already set, or

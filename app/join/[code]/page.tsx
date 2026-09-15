@@ -2,9 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { getAuthUser } from "@/lib/auth/session";
-import { FlowShell } from "@/components/caravan/flow-shell";
-import { ClosedGateIllustration } from "@/components/caravan/illustrations";
-import { JoinWithGoogleButton } from "@/components/caravan/join-with-google-button";
+import { FlowShell } from "@/components/caravan/primitives/flow-shell";
+import { ClosedGateIllustration } from "@/components/caravan/primitives/illustrations";
+import { JoinWithGoogleButton } from "@/components/caravan/auth/join-with-google-button";
 
 export default async function InviteLandingPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;

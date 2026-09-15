@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeTopDateWindows } from "./date-solver";
-import type { AvailabilityRow } from "./database.types";
+import type { AvailabilityRow } from "../database.types";
 
 function avail(
   memberId: string,

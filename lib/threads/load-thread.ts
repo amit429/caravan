@@ -1,7 +1,7 @@
 import type { createServiceSupabaseClient } from "@/lib/supabase/service";
 import type { MessageRow } from "@/lib/database.types";
 import { ensureThread } from "./ensure-thread";
-import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 
 // Shared by the thread API route and the You page's server component so
 // both land on the exact same "ensure it exists, seed it if it's brand new"

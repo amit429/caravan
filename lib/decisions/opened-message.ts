@@ -1,4 +1,4 @@
-import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
+import { DECISION_TYPE_TITLE } from "@/lib/decisions/decision-titles";
 import type { DecisionOption, DecisionType } from "@/lib/database.types";
 
 // F2 (docs/design/screens.html): a decision opening is worth a line in the

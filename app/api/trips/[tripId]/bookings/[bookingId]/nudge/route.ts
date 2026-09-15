@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { requireTripOwner } from "@/lib/auth/resolve-caller";
-import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import { buildNudgeMessage } from "@/lib/bookings/nudge-message";
 import type { MemberRow } from "@/lib/database.types";
 

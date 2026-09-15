@@ -1,6 +1,6 @@
 "use client";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
-import { GoogleIcon } from "@/components/caravan/google-icon";
+import { GoogleIcon } from "@/components/caravan/primitives/google-icon";
 import { POST_AUTH_REDIRECT_COOKIE } from "@/lib/auth/post-auth-redirect";
 
 export function JoinWithGoogleButton({ code, label = "Continue with Google" }: { code: string; label?: string }) {

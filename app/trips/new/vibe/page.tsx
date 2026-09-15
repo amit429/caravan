@@ -1,12 +1,12 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { AppBar } from "@/components/caravan/app-bar";
-import { ProgressDots } from "@/components/caravan/progress-dots";
-import { Chip } from "@/components/caravan/chip";
-import { BudgetSlider } from "@/components/caravan/budget-slider";
+import { AppBar } from "@/components/caravan/layout/app-bar";
+import { ProgressDots } from "@/components/caravan/primitives/progress-dots";
+import { Chip } from "@/components/caravan/primitives/chip";
+import { BudgetSlider } from "@/components/caravan/intake/budget-slider";
 import { writeDraft, readDraft } from "@/app/trips/new/new-trip-store";
-import { FlowShell } from "@/components/caravan/flow-shell";
+import { FlowShell } from "@/components/caravan/primitives/flow-shell";
 
 const VIBE_OPTIONS = ["Beach", "Mountains", "Party", "Slow", "Road trip", "Food", "Trekking", "Cities"];
 

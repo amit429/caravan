@@ -4,8 +4,8 @@ import { CheckCircle2, CircleDashed, ChevronRight } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
 import { loadThread } from "@/lib/threads/load-thread";
-import { ThreadFeed } from "@/components/caravan/thread-feed";
-import { RealtimeRefresh } from "@/components/caravan/realtime-refresh";
+import { ThreadFeed } from "@/components/caravan/room/thread-feed";
+import { RealtimeRefresh } from "@/components/caravan/shared/realtime-refresh";
 import type { TaskRow } from "@/lib/database.types";
 
 export default async function YouPage({ params }: { params: Promise<{ tripId: string }> }) {

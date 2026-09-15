@@ -1,18 +1,18 @@
 import { notFound } from "next/navigation";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { computeTopDateWindows } from "@/lib/date-solver";
-import { groupBudgetCeiling } from "@/lib/budget";
-import { MapRouteIllustration } from "@/components/caravan/illustrations";
-import { Avatar } from "@/components/caravan/avatar";
-import { DecisionCard } from "@/components/caravan/decision-card";
-import { CreateDatesDecisionButton } from "@/components/caravan/create-dates-decision-button";
-import { GenerateItineraryButton } from "@/components/caravan/generate-itinerary-button";
-import { PrepChecklist } from "@/components/caravan/prep-checklist";
-import { GenerateChecklistButton } from "@/components/caravan/generate-checklist-button";
-import { ShareSnapshot } from "@/components/caravan/share-snapshot";
-import { RealtimeRefresh } from "@/components/caravan/realtime-refresh";
-import { SummaryLinkCard } from "@/components/caravan/summary-link-card";
+import { computeTopDateWindows } from "@/lib/dates/date-solver";
+import { groupBudgetCeiling } from "@/lib/budget/budget";
+import { MapRouteIllustration } from "@/components/caravan/primitives/illustrations";
+import { Avatar } from "@/components/caravan/primitives/avatar";
+import { DecisionCard } from "@/components/caravan/decisions/decision-card";
+import { CreateDatesDecisionButton } from "@/components/caravan/decisions/create-dates-decision-button";
+import { GenerateItineraryButton } from "@/components/caravan/generate/generate-itinerary-button";
+import { PrepChecklist } from "@/components/caravan/plan/prep-checklist";
+import { GenerateChecklistButton } from "@/components/caravan/generate/generate-checklist-button";
+import { ShareSnapshot } from "@/components/caravan/sharing/share-snapshot";
+import { RealtimeRefresh } from "@/components/caravan/shared/realtime-refresh";
+import { SummaryLinkCard } from "@/components/caravan/plan/summary-link-card";
 import type {
   AvailabilityRow,
   BookingRow,

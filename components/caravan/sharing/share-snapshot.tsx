@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { buildTripSummary } from "@/lib/whatsapp-summary";
+import { buildTripSummary } from "@/lib/trips/whatsapp-summary";
 
 export function ShareSnapshot({
   tripName,

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, SendHorizontal, Link2, Vote, Sparkles, Trash2 } from "lucide-react";
-import { BottomSheet } from "@/components/caravan/bottom-sheet";
+import { BottomSheet } from "@/components/caravan/primitives/bottom-sheet";
 
 type SheetView = "menu" | "link" | "vote" | "ask";
 

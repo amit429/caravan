@@ -1,10 +1,10 @@
 import { generateObject } from "ai";
 import { z } from "zod";
-import { flashModel, estimateCost } from "./model";
-import { logAgentRun } from "./log-run";
-import { postAgentMessage } from "./post-agent-message";
+import { flashModel, estimateCost } from "./runtime/model";
+import { logAgentRun } from "./runtime/log-run";
+import { postAgentMessage } from "./runtime/post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { flagMembersOverBudget } from "@/lib/cost-flags";
+import { flagMembersOverBudget } from "@/lib/budget/cost-flags";
 import type { DecisionRow, FactRow } from "@/lib/database.types";
 
 const MODEL_ID = "gemini-3.6-flash";

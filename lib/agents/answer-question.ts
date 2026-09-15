@@ -1,8 +1,8 @@
 import { generateText } from "ai";
-import { flashModel, estimateCost } from "./model";
-import { logAgentRun } from "./log-run";
+import { flashModel, estimateCost } from "./runtime/model";
+import { logAgentRun } from "./runtime/log-run";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
+import { DECISION_TYPE_TITLE } from "@/lib/decisions/decision-titles";
 import type { DecisionRow, CostEstimateRow, TaskRow, BookingRow } from "@/lib/database.types";
 
 const MODEL_ID = "gemini-3.6-flash";

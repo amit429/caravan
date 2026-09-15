@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BottomSheet } from "@/components/caravan/bottom-sheet";
-import { Avatar } from "@/components/caravan/avatar";
+import { BottomSheet } from "@/components/caravan/primitives/bottom-sheet";
+import { Avatar } from "@/components/caravan/primitives/avatar";
 import { FACT_CATEGORY_LABEL, formatFactValue } from "@/lib/facts/format-fact";
 import { vibeEmoji } from "@/lib/facts/vibe-emoji";
 import type { FactRow, MemberRow } from "@/lib/database.types";

@@ -1,10 +1,10 @@
 import { generateObject } from "ai";
 import { z } from "zod";
-import { flashModel, estimateCost } from "./model";
-import { logAgentRun } from "./log-run";
-import { postAgentMessage } from "./post-agent-message";
+import { flashModel, estimateCost } from "./runtime/model";
+import { logAgentRun } from "./runtime/log-run";
+import { postAgentMessage } from "./runtime/post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { computeTopDateWindows } from "@/lib/date-solver";
+import { computeTopDateWindows } from "@/lib/dates/date-solver";
 import type { AvailabilityRow, DecisionRow, FactRow, ItineraryDay, MemberRow } from "@/lib/database.types";
 
 const MODEL_ID = "gemini-3.6-flash";

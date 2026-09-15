@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FlowShell } from "@/components/caravan/flow-shell";
+import { FlowShell } from "@/components/caravan/primitives/flow-shell";
 
 export default function JoinEntryPage() {
   const router = useRouter();

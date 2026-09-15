@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
-import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
+import { DECISION_TYPE_TITLE } from "@/lib/decisions/decision-titles";
 import type { DecisionType } from "@/lib/database.types";
 
 // PRD G6 / spec's decision state enum already anticipated REOPENED — this

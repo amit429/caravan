@@ -1,4 +1,4 @@
-import type { AvailabilityRow } from "./database.types";
+import type { AvailabilityRow } from "../database.types";
 
 export type DateWindow = {
   startDate: string;

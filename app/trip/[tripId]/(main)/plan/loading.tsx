@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/caravan/skeleton";
+import { Skeleton } from "@/components/caravan/primitives/skeleton";
 
 function SectionSkeleton({ lines = 2 }: { lines?: number }) {
   return (

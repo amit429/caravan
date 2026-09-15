@@ -8,7 +8,7 @@ const mockStatusSelect = vi.fn();
 const mockTripSingle = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({ getAuthUser: () => mockGetAdminUser() }));
-vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
+vi.mock("@/lib/agents/runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
     from: (table: string) => {

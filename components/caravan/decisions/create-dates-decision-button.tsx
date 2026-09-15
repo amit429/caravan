@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { DateWindow } from "@/lib/date-solver";
+import type { DateWindow } from "@/lib/dates/date-solver";
 
 function formatShort(iso: string) {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, {

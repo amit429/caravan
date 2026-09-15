@@ -5,7 +5,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { createDecisionSchema } from "@/lib/validation";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
-import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import { buildDecisionOpenedMessage } from "@/lib/decisions/opened-message";
 
 // Listing is dual-auth (admin or member both view decisions on Plan/Room) so it

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { MemberFactsBoard } from "@/components/caravan/member-facts-board";
+import { MemberFactsBoard } from "@/components/caravan/plan/member-facts-board";
 import type { FactRow, MemberRow } from "@/lib/database.types";
 
 // Budget stays private forever — not even the admin sees an individual

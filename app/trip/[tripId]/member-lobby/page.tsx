@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Compass } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
-import { AvatarStack } from "@/components/caravan/avatar";
-import { FlowShell } from "@/components/caravan/flow-shell";
-import { Skeleton } from "@/components/caravan/skeleton";
-import { AmbientGlow } from "@/components/caravan/ambient-glow";
+import { AvatarStack } from "@/components/caravan/primitives/avatar";
+import { FlowShell } from "@/components/caravan/primitives/flow-shell";
+import { Skeleton } from "@/components/caravan/primitives/skeleton";
+import { AmbientGlow } from "@/components/caravan/primitives/ambient-glow";
 import type { MemberRow } from "@/lib/database.types";
 
 type LobbyTrip = { id: string; name: string; status: string };

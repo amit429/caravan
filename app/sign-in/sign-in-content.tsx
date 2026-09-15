@@ -1,9 +1,9 @@
 "use client";
 import { useSearchParams } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
-import { AppBar } from "@/components/caravan/app-bar";
-import { FlowShell } from "@/components/caravan/flow-shell";
-import { GoogleIcon } from "@/components/caravan/google-icon";
+import { AppBar } from "@/components/caravan/layout/app-bar";
+import { FlowShell } from "@/components/caravan/primitives/flow-shell";
+import { GoogleIcon } from "@/components/caravan/primitives/google-icon";
 
 export function SignInContent() {
   const supabase = createBrowserSupabaseClient();

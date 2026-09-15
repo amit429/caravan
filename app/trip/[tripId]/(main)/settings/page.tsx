@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import { getAuthUser } from "@/lib/auth/session";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
-import { ToggleJoiningButton } from "@/components/caravan/toggle-joining-button";
-import { ReopenDecisionButton } from "@/components/caravan/reopen-decision-button";
-import { RemoveMemberButton } from "@/components/caravan/remove-member-button";
-import { InviteLinkCard } from "@/components/caravan/invite-link-card";
-import { DeleteTripButton } from "@/components/caravan/delete-trip-button";
-import { Avatar } from "@/components/caravan/avatar";
+import { DECISION_TYPE_TITLE } from "@/lib/decisions/decision-titles";
+import { ToggleJoiningButton } from "@/components/caravan/settings/toggle-joining-button";
+import { ReopenDecisionButton } from "@/components/caravan/decisions/reopen-decision-button";
+import { RemoveMemberButton } from "@/components/caravan/settings/remove-member-button";
+import { InviteLinkCard } from "@/components/caravan/sharing/invite-link-card";
+import { DeleteTripButton } from "@/components/caravan/settings/delete-trip-button";
+import { Avatar } from "@/components/caravan/primitives/avatar";
 import type { DecisionRow, MemberRow } from "@/lib/database.types";
 
 const TONE_LABEL: Record<string, string> = {

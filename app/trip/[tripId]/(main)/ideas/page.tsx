@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { IdeaInbox } from "@/components/caravan/idea-inbox";
+import { IdeaInbox } from "@/components/caravan/plan/idea-inbox";
 import type { IdeaRow, IdeaVoteRow } from "@/lib/database.types";
 
 export default async function IdeasPage({ params }: { params: Promise<{ tripId: string }> }) {

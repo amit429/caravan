@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
-import { Avatar } from "@/components/caravan/avatar";
+import { Avatar } from "@/components/caravan/primitives/avatar";
 
 export function AccountMenu({ email }: { email: string }) {
   const [open, setOpen] = useState(false);

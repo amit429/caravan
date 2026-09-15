@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { getAuthUser } from "@/lib/auth/session";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { CompassIllustration } from "@/components/caravan/illustrations";
-import { AccountMenu } from "@/components/caravan/account-menu";
-import { AvatarStack } from "@/components/caravan/avatar";
+import { CompassIllustration } from "@/components/caravan/primitives/illustrations";
+import { AccountMenu } from "@/components/caravan/layout/account-menu";
+import { AvatarStack } from "@/components/caravan/primitives/avatar";
 import type { MemberRow, TripRow } from "@/lib/database.types";
 
 const STATUS_STYLE: Record<TripRow["status"], { label: string; className: string }> = {

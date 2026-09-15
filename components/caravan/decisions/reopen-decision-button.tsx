@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useConfirm } from "@/components/caravan/use-confirm";
+import { useConfirm } from "@/components/caravan/shared/use-confirm";
 
 export function ReopenDecisionButton({ tripId, decisionId }: { tripId: string; decisionId: string }) {
   const router = useRouter();

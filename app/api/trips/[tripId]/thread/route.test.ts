@@ -16,7 +16,7 @@ vi.mock("@/lib/threads/ensure-thread", () => ({ ensureThread: (...args: unknown[
 vi.mock("@/lib/threads/load-thread", () => ({ loadThread: (...args: unknown[]) => mockLoadThread(...args) }));
 vi.mock("@/lib/agents/scribe", () => ({ runScribe: (...args: unknown[]) => mockRunScribe(...args) }));
 vi.mock("@/lib/agents/answer-question", () => ({ answerTripQuestion: (...args: unknown[]) => mockAnswerTripQuestion(...args) }));
-vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
+vi.mock("@/lib/agents/runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 
 vi.mock("@/lib/auth/resolve-caller", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/resolve-caller")>("@/lib/auth/resolve-caller");

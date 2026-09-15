@@ -5,7 +5,7 @@ import { ensureThread } from "@/lib/threads/ensure-thread";
 import { loadThread } from "@/lib/threads/load-thread";
 import { runScribe } from "@/lib/agents/scribe";
 import { answerTripQuestion } from "@/lib/agents/answer-question";
-import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 import { threadMessageSchema } from "@/lib/validation";
 

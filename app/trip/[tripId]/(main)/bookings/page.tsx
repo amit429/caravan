@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { BookingTracker } from "@/components/caravan/booking-tracker";
+import { BookingTracker } from "@/components/caravan/plan/booking-tracker";
 import type { BookingRow, BookingStatusRow, MemberRow } from "@/lib/database.types";
 
 export default async function BookingsPage({ params }: { params: Promise<{ tripId: string }> }) {

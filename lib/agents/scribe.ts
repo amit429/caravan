@@ -1,8 +1,8 @@
 import { generateObject } from "ai";
 import { z } from "zod";
-import { flashModel, estimateCost, fastGoogleOptions } from "./model";
-import { logAgentRun } from "./log-run";
-import { postAgentMessage } from "./post-agent-message";
+import { flashModel, estimateCost, fastGoogleOptions } from "./runtime/model";
+import { logAgentRun } from "./runtime/log-run";
+import { postAgentMessage } from "./runtime/post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import type { MemberRow, MessageRow } from "@/lib/database.types";
 

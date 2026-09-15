@@ -4,7 +4,7 @@ import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { intakeSchema } from "@/lib/validation";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 import { ensureThread } from "@/lib/threads/ensure-thread";
-import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import { buildIntakeReceipt } from "@/lib/threads/intake-receipt";
 
 export async function GET(

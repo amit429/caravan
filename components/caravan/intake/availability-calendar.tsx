@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { Strength } from "@/lib/availability-calendar";
+import type { Strength } from "@/lib/dates/availability-calendar";
 
 const CYCLE: (Strength | null)[] = [null, "free", "partial", "blocked"];
 const DOW = ["M", "T", "W", "T", "F", "S", "S"];

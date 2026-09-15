@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { flagMembersOverBudget } from "@/lib/cost-flags";
-import { GenerateCostEstimateButton } from "@/components/caravan/generate-cost-estimate-button";
-import { EmptyState } from "@/components/caravan/empty-state";
-import { ReceiptIllustration } from "@/components/caravan/illustrations";
+import { flagMembersOverBudget } from "@/lib/budget/cost-flags";
+import { GenerateCostEstimateButton } from "@/components/caravan/generate/generate-cost-estimate-button";
+import { EmptyState } from "@/components/caravan/primitives/empty-state";
+import { ReceiptIllustration } from "@/components/caravan/primitives/illustrations";
 import type { CostEstimateRow, FactRow } from "@/lib/database.types";
 
 export default async function CostPage({ params }: { params: Promise<{ tripId: string }> }) {

@@ -5,7 +5,7 @@ const mockPostAgentMessage = vi.fn();
 const mockOrder = vi.fn();
 
 vi.mock("./ensure-thread", () => ({ ensureThread: (...args: unknown[]) => mockEnsureThread(...args) }));
-vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
+vi.mock("@/lib/agents/runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 
 const supabase = {
   from: () => ({ select: () => ({ eq: () => ({ order: () => mockOrder() }) }) }),

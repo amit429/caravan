@@ -1,7 +1,7 @@
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { runScout } from "@/lib/agents/scout";
 import { runCostEstimator } from "@/lib/agents/cost-estimator";
-import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import type { DecisionRow } from "@/lib/database.types";
 
 type RemoveMemberResult = {

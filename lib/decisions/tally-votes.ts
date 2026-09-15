@@ -1,4 +1,4 @@
-import type { DecisionOption } from "./database.types";
+import type { DecisionOption } from "../database.types";
 
 type VoteLike = { option_id: string; is_veto: boolean };
 

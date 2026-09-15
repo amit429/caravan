@@ -10,9 +10,9 @@ const mockFactsUpdate = vi.fn();
 const mockAvailabilityInsert = vi.fn();
 
 vi.mock("ai", () => ({ generateObject: (...args: unknown[]) => mockGenerateObject(...args) }));
-vi.mock("./log-run", () => ({ logAgentRun: (...args: unknown[]) => mockLogAgentRun(...args) }));
-vi.mock("./post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
-vi.mock("./model", () => ({
+vi.mock("./runtime/log-run", () => ({ logAgentRun: (...args: unknown[]) => mockLogAgentRun(...args) }));
+vi.mock("./runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
+vi.mock("./runtime/model", () => ({
   flashModel: "mock-flash-model",
   estimateCost: () => 0,
   fastGoogleOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },

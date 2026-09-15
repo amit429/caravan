@@ -1,6 +1,6 @@
 import { generateObject } from "ai";
 import { z } from "zod";
-import { flashModel, fastGoogleOptions } from "@/lib/agents/model";
+import { flashModel, fastGoogleOptions } from "@/lib/agents/runtime/model";
 
 type OgTags = { title: string | null; description: string | null; image: string | null };
 

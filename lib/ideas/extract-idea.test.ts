@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const mockGenerateObject = vi.fn();
 vi.mock("ai", () => ({ generateObject: (...args: unknown[]) => mockGenerateObject(...args) }));
-vi.mock("@/lib/agents/model", () => ({ flashModel: "mock-flash-model", fastGoogleOptions: {} }));
+vi.mock("@/lib/agents/runtime/model", () => ({ flashModel: "mock-flash-model", fastGoogleOptions: {} }));
 
 import { parseOgTags, extractIdeaMetadata } from "./extract-idea";
 

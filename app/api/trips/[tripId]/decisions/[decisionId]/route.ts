@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { requireTripOwner } from "@/lib/auth/resolve-caller";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
-import { postAgentMessage } from "@/lib/agents/post-agent-message";
-import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
+import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
+import { DECISION_TYPE_TITLE } from "@/lib/decisions/decision-titles";
 import type { DecisionRow, DecisionType } from "@/lib/database.types";
 
 // votes.decision_id cascades, so deleting the decision cleans up its votes

@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/caravan/skeleton";
+import { Skeleton } from "@/components/caravan/primitives/skeleton";
 
 export default function CostLoading() {
   return (
