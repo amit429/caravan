@@ -6,11 +6,40 @@ import { AppBar } from "@/components/caravan/app-bar";
 import { ProgressDots } from "@/components/caravan/progress-dots";
 import { Chip } from "@/components/caravan/chip";
 import { AvailabilityCalendar } from "@/components/caravan/availability-calendar";
+import { AmbientGlow } from "@/components/caravan/ambient-glow";
+import {
+  SunCalendarIllustration,
+  WalletIllustration,
+  SignpostIllustration,
+  SunWaveIllustration,
+  ShieldIllustration,
+  PartyPopperIllustration,
+} from "@/components/caravan/illustrations";
 import { coalesceAvailability, type Strength } from "@/lib/availability-calendar";
 
 const BUDGET_OPTIONS = ["Under 10k", "10-20k", "20-35k", "Open"];
+const BUDGET_EMOJI: Record<string, string> = { "Under 10k": "🌱", "10-20k": "🙂", "20-35k": "💎", Open: "🚀" };
 const VIBE_OPTIONS = ["Beach", "Mountains", "Party", "Slow", "Road trip", "Food", "Trekking", "Cities"];
+const VIBE_EMOJI: Record<string, string> = {
+  Beach: "🏖️",
+  Mountains: "⛰️",
+  Party: "🎉",
+  Slow: "🌙",
+  "Road trip": "🚗",
+  Food: "🍜",
+  Trekking: "🥾",
+  Cities: "🏙️",
+};
+const HARD_NO_SUGGESTIONS = ["No flights", "No overnight buses", "No trekking", "Back by Sunday night"];
 const STEP_COUNT = 5; // availability, budget, departure city, vibe, hard nos
+
+const STEP_META = [
+  { Icon: SunCalendarIllustration, tint: "bg-signal-d/15 text-signal-d", eyebrow: "When" },
+  { Icon: WalletIllustration, tint: "bg-agent-t text-agent", eyebrow: "Budget" },
+  { Icon: SignpostIllustration, tint: "bg-plum-t text-plum", eyebrow: "From" },
+  { Icon: SunWaveIllustration, tint: "bg-warn-t text-warn", eyebrow: "Vibe" },
+  { Icon: ShieldIllustration, tint: "bg-stop-t text-stop", eyebrow: "Hard nos" },
+];
 
 export default function IntakePage() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -31,9 +60,9 @@ export default function IntakePage() {
     setVibe((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]));
   }
 
-  function addHardNo() {
-    const trimmed = hardNoText.trim();
-    if (!trimmed) return;
+  function addHardNo(text?: string) {
+    const trimmed = (text ?? hardNoText).trim();
+    if (!trimmed || hardNos.includes(trimmed)) return;
     setHardNos((cur) => [...cur, trimmed]);
     setHardNoText("");
   }
@@ -66,14 +95,18 @@ export default function IntakePage() {
 
   if (done) {
     return (
-      <FlowShell className="justify-center items-center gap-4 px-8 text-center">
-        <h1 className="font-display text-2xl font-semibold">You&rsquo;re in</h1>
-        <p className="text-sm text-ink-2">
+      <FlowShell className="relative overflow-hidden justify-center items-center gap-4 px-8 text-center">
+        <AmbientGlow />
+        <div className="relative grid size-20 place-items-center rounded-full bg-signal-d/15 text-signal-d animate-in zoom-in-50 fade-in duration-500">
+          <PartyPopperIllustration size={44} />
+        </div>
+        <h1 className="relative font-display text-2xl font-semibold">You&rsquo;re in</h1>
+        <p className="relative text-sm text-ink-2">
           The agent will work out which dates actually work once everyone&rsquo;s answered.
         </p>
         <button
           onClick={() => router.push(`/trip/${tripId}/room`)}
-          className="w-full py-4 rounded-xl bg-plum text-white font-semibold"
+          className="relative w-full py-4 rounded-xl bg-plum text-white font-semibold transition-transform active:scale-[0.98]"
         >
           Back to the room
         </button>
@@ -88,92 +121,120 @@ export default function IntakePage() {
     step === 3 ||
     step === 4;
 
+  const meta = STEP_META[step];
+  const Icon = meta.Icon;
+
   return (
     <FlowShell>
       <AppBar title="Quick questions" right={`${step + 1} of ${STEP_COUNT}`} />
       <div className="flex-1 flex flex-col gap-4 px-5 md:px-8 overflow-y-auto">
         <ProgressDots step={step} total={STEP_COUNT} />
 
-        {step === 0 && (
-          <>
-            <h1 className="font-display text-2xl font-semibold">When could you go?</h1>
-            <p className="text-sm text-ink-2">
-              Drag across the days. Tap once for free, tap again for &ldquo;could work but it&rsquo;s tight&rdquo;, again for can&rsquo;t.
-            </p>
-            <AvailabilityCalendar marks={availabilityMarks} onChange={setAvailabilityMarks} />
-          </>
-        )}
+        <div key={step} className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-3 duration-300">
+          <div className="flex items-center gap-3">
+            <div className={`grid size-14 shrink-0 place-items-center rounded-full ${meta.tint}`}>
+              <Icon size={30} />
+            </div>
+            <span className="font-mono text-[10.5px] uppercase tracking-wide text-ink-3">
+              Step {step + 1} of {STEP_COUNT} &middot; {meta.eyebrow}
+            </span>
+          </div>
 
-        {step === 1 && (
-          <>
-            <h1 className="font-display text-2xl font-semibold">What&rsquo;s your budget?</h1>
-            <p className="text-sm text-ink-2">Only the group ceiling is ever shared — nobody sees your number.</p>
-            <div className="flex flex-wrap gap-1.5">
-              {BUDGET_OPTIONS.map((b) => (
-                <Chip key={b} selected={budgetBand === b} onClick={() => setBudgetBand(b)}>
-                  {b}
-                </Chip>
-              ))}
-            </div>
-          </>
-        )}
+          {step === 0 && (
+            <>
+              <h1 className="font-display text-2xl font-semibold">When could you go?</h1>
+              <p className="text-sm text-ink-2">
+                Drag across the days. Tap once for free, tap again for &ldquo;could work but it&rsquo;s tight&rdquo;, again for can&rsquo;t.
+              </p>
+              <AvailabilityCalendar marks={availabilityMarks} onChange={setAvailabilityMarks} />
+            </>
+          )}
 
-        {step === 2 && (
-          <>
-            <h1 className="font-display text-2xl font-semibold">Where are you leaving from?</h1>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-ink-2">Departure city</label>
-              <input
-                value={departureCity}
-                onChange={(e) => setDepartureCity(e.target.value)}
-                placeholder="Pune"
-                className="bg-card border border-line rounded-md p-3.5"
-              />
-            </div>
-          </>
-        )}
+          {step === 1 && (
+            <>
+              <h1 className="font-display text-2xl font-semibold">What&rsquo;s your budget?</h1>
+              <div className="rounded-lg border-l-[3px] border-agent bg-agent-t/50 p-3.5">
+                <p className="text-sm">
+                  <span className="font-semibold">Nobody sees this number.</span> Not even the admin &mdash; the group
+                  only ever sees a ceiling the whole plan has to fit under.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {BUDGET_OPTIONS.map((b) => (
+                  <Chip key={b} selected={budgetBand === b} onClick={() => setBudgetBand(b)}>
+                    {BUDGET_EMOJI[b]} {b}
+                  </Chip>
+                ))}
+              </div>
+            </>
+          )}
 
-        {step === 3 && (
-          <>
-            <h1 className="font-display text-2xl font-semibold">What&rsquo;s the vibe?</h1>
-            <p className="text-sm text-ink-2">Pick as many as you want.</p>
-            <div className="flex flex-wrap gap-1.5">
-              {VIBE_OPTIONS.map((v) => (
-                <Chip key={v} selected={vibe.includes(v)} onClick={() => toggleVibe(v)}>
-                  {v}
-                </Chip>
-              ))}
-            </div>
-          </>
-        )}
+          {step === 2 && (
+            <>
+              <h1 className="font-display text-2xl font-semibold">Where are you leaving from?</h1>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-ink-2">Departure city</label>
+                <input
+                  value={departureCity}
+                  onChange={(e) => setDepartureCity(e.target.value)}
+                  placeholder="Pune"
+                  className="bg-card border border-line rounded-md p-3.5 transition-colors focus:border-plum focus:outline-none"
+                />
+              </div>
+            </>
+          )}
 
-        {step === 4 && (
-          <>
-            <h1 className="font-display text-2xl font-semibold">Any hard nos?</h1>
-            <p className="text-sm text-ink-2">
-              Things that rule an option out entirely — these can never be voted away.
-            </p>
-            <div className="flex gap-2">
-              <input
-                value={hardNoText}
-                onChange={(e) => setHardNoText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addHardNo()}
-                placeholder="No overnight buses"
-                className="flex-1 bg-card border border-line rounded-md p-3.5"
-              />
-              <button onClick={addHardNo} className="px-4 rounded-md border border-line font-semibold">
-                Add
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {hardNos.map((h, i) => (
-                <Chip key={i} selected onClick={() => removeHardNo(i)}>
-                  {h} &times;
-                </Chip>
-              ))}
-            </div>
-          </>
-        )}
+          {step === 3 && (
+            <>
+              <h1 className="font-display text-2xl font-semibold">What&rsquo;s the vibe?</h1>
+              <p className="text-sm text-ink-2">Pick as many as you want.</p>
+              <div className="flex flex-wrap gap-1.5">
+                {VIBE_OPTIONS.map((v) => (
+                  <Chip key={v} selected={vibe.includes(v)} onClick={() => toggleVibe(v)}>
+                    {VIBE_EMOJI[v]} {v}
+                  </Chip>
+                ))}
+              </div>
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <h1 className="font-display text-2xl font-semibold">Any hard nos?</h1>
+              <p className="text-sm text-ink-2">
+                Things that rule an option out entirely &mdash; these can never be voted away.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {HARD_NO_SUGGESTIONS.filter((s) => !hardNos.includes(s)).map((s) => (
+                  <Chip key={s} onClick={() => addHardNo(s)}>
+                    + {s}
+                  </Chip>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={hardNoText}
+                  onChange={(e) => setHardNoText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addHardNo()}
+                  placeholder="Something else…"
+                  className="flex-1 bg-card border border-line rounded-md p-3.5 transition-colors focus:border-plum focus:outline-none"
+                />
+                <button onClick={() => addHardNo()} className="px-4 rounded-md border border-line font-semibold transition-colors active:bg-sunk">
+                  Add
+                </button>
+              </div>
+              {hardNos.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {hardNos.map((h, i) => (
+                    <Chip key={i} selected onClick={() => removeHardNo(i)}>
+                      {h} &times;
+                    </Chip>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
         {error && <p className="text-xs text-stop">{error}</p>}
       </div>
@@ -181,7 +242,7 @@ export default function IntakePage() {
         {step > 0 && (
           <button
             onClick={() => setStep((s) => s - 1)}
-            className="flex-1 py-4 rounded-xl border border-line font-semibold"
+            className="flex-1 py-4 rounded-xl border border-line font-semibold transition-colors active:bg-sunk"
           >
             Back
           </button>
@@ -189,9 +250,9 @@ export default function IntakePage() {
         <button
           disabled={!canGoNext || submitting}
           onClick={() => (step === STEP_COUNT - 1 ? submit() : setStep((s) => s + 1))}
-          className="flex-1 py-4 rounded-xl bg-plum text-white font-semibold disabled:opacity-40"
+          className="flex-1 py-4 rounded-xl bg-plum text-white font-semibold disabled:opacity-40 transition-transform active:scale-[0.98]"
         >
-          {step === STEP_COUNT - 1 ? "Done" : "Next"}
+          {step === STEP_COUNT - 1 ? (submitting ? "Saving…" : "Done") : "Next"}
         </button>
       </div>
     </FlowShell>

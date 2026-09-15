@@ -115,6 +115,87 @@ export function LobbyIllustration({ className = "", size = 112 }: IllustrationPr
   );
 }
 
+// A calendar page with a little sun on it — "pick your good days."
+export function SunCalendarIllustration({ className = "", size = 112 }: IllustrationProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" className={className} {...base}>
+      <rect x="14" y="22" width="68" height="58" rx="8" />
+      <path d="M14 38 H82" />
+      <path d="M30 14 V26" />
+      <path d="M66 14 V26" />
+      <circle cx="48" cy="59" r="9" />
+      <path d="M48 43 V47" />
+      <path d="M48 71 V75" />
+      <path d="M32 59 H36" />
+      <path d="M60 59 H64" />
+    </svg>
+  );
+}
+
+// A wallet with a coin tucked in the clasp — "what can you spend, privately."
+export function WalletIllustration({ className = "", size = 112 }: IllustrationProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" className={className} {...base}>
+      <path d="M14 30 h56 a8 8 0 0 1 8 8 v34 a8 8 0 0 1 -8 8 h-56 a8 8 0 0 1 -8 -8 v-34 a8 8 0 0 1 8 -8 Z" />
+      <path d="M14 30 L24 20 H68" />
+      <circle cx="65" cy="55" r="5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+// A signpost with two boards pointing opposite ways — "where are you coming from."
+export function SignpostIllustration({ className = "", size = 112 }: IllustrationProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" className={className} {...base}>
+      <path d="M48 20 V86" />
+      <path d="M48 30 H78 L70 40 L78 50 H48 Z" strokeLinejoin="round" />
+      <path d="M48 46 H18 L26 56 L18 66 H48 Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// A sun over a rolling shoreline — "what are you actually after."
+export function SunWaveIllustration({ className = "", size = 112 }: IllustrationProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" className={className} {...base}>
+      <circle cx="48" cy="36" r="13" />
+      <path d="M48 12 V17" />
+      <path d="M48 55 V60" />
+      <path d="M24 36 H29" />
+      <path d="M67 36 H72" />
+      <path d="M68.5 19.5 L65 23" />
+      <path d="M31 23 L27.5 19.5" />
+      <path d="M12 74 Q22 62 32 74 T52 74 T72 74 T92 74" />
+    </svg>
+  );
+}
+
+// A shield with a line struck through the middle — "this blocks an option, no vote overrides it."
+export function ShieldIllustration({ className = "", size = 112 }: IllustrationProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" className={className} {...base}>
+      <path d="M48 12 L78 24 V49 C78 67 64 79 48 86 C32 79 18 67 18 49 V24 Z" strokeLinejoin="round" />
+      <path d="M37 37 L59 59" />
+      <path d="M59 37 L37 59" />
+    </svg>
+  );
+}
+
+// A party popper mid-burst — the "you're done" celebration.
+export function PartyPopperIllustration({ className = "", size = 112 }: IllustrationProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" className={className} {...base}>
+      <path d="M24 72 L54 42 L66 54 L36 84 Z" strokeLinejoin="round" />
+      <path d="M58 20 V28" />
+      <path d="M72 32 L65 36" />
+      <path d="M76 46 H68" />
+      <circle cx="68" cy="18" r="2.5" fill="currentColor" stroke="none" />
+      <circle cx="82" cy="38" r="2" fill="currentColor" stroke="none" />
+      <circle cx="50" cy="16" r="2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 // A clipboard with one item checked off — "nothing on the list yet."
 export function ChecklistIllustration({ className = "", size = 112 }: IllustrationProps) {
   return (
