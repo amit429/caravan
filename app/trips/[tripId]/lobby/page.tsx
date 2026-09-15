@@ -12,6 +12,7 @@ import { LobbyIllustration } from "@/components/caravan/illustrations";
 import { AmbientGlow } from "@/components/caravan/ambient-glow";
 import { Switch } from "@/components/caravan/switch";
 import { formatTimeAgo } from "@/lib/format-time-ago";
+import { MIN_MEMBERS_TO_OPEN } from "@/lib/trips/constants";
 import type { MemberRow, TripRow } from "@/lib/database.types";
 
 export default function AdminLobbyPage() {
@@ -20,6 +21,7 @@ export default function AdminLobbyPage() {
   const [trip, setTrip] = useState<TripRow | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [copied, setCopied] = useState(false);
+  const [blockedNotice, setBlockedNotice] = useState(false);
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
@@ -65,9 +67,18 @@ export default function AdminLobbyPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "start" }),
     });
-    // Even if this 409s because someone else already opened it in the
-    // meantime, the room is the right place to land, not a silent no-op.
-    if (res.ok || res.status === 409) router.push(`/trip/${tripId}/room`);
+    if (res.status === 409) {
+      const body = await res.json().catch(() => ({}));
+      if (body.error === "not_enough_members") {
+        setBlockedNotice(true);
+        return;
+      }
+      // Someone else already opened it in the meantime — the room is the
+      // right place to land either way, not a silent no-op.
+      router.push(`/trip/${tripId}/room`);
+      return;
+    }
+    if (res.ok) router.push(`/trip/${tripId}/room`);
   }
 
   async function toggleJoining() {
@@ -111,12 +122,11 @@ export default function AdminLobbyPage() {
     );
   }
 
-  const ctaCopy =
-    members.length === 0
-      ? "Open the room anyway"
-      : members.length === 1
-        ? "Open it — it's just you and me"
-        : "Open the room";
+  const remaining = Math.max(0, MIN_MEMBERS_TO_OPEN - members.length);
+  const canOpen = remaining === 0;
+  const ctaCopy = canOpen
+    ? "Open the room"
+    : `Need ${remaining} more to open`;
 
   return (
     <FlowShell>
@@ -149,6 +159,9 @@ export default function AdminLobbyPage() {
             </span>
             Room&rsquo;s still shut &mdash; open it whenever you&rsquo;re ready
           </div>
+          <p className="max-w-[280px] text-[11.5px] text-ink-3">
+            Opens once at least {MIN_MEMBERS_TO_OPEN} people are here &mdash; a 2-3 person group barely needs a room.
+          </p>
         </div>
       </div>
 
@@ -195,9 +208,15 @@ export default function AdminLobbyPage() {
       </div>
 
       <div className="px-5 pb-10 pt-3 md:px-8">
+        {blockedNotice && (
+          <p className="mb-2 text-center text-xs font-medium text-stop">
+            Still need {remaining} more &mdash; the room stays shut till then.
+          </p>
+        )}
         <button
           onClick={startTrip}
-          className="w-full rounded-xl bg-signal py-4 font-semibold text-ink shadow-lg shadow-signal/30 transition-transform active:scale-[0.98]"
+          disabled={!canOpen}
+          className="w-full rounded-xl bg-signal py-4 font-semibold text-ink shadow-lg shadow-signal/30 transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
         >
           {ctaCopy}
         </button>

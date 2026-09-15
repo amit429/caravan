@@ -6,6 +6,7 @@ import { resolveCaller, callerAuthError, requireTripOwner } from "@/lib/auth/res
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 import { postAgentMessage } from "@/lib/agents/post-agent-message";
 import { buildKickoffMessage } from "@/lib/trips/kickoff-message";
+import { MIN_MEMBERS_TO_OPEN } from "@/lib/trips/constants";
 
 // Dual-auth: the member lobby needs this before the trip goes active, when the
 // only realtime channel members can hear is the broadcast one (see
@@ -65,6 +66,19 @@ export async function PATCH(
   if (action === "start") {
     if (trip.status !== "lobby") {
       return NextResponse.json({ error: "trip_not_in_lobby" }, { status: 409 });
+    }
+    // Only gates the lobby → active transition, so a trip that was already
+    // active before this rule shipped is never retroactively affected.
+    const { count: memberCount } = await supabase
+      .from("members")
+      .select("id", { count: "exact", head: true })
+      .eq("trip_id", tripId)
+      .eq("status", "active");
+    if ((memberCount ?? 0) < MIN_MEMBERS_TO_OPEN) {
+      return NextResponse.json(
+        { error: "not_enough_members", minMembers: MIN_MEMBERS_TO_OPEN },
+        { status: 409 }
+      );
     }
     const { data, error } = await supabase
       .from("trips")

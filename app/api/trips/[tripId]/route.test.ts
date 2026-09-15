@@ -10,6 +10,7 @@ const mockMembersGet = vi.fn();
 const mockPostAgentMessage = vi.fn();
 const mockTripOwnerCheck = vi.fn();
 const mockTripDelete = vi.fn();
+const mockMemberCount = vi.fn();
 
 vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
@@ -25,20 +26,23 @@ vi.mock("@/lib/auth/session", () => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabaseClient: () => ({
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          single: () => mockSingle(),
-        }),
-      }),
-      update: (patch: unknown) => ({
-        eq: () => ({
-          select: () => ({
-            single: () => mockUpdate(patch),
+    from: (table: string) => {
+      if (table === "members") return { select: () => ({ eq: () => ({ eq: () => mockMemberCount() }) }) };
+      return {
+        select: () => ({
+          eq: () => ({
+            single: () => mockSingle(),
           }),
         }),
-      }),
-    }),
+        update: (patch: unknown) => ({
+          eq: () => ({
+            select: () => ({
+              single: () => mockUpdate(patch),
+            }),
+          }),
+        }),
+      };
+    },
   }),
 }));
 
@@ -72,6 +76,7 @@ beforeEach(() => {
   mockPostAgentMessage.mockReset();
   mockTripOwnerCheck.mockReset();
   mockTripDelete.mockReset().mockResolvedValue({ error: null });
+  mockMemberCount.mockReset().mockResolvedValue({ count: 4, error: null });
 });
 
 describe("GET /api/trips/[tripId]", () => {
@@ -119,6 +124,17 @@ describe("PATCH /api/trips/[tripId]", () => {
     mockSingle.mockResolvedValue({ data: { id: "trip-1", admin_user_id: "admin-1", status: "active" }, error: null });
     const res = await PATCH(patchRequest("start"), { params: Promise.resolve({ tripId: "trip-1" }) });
     expect(res.status).toBe(409);
+  });
+
+  it("rejects starting a trip with 3 or fewer active members", async () => {
+    mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "x@example.com" });
+    mockSingle.mockResolvedValue({ data: { id: "trip-1", admin_user_id: "admin-1", status: "lobby" }, error: null });
+    mockMemberCount.mockResolvedValue({ count: 3, error: null });
+    const res = await PATCH(patchRequest("start"), { params: Promise.resolve({ tripId: "trip-1" }) });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("not_enough_members");
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it("starts a lobby trip and posts the kickoff message", async () => {
