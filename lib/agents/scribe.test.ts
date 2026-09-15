@@ -44,6 +44,7 @@ const message: MessageRow = {
   id: "msg-1",
   trip_id: "trip-1",
   lane: "group",
+  thread_id: null,
   author_type: "member",
   author_id: "member-1",
   agent_name: null,
@@ -153,6 +154,29 @@ describe("runScribe", () => {
     expect(mockPostAgentMessage).toHaveBeenCalledWith(
       expect.objectContaining({ tripId: "trip-1", agentName: "scribe", body: expect.stringContaining("Nov 20-25") })
     );
+  });
+
+  it("forwards threadId so a thread-origin extraction's receipt stays in that thread", async () => {
+    mockGenerateObject
+      .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
+      .mockResolvedValueOnce({
+        object: {
+          extractions: [
+            {
+              kind: "fact",
+              memberId: "member-1",
+              category: "budget",
+              type: "SOFT",
+              value: { band: "10-20k" },
+              confidence: 0.9,
+              rationale: "budget 10-20k",
+            },
+          ],
+        },
+        usage: usage(),
+      });
+    await runScribe({ tripId: "trip-1", message, authorMember: member, threadId: "thread-1" });
+    expect(mockPostAgentMessage).toHaveBeenCalledWith(expect.objectContaining({ threadId: "thread-1" }));
   });
 
   it("files an availability extraction into the availability table", async () => {

@@ -80,3 +80,8 @@ export const taskStatusSchema = z.object({
   done: z.boolean(),
 });
 export type TaskStatusInput = z.infer<typeof taskStatusSchema>;
+
+export const threadMessageSchema = z.object({
+  body: z.string().trim().min(1).max(2000),
+});
+export type ThreadMessageInput = z.infer<typeof threadMessageSchema>;

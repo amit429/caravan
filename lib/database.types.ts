@@ -27,10 +27,18 @@ export type MemberRow = {
 
 export type AgentName = "concierge" | "scribe" | "chaser" | "scout" | "planner" | "quartermaster";
 
+export type ThreadRow = {
+  id: string;
+  trip_id: string;
+  member_id: string;
+  created_at: string;
+};
+
 export type MessageRow = {
   id: string;
   trip_id: string;
-  lane: "group";
+  lane: "group" | "thread";
+  thread_id: string | null;
   author_type: "member" | "agent";
   author_id: string | null;
   agent_name: AgentName | null;

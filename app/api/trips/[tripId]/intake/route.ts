@@ -3,6 +3,9 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
 import { intakeSchema } from "@/lib/validation";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
+import { ensureThread } from "@/lib/threads/ensure-thread";
+import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { buildIntakeReceipt } from "@/lib/threads/intake-receipt";
 
 export async function GET(
   _request: Request,
@@ -92,6 +95,22 @@ export async function POST(
   if (factsError) {
     return NextResponse.json({ error: "could_not_save_facts" }, { status: 500 });
   }
+
+  // The agent "confirms what it heard" back in the member's own thread (spec
+  // D8 / docs/design/screens.html F/D2) rather than just silently saving —
+  // this is what makes intake read as the agent listening, not a form drop.
+  const threadId = await ensureThread(tripId, memberId, supabase);
+  await postAgentMessage({
+    tripId,
+    agentName: "concierge",
+    threadId,
+    body: buildIntakeReceipt({
+      budgetBand: parsed.data.budgetBand,
+      departureCity: parsed.data.departureCity,
+      vibe: parsed.data.vibe,
+      hardNos: parsed.data.hardNos,
+    }),
+  });
 
   await broadcastTripChange(tripId);
   return NextResponse.json({ ok: true }, { status: 201 });

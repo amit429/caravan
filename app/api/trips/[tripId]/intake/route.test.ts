@@ -5,8 +5,12 @@ const mockGetMemberSession = vi.fn();
 const mockInsertAvailability = vi.fn();
 const mockInsertFacts = vi.fn();
 const mockBroadcast = vi.fn();
+const mockEnsureThread = vi.fn();
+const mockPostAgentMessage = vi.fn();
 
 vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
+vi.mock("@/lib/threads/ensure-thread", () => ({ ensureThread: (...args: unknown[]) => mockEnsureThread(...args) }));
+vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
   getAdminUser: () => mockGetAdminUser(),
@@ -77,6 +81,8 @@ beforeEach(() => {
   mockInsertAvailability.mockReset().mockResolvedValue({ error: null });
   mockInsertFacts.mockReset().mockResolvedValue({ error: null });
   mockBroadcast.mockReset();
+  mockEnsureThread.mockReset().mockResolvedValue("thread-1");
+  mockPostAgentMessage.mockReset();
 });
 
 describe("POST /api/trips/[tripId]/intake", () => {
@@ -115,5 +121,8 @@ describe("POST /api/trips/[tripId]/intake", () => {
       expect.objectContaining({ category: "budget", type: "SOFT", value: { band: "10-20k" } })
     );
     expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
+    expect(mockPostAgentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ tripId: "trip-1", agentName: "concierge", threadId: "thread-1" })
+    );
   });
 });

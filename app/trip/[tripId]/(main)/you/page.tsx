@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CheckCircle2, CircleDashed, ChevronRight } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { ThreadIllustration } from "@/components/caravan/illustrations";
-import { Card } from "@/components/caravan/card";
+import { loadThread } from "@/lib/threads/load-thread";
+import { ThreadFeed } from "@/components/caravan/thread-feed";
+import { RealtimeRefresh } from "@/components/caravan/realtime-refresh";
+import type { TaskRow } from "@/lib/database.types";
 
 export default async function YouPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
@@ -11,43 +14,46 @@ export default async function YouPage({ params }: { params: Promise<{ tripId: st
   const caller = await resolveCaller(tripId, supabase);
   if (!caller || caller.status === "removed") notFound();
 
-  const { count } = await supabase
-    .from("facts")
-    .select("*", { count: "exact", head: true })
-    .eq("trip_id", tripId)
-    .eq("member_id", caller.id);
-  const intakeDone = (count ?? 0) > 0;
+  const [{ count: factCount }, { data: yourTasks }] = await Promise.all([
+    supabase.from("facts").select("*", { count: "exact", head: true }).eq("trip_id", tripId).eq("member_id", caller.id),
+    supabase.from("tasks").select().eq("trip_id", tripId).eq("member_id", caller.id),
+  ]);
+  const intakeDone = (factCount ?? 0) > 0;
+  const pendingTasks = ((yourTasks ?? []) as TaskRow[]).filter((t) => !t.done).length;
 
-  if (!intakeDone) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 text-center">
-        <ThreadIllustration className="text-plum" />
-        <div className="flex flex-col gap-1.5">
-          <h2 className="font-display text-lg font-semibold">Five quick questions</h2>
-          <p className="text-sm text-ink-2 max-w-[280px]">
-            Your dates, budget, and vibe — about 90 seconds, mostly taps.
-          </p>
-        </div>
-        <Link href={`/trip/${tripId}/intake`} className="w-full max-w-[280px] py-3.5 rounded-xl bg-plum text-white text-center font-semibold">
-          Answer them
-        </Link>
-      </div>
-    );
-  }
+  const { threadId, messages } = await loadThread(tripId, caller.id, supabase);
 
   return (
-    <div className="flex-1 flex flex-col gap-3 px-5 pt-5 md:px-8">
-      <Card>
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
-            <div className="text-sm font-semibold">Your answers are in</div>
-            <div className="text-xs text-ink-3 mt-0.5">Dates, budget, and vibe are counted in the plan.</div>
-          </div>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <RealtimeRefresh tripId={tripId} />
+      <div className="flex flex-col gap-2 px-4 pt-3">
+        <div className="flex items-center gap-2.5 rounded-lg bg-card px-3.5 py-2.5">
+          {intakeDone ? (
+            <CheckCircle2 className="size-4 shrink-0 text-agent" />
+          ) : (
+            <CircleDashed className="size-4 shrink-0 text-ink-3" />
+          )}
+          <span className="flex-1 text-sm font-medium">
+            {intakeDone ? "Your answers are in" : "Five quick questions to go"}
+          </span>
           <Link href={`/trip/${tripId}/intake`} className="text-sm font-medium text-plum">
-            Edit
+            {intakeDone ? "Edit" : "Answer"}
           </Link>
         </div>
-      </Card>
+        {pendingTasks > 0 && (
+          <Link
+            href={`/trip/${tripId}/plan`}
+            className="flex items-center gap-2.5 rounded-lg bg-card px-3.5 py-2.5 transition-colors hover:bg-sunk"
+          >
+            <CircleDashed className="size-4 shrink-0 text-warn" />
+            <span className="flex-1 text-sm font-medium">
+              {pendingTasks} prep {pendingTasks === 1 ? "task" : "tasks"} still open
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-ink-3" />
+          </Link>
+        )}
+      </div>
+      <ThreadFeed tripId={tripId} threadId={threadId} initialMessages={messages} intakeDone={intakeDone} />
     </div>
   );
 }

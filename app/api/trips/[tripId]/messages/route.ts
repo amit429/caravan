@@ -13,10 +13,14 @@ export async function GET(
   const caller = await resolveCaller(tripId, supabase);
   const authError = callerAuthError(caller);
   if (authError) return authError;
+  // lane='group' only — thread messages share this table now (Threads-lite),
+  // and a thread is visible only to its own participant (spec D8), never the
+  // whole trip.
   const { data, error } = await supabase
     .from("messages")
     .select()
     .eq("trip_id", tripId)
+    .eq("lane", "group")
     .order("created_at", { ascending: true });
   if (error) return NextResponse.json({ error: "could_not_list_messages" }, { status: 500 });
   return NextResponse.json({ messages: data });

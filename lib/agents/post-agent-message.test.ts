@@ -23,6 +23,16 @@ describe("postAgentMessage", () => {
     expect(mockBroadcast).toHaveBeenCalledWith("trip-1", { type: "message", message: { id: "msg-1", body: "hello" } });
   });
 
+  it("broadcasts a thread_message when posting into a thread", async () => {
+    mockSingle.mockResolvedValue({ data: { id: "msg-2", body: "hey" }, error: null });
+    await postAgentMessage({ tripId: "trip-1", agentName: "concierge", body: "hey", threadId: "thread-1" });
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1", {
+      type: "thread_message",
+      threadId: "thread-1",
+      message: { id: "msg-2", body: "hey" },
+    });
+  });
+
   it("does not broadcast if the insert failed", async () => {
     mockSingle.mockResolvedValue({ data: null, error: new Error("db down") });
     await postAgentMessage({ tripId: "trip-1", agentName: "scout", body: "hello" });

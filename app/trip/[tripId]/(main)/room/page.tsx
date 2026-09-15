@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
 import { RoomFeed } from "./room-feed";
+import type { MemberRow } from "@/lib/database.types";
 
 export default async function RoomPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
@@ -9,14 +10,17 @@ export default async function RoomPage({ params }: { params: Promise<{ tripId: s
   const caller = await resolveCaller(tripId, supabase);
   if (!caller || caller.status === "removed") notFound();
 
-  const { data: trip } = await supabase.from("trips").select().eq("id", tripId).single();
-  if (!trip) notFound();
+  const [{ data: messages }, { data: members }] = await Promise.all([
+    supabase.from("messages").select().eq("trip_id", tripId).eq("lane", "group").order("created_at", { ascending: true }),
+    supabase.from("members").select().eq("trip_id", tripId).eq("status", "active").order("joined_at", { ascending: true }),
+  ]);
 
-  const { data: messages } = await supabase
-    .from("messages")
-    .select()
-    .eq("trip_id", tripId)
-    .order("created_at", { ascending: true });
-
-  return <RoomFeed tripId={tripId} tripName={trip.name} initialMessages={messages ?? []} />;
+  return (
+    <RoomFeed
+      tripId={tripId}
+      initialMessages={messages ?? []}
+      members={(members ?? []) as MemberRow[]}
+      myMemberId={caller.id}
+    />
+  );
 }

@@ -87,7 +87,12 @@ Rules:
 // message-events trigger, simplified to per-message since batching needs a
 // queue we haven't added yet). Never throws — a broken extraction should
 // never take down the message-post request that triggered it.
-export async function runScribe(params: { tripId: string; message: MessageRow; authorMember: MemberRow }) {
+export async function runScribe(params: {
+  tripId: string;
+  message: MessageRow;
+  authorMember: MemberRow;
+  threadId?: string;
+}) {
   const passed = await passesGate(params.tripId, params.message.body);
   if (!passed) return;
 
@@ -166,5 +171,6 @@ export async function runScribe(params: { tripId: string; message: MessageRow; a
     agentName: "scribe",
     body: `Filed: ${receipts.join(" · ")}`,
     metadata: { sourceMessageId: params.message.id },
+    threadId: params.threadId,
   });
 }

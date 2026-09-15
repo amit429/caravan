@@ -5,6 +5,7 @@ const mockGetMemberSession = vi.fn();
 const mockTripSingle = vi.fn();
 const mockMemberMaybeSingle = vi.fn();
 const mockInsertSingle = vi.fn();
+const mockMessagesSelect = vi.fn();
 const mockAfter = vi.fn();
 const mockBroadcast = vi.fn();
 
@@ -40,14 +41,17 @@ vi.mock("@/lib/supabase/service", () => ({
         };
       }
       if (table === "messages") {
-        return { insert: (row: unknown) => ({ select: () => ({ single: () => mockInsertSingle(row) }) }) };
+        return {
+          insert: (row: unknown) => ({ select: () => ({ single: () => mockInsertSingle(row) }) }),
+          select: () => ({ eq: () => ({ eq: () => ({ order: () => mockMessagesSelect() }) }) }),
+        };
       }
       throw new Error(`unexpected table ${table}`);
     },
   }),
 }));
 
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 beforeEach(() => {
   mockGetAdminUser.mockReset();
@@ -55,8 +59,29 @@ beforeEach(() => {
   mockTripSingle.mockReset();
   mockMemberMaybeSingle.mockReset();
   mockInsertSingle.mockReset();
+  mockMessagesSelect.mockReset();
   mockAfter.mockReset();
   mockBroadcast.mockReset();
+});
+
+describe("GET /api/trips/[tripId]/messages", () => {
+  it("rejects a caller with no session", async () => {
+    mockGetAdminUser.mockResolvedValue(null);
+    mockGetMemberSession.mockResolvedValue(null);
+    const res = await GET(new Request("http://localhost"), { params: Promise.resolve({ tripId: "trip-1" }) });
+    expect(res.status).toBe(401);
+  });
+
+  it("lists only group-lane messages for a resolved caller", async () => {
+    mockGetAdminUser.mockResolvedValue(null);
+    mockGetMemberSession.mockResolvedValue({ tripId: "trip-1", memberId: "member-1" });
+    mockMemberMaybeSingle.mockResolvedValue({ data: { id: "member-1", status: "active" }, error: null });
+    mockMessagesSelect.mockResolvedValue({ data: [{ id: "msg-1", lane: "group" }], error: null });
+    const res = await GET(new Request("http://localhost"), { params: Promise.resolve({ tripId: "trip-1" }) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.messages).toEqual([{ id: "msg-1", lane: "group" }]);
+  });
 });
 
 function postRequest(body: unknown) {
