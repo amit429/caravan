@@ -60,7 +60,14 @@ export default async function DecisionDetailPage({
         </div>
       )}
 
-      <DecisionCard tripId={tripId} decision={decisionRow} votes={allVotes} isAdmin={isAdmin} showDetailLink={false} />
+      <DecisionCard
+        tripId={tripId}
+        decision={decisionRow}
+        votes={allVotes}
+        isAdmin={isAdmin}
+        showDetailLink={false}
+        redirectOnDeleteTo={`/trip/${tripId}/plan`}
+      />
 
       {notVoted.length > 0 && decisionRow.state !== "LOCKED" && (
         <div className="flex flex-col gap-2">

@@ -2,8 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
 import { BottomSheet } from "@/components/caravan/bottom-sheet";
+import { useConfirm } from "@/components/caravan/use-confirm";
 import type { DecisionRow, VoteRow } from "@/lib/database.types";
 
 type Block = { optionId: string; message: string };
@@ -22,16 +24,37 @@ export function DecisionCard({
   votes,
   isAdmin,
   showDetailLink = true,
+  redirectOnDeleteTo,
 }: {
   tripId: string;
   decision: DecisionRow;
   votes: VoteRow[];
   isAdmin: boolean;
   showDetailLink?: boolean;
+  redirectOnDeleteTo?: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [block, setBlock] = useState<Block | null>(null);
+  const { confirm, dialog } = useConfirm();
+
+  async function remove() {
+    if (
+      !(await confirm(
+        `Delete this ${DECISION_TYPE_TITLE[decision.type]?.toLowerCase() ?? "decision"}?`,
+        decision.state === "LOCKED"
+          ? "This is already locked in — deleting it erases the call and every vote behind it. There's no undo."
+          : "This erases every vote on it for everyone. There's no undo.",
+        { destructive: true }
+      ))
+    )
+      return;
+    setPending(true);
+    await fetch(`/api/trips/${tripId}/decisions/${decision.id}`, { method: "DELETE" });
+    setPending(false);
+    if (redirectOnDeleteTo) router.push(redirectOnDeleteTo);
+    else router.refresh();
+  }
 
   const counts = new Map<string, number>();
   const vetoed = new Set<string>();
@@ -82,6 +105,7 @@ export function DecisionCard({
 
   return (
     <div className="bg-card rounded-lg border border-line overflow-hidden">
+      {dialog}
       <div className="flex items-center gap-2 px-3.5 pt-3">
         <span className="font-mono text-[10px] text-ink-3">{decision.state}</span>
         {decision.deadline && decision.state !== "LOCKED" && (
@@ -96,6 +120,16 @@ export function DecisionCard({
           <Link href={`/trip/${tripId}/decisions/${decision.id}`} className="ml-auto text-xs font-medium text-plum">
             Details
           </Link>
+        )}
+        {isAdmin && (
+          <button
+            disabled={pending}
+            onClick={remove}
+            aria-label="Delete this decision"
+            className={`${showDetailLink ? "" : "ml-auto"} text-ink-3 transition-colors hover:text-stop disabled:opacity-40`}
+          >
+            <Trash2 className="size-4" />
+          </button>
         )}
       </div>
       <div className={decision.type === "DESTINATION" ? "flex flex-col gap-3 px-3.5 pb-3.5" : "flex flex-col"}>
