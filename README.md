@@ -10,6 +10,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Vercel AI SDK](https://img.shields.io/badge/Vercel%20AI%20SDK-v7-000000?logo=vercel&logoColor=white)](https://sdk.vercel.ai)
 [![Vitest](https://img.shields.io/badge/tests-253%20passing-2ecc71?logo=vitest&logoColor=white)](#testing)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
@@ -437,10 +438,11 @@ erDiagram
 - Node.js 20+
 - A [Supabase](https://supabase.com) project
 - A [Google Gemini API key](https://aistudio.google.com/apikey)
-- A Google OAuth client (for Supabase Auth's Google provider)
+- A Google OAuth client, for Supabase Auth's Google provider (steps below)
 - *(optional)* A [Tavily](https://app.tavily.com) API key for live destination research
+- *(optional, production only)* An [Inngest](https://inngest.com) account, for the Chaser cron
 
-### Setup
+### 1. Clone and install
 
 ```bash
 git clone <this-repo>
@@ -448,6 +450,30 @@ cd caravan
 npm install
 cp .env.example .env.local
 ```
+
+### 2. Supabase — database + auth
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. Run every file in `supabase/migrations/` against it, **in filename order** — either `supabase db push` via the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started), or paste each one into the dashboard's SQL editor.
+3. From **Project Settings → API**, copy the project URL, the `anon` public key, and the `service_role` key into `.env.local` (below). The service-role key is server-only — it bypasses RLS and must never reach the client.
+
+### 3. Google OAuth — where the client ID/secret actually live
+
+**They don't go in this codebase at all** — not in a file, not in an env var. Supabase Auth owns the entire OAuth handshake with Google; the app only ever calls `supabase.auth.signInWithOAuth({ provider: "google" })` and lets Supabase redirect, exchange the code, and hand back a session. That's why a `grep` for `client_id`/`clientId` across this repo turns up nothing — it's not a gap, that credential simply has no reason to ever touch application code.
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an **OAuth 2.0 Client ID** (Application type: **Web application**).
+2. Under **Authorized redirect URIs**, add your Supabase project's own callback — **not** this app's `/auth/callback` route:
+   ```
+   https://<your-project-ref>.supabase.co/auth/v1/callback
+   ```
+3. In the Supabase dashboard, go to **Authentication → Sign In / Providers → Google**, toggle it on, and paste the **Client ID** and **Client Secret** from step 1 there. This is the one and only place those two values are ever configured.
+4. Separately, in **Authentication → URL Configuration**, add this app's own callback as an allowed redirect URL (this is the one Supabase-related URL that *is* referenced in code, in `app/auth/callback/route.ts`):
+   ```
+   http://localhost:3000/auth/callback        # dev
+   https://<your-domain>/auth/callback         # production
+   ```
+
+### 4. Environment variables
 
 Fill in `.env.local`:
 
@@ -459,7 +485,24 @@ GOOGLE_GENERATIVE_AI_API_KEY=      # Gemini key from https://aistudio.google.com
 TAVILY_API_KEY=                    # optional — Scout works without it, just with less live context
 ```
 
-Run the migrations in `supabase/migrations/` against your project (via the Supabase CLI or dashboard SQL editor, in filename order), then enable the Google provider under Supabase Auth with your OAuth client credentials.
+Nothing Inngest- or Google-OAuth-client-related belongs in this file — see §3 above for Google, and §5 below for Inngest.
+
+### 5. Inngest — where the cron setup goes
+
+The whole integration is two files: `lib/inngest/client.ts` (defines the client + the trip ID) and `app/api/inngest/route.ts` (the single HTTP endpoint — `serve()` from the `inngest/next` package turns it into `GET`/`POST`/`PUT` handlers). `lib/inngest/functions.ts` defines the actual cron job (`chaser-sweep`, `*/30 * * * *`).
+
+- **Local dev:** run the Inngest Dev Server alongside `next dev` — it auto-discovers `/api/inngest` with zero config, no env vars needed:
+  ```bash
+  npx inngest-cli@latest dev
+  ```
+- **Production:** create an app at [app.inngest.com](https://app.inngest.com), point it at your deployed `/api/inngest` URL, and set these two on your host (Vercel dashboard, etc.) — the SDK picks them up from `process.env` automatically, there's no code change:
+  ```bash
+  INNGEST_EVENT_KEY=
+  INNGEST_SIGNING_KEY=
+  ```
+  Without these set in production, the endpoint still exists but Inngest Cloud can't authenticate to it, so the Chaser sweep silently never fires — decisions with deadlines just won't auto-lock or nudge.
+
+### 6. Run it
 
 ```bash
 npm run dev       # start the dev server
@@ -517,8 +560,8 @@ Built for [Vercel](https://vercel.com):
 
 1. Import the repo, set the environment variables above in the Vercel dashboard.
 2. Point `NEXT_PUBLIC_SUPABASE_URL` / keys at your production Supabase project (run migrations there too).
-3. Register your production callback URL (`https://<your-domain>/auth/callback`) in both Supabase Auth's Google provider settings and your Google OAuth client's authorized redirect URIs.
-4. Wire up Inngest (via the Vercel integration or manually) so the Chaser cron (`app/api/inngest/route.ts`) actually gets invoked every 30 minutes in production.
+3. Add your production URL's `/auth/callback` (`https://<your-domain>/auth/callback`) to Supabase's **Authentication → URL Configuration** allowed redirects — the Google Cloud Console side doesn't change per-deployment, it always points at Supabase's own callback (see [§3 above](#3-google-oauth--where-the-client-idsecret-actually-live)).
+4. Set `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` and point an Inngest app at `/api/inngest` (see [§5 above](#5-inngest--where-the-cron-setup-goes)) so the Chaser sweep actually fires every 30 minutes in production.
 
 ---
 
@@ -547,4 +590,4 @@ Kept here on purpose so this stays an honest README, not a marketing page:
 
 ## License
 
-No license file is currently included — treat this as all-rights-reserved unless/until the repo owner adds one. If you're the owner and want to open-source it, add a `LICENSE` file (MIT is a reasonable default for a project like this).
+[MIT](LICENSE) — do what you want with it, including in production, with attribution and no warranty.
