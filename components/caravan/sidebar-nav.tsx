@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, MessageCircle, Map, User } from "lucide-react";
+import { ArrowLeft, MessageCircle, Map, User, Settings } from "lucide-react";
 
 const TABS = [
   { name: "Room", href: (tripId: string) => `/trip/${tripId}/room`, icon: MessageCircle },
@@ -13,10 +13,12 @@ export function SidebarNav({
   tripId,
   tripName,
   badges = {},
+  isAdmin = false,
 }: {
   tripId: string;
   tripName?: string;
   badges?: Partial<Record<string, number>>;
+  isAdmin?: boolean;
 }) {
   const pathname = usePathname();
   return (
@@ -57,6 +59,17 @@ export function SidebarNav({
           </Link>
         );
       })}
+      {isAdmin && (
+        <Link
+          href={`/trip/${tripId}/settings`}
+          className={`mt-auto flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+            pathname === `/trip/${tripId}/settings` ? "bg-plum-t text-plum" : "text-ink-2 hover:bg-sunk"
+          }`}
+        >
+          <Settings className="size-4" />
+          Trip settings
+        </Link>
+      )}
     </nav>
   );
 }

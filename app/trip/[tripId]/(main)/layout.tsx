@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Settings } from "lucide-react";
 import { TabBar } from "@/components/caravan/tab-bar";
 import { SidebarNav } from "@/components/caravan/sidebar-nav";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { getAdminUser } from "@/lib/auth/session";
 
 export default async function TripLayout({
   children,
@@ -14,8 +15,12 @@ export default async function TripLayout({
 }) {
   const { tripId } = await params;
   const supabase = createServiceSupabaseClient();
-  const { data: trip } = await supabase.from("trips").select("name").eq("id", tripId).single();
+  const [{ data: trip }, admin] = await Promise.all([
+    supabase.from("trips").select("name, admin_user_id").eq("id", tripId).single(),
+    getAdminUser(),
+  ]);
   if (!trip) notFound();
+  const isOwningAdmin = !!admin && trip.admin_user_id === admin.id;
 
   return (
     // h-dvh, not min-h-dvh: this shell has real internal scroll regions
@@ -26,7 +31,7 @@ export default async function TripLayout({
     // in this chain to a definite height, so overflow is contained where
     // each page already puts its own overflow-y-auto.
     <div className="h-dvh flex flex-col bg-paper md:flex-row">
-      <SidebarNav tripId={tripId} tripName={trip.name} />
+      <SidebarNav tripId={tripId} tripName={trip.name} isAdmin={isOwningAdmin} />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-hidden md:max-w-2xl">
         {/* The only way back to /trips used to be the phone's back button —
             this is the fix for that. Desktop gets the equivalent in SidebarNav. */}
@@ -38,7 +43,16 @@ export default async function TripLayout({
           >
             <ChevronLeft className="size-5" />
           </Link>
-          <span className="font-display text-base font-semibold truncate">{trip.name}</span>
+          <span className="flex-1 truncate font-display text-base font-semibold">{trip.name}</span>
+          {isOwningAdmin && (
+            <Link
+              href={`/trip/${tripId}/settings`}
+              aria-label="Trip settings"
+              className="rounded-full p-1.5 text-ink-2 transition-colors active:bg-sunk"
+            >
+              <Settings className="size-5" />
+            </Link>
+          )}
         </div>
         <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in duration-200">{children}</div>
         <TabBar tripId={tripId} />

@@ -1,16 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
 import type { DecisionRow, VoteRow } from "@/lib/database.types";
-
-const TYPE_TITLE: Record<string, string> = {
-  DATES: "When are we going?",
-  DESTINATION: "Where are we going?",
-  BUDGET: "What's the budget?",
-  STAY: "Where are we staying?",
-  ACTIVITY: "What are we doing?",
-  CUSTOM: "Decision",
-};
 
 export function DecisionCard({
   tripId,
@@ -73,7 +65,7 @@ export function DecisionCard({
         )}
       </div>
       <div className="px-3.5 pb-2.5 pt-1 font-display text-base font-semibold">
-        {TYPE_TITLE[decision.type] ?? decision.type}
+        {DECISION_TYPE_TITLE[decision.type] ?? decision.type}
       </div>
       <div className="flex flex-col">
         {decision.options.map((opt) => {
