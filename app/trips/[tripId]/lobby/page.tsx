@@ -160,7 +160,7 @@ export default function AdminLobbyPage() {
             Room&rsquo;s still shut &mdash; open it whenever you&rsquo;re ready
           </div>
           <p className="max-w-[280px] text-[11.5px] text-ink-3">
-            Opens once at least {MIN_MEMBERS_TO_OPEN} people are here &mdash; a 2-3 person group barely needs a room.
+            Opens once at least {MIN_MEMBERS_TO_OPEN} people are here (you included) &mdash; a 1-2 person group barely needs a room.
           </p>
         </div>
       </div>

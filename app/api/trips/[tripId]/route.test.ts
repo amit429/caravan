@@ -76,7 +76,7 @@ beforeEach(() => {
   mockPostAgentMessage.mockReset();
   mockTripOwnerCheck.mockReset();
   mockTripDelete.mockReset().mockResolvedValue({ error: null });
-  mockMemberCount.mockReset().mockResolvedValue({ count: 4, error: null });
+  mockMemberCount.mockReset().mockResolvedValue({ count: 3, error: null });
 });
 
 describe("GET /api/trips/[tripId]", () => {
@@ -126,10 +126,10 @@ describe("PATCH /api/trips/[tripId]", () => {
     expect(res.status).toBe(409);
   });
 
-  it("rejects starting a trip with 3 or fewer active members", async () => {
+  it("rejects starting a trip with 2 or fewer active members", async () => {
     mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "x@example.com" });
     mockSingle.mockResolvedValue({ data: { id: "trip-1", admin_user_id: "admin-1", status: "lobby" }, error: null });
-    mockMemberCount.mockResolvedValue({ count: 3, error: null });
+    mockMemberCount.mockResolvedValue({ count: 2, error: null });
     const res = await PATCH(patchRequest("start"), { params: Promise.resolve({ tripId: "trip-1" }) });
     expect(res.status).toBe(409);
     const body = await res.json();
