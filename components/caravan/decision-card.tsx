@@ -103,37 +103,18 @@ export function DecisionCard({
         .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0))[0]
     : null;
 
-  return (
-    <div className="bg-card rounded-lg border border-line overflow-hidden">
-      {dialog}
-      <div className="flex items-center gap-2 px-3.5 pt-3">
-        <span className="font-mono text-[10px] text-ink-3">{decision.state}</span>
-        {decision.deadline && decision.state !== "LOCKED" && (
-          <span className="ml-auto text-[10px] font-mono text-warn">
-            by {new Date(decision.deadline).toLocaleDateString()}
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-2 px-3.5 pb-2.5 pt-1">
-        <span className="font-display text-base font-semibold">{DECISION_TYPE_TITLE[decision.type] ?? decision.type}</span>
-        {showDetailLink && (
-          <Link href={`/trip/${tripId}/decisions/${decision.id}`} className="ml-auto text-xs font-medium text-plum">
-            Details
-          </Link>
-        )}
-        {isAdmin && (
-          <button
-            disabled={pending}
-            onClick={remove}
-            aria-label="Delete this decision"
-            className={`${showDetailLink ? "" : "ml-auto"} text-ink-3 transition-colors hover:text-stop disabled:opacity-40`}
-          >
-            <Trash2 className="size-4" />
-          </button>
-        )}
-      </div>
-      <div className={decision.type === "DESTINATION" ? "flex flex-col gap-3 px-3.5 pb-3.5" : "flex flex-col"}>
-        {decision.options.map((opt, i) => {
+  const deleteButton = isAdmin && (
+    <button
+      disabled={pending}
+      onClick={remove}
+      aria-label="Delete this decision"
+      className="text-ink-3 transition-colors hover:text-stop disabled:opacity-40"
+    >
+      <Trash2 className="size-4" />
+    </button>
+  );
+
+  const optionCards = decision.options.map((opt, i) => {
           const count = counts.get(opt.id) ?? 0;
           const isVetoed = vetoed.has(opt.id);
           const isWinner = decision.locked_option === opt.id;
@@ -228,10 +209,10 @@ export function DecisionCard({
               </div>
             </div>
           );
-        })}
-      </div>
+  });
 
-      <BottomSheet open={!!block} onClose={() => setBlock(null)}>
+  const blockSheet = (
+    <BottomSheet open={!!block} onClose={() => setBlock(null)}>
         {block && (
           <div className="flex flex-col gap-3">
             <span className="w-fit rounded-full bg-stop-t px-2.5 py-1 text-[10px] font-semibold text-stop">
@@ -272,7 +253,56 @@ export function DecisionCard({
             <p className="text-xs text-ink-3">I haven&rsquo;t named who&rsquo;s blocked, and won&rsquo;t. Their reason stays in their own fact.</p>
           </div>
         )}
-      </BottomSheet>
+    </BottomSheet>
+  );
+
+  // Destination options render directly on the page instead of stacked
+  // inside a shared bordered/overflow-hidden box — that extra wrapper is
+  // what was fighting the page's own scroll region (spec fix: "don't need a
+  // box on the page with a scroll inside it, show the destinations
+  // directly"). Every other decision type keeps the compact boxed list,
+  // which was never the problem.
+  if (decision.type === "DESTINATION") {
+    return (
+      <div className="flex flex-col gap-3">
+        {dialog}
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[10px] text-ink-3">{decision.state}</span>
+          {decision.deadline && decision.state !== "LOCKED" && (
+            <span className="ml-auto text-[10px] font-mono text-warn">
+              by {new Date(decision.deadline).toLocaleDateString()}
+            </span>
+          )}
+          {deleteButton && <span className="ml-auto">{deleteButton}</span>}
+        </div>
+        {optionCards}
+        {blockSheet}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-card rounded-lg border border-line overflow-hidden">
+      {dialog}
+      <div className="flex items-center gap-2 px-3.5 pt-3">
+        <span className="font-mono text-[10px] text-ink-3">{decision.state}</span>
+        {decision.deadline && decision.state !== "LOCKED" && (
+          <span className="ml-auto text-[10px] font-mono text-warn">
+            by {new Date(decision.deadline).toLocaleDateString()}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2 px-3.5 pb-2.5 pt-1">
+        <span className="font-display text-base font-semibold">{DECISION_TYPE_TITLE[decision.type] ?? decision.type}</span>
+        {showDetailLink && (
+          <Link href={`/trip/${tripId}/decisions/${decision.id}`} className="ml-auto text-xs font-medium text-plum">
+            Details
+          </Link>
+        )}
+        {deleteButton && <span className={showDetailLink ? "" : "ml-auto"}>{deleteButton}</span>}
+      </div>
+      <div className="flex flex-col">{optionCards}</div>
+      {blockSheet}
     </div>
   );
 }
