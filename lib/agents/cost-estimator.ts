@@ -8,7 +8,7 @@ import { budgetBandCeiling } from "@/lib/budget";
 import { flagMembersOverBudget } from "@/lib/cost-flags";
 import type { DecisionRow, FactRow } from "@/lib/database.types";
 
-const MODEL_ID = "gemini-2.5-flash";
+const MODEL_ID = "gemini-3.6-flash";
 
 const estimateSchema = z.object({
   minPerHead: z.number().positive(),

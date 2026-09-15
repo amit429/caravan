@@ -1,11 +1,15 @@
 import { google } from "@ai-sdk/google";
 
-// Cost routed by task, not one model everywhere (PRD §12.2): cheap/fast for the
-// gate check and Scribe's extraction, a stronger model for Scout's destination
-// reasoning. Both are Gemini for now — swapping Scout to Claude later is a
-// one-line change since the AI SDK abstracts the provider.
-export const flashModel = google("gemini-2.5-flash");
-export const proModel = google("gemini-2.5-pro");
+// Single model everywhere (gemini-2.5-pro was deprecated for new users and
+// broke Scout/Planner in production — see agent_runs for the AI_APICallError).
+// Consolidated onto one Flash-tier model rather than re-pinning a separate
+// Pro tier: gemini-3.6-flash beats gemini-3.5-flash on both price (cheaper
+// output) and quality (fewer tokens per task, stronger multi-step reasoning),
+// so there's no longer a case for a pricier Pro model for Scout/Planner's
+// destination and itinerary reasoning. Swapping any task to a different
+// model/provider later is still a one-line change since the AI SDK
+// abstracts it.
+export const flashModel = google("gemini-3.6-flash");
 
 // Flash defaults to "thinking" mode, which burns tokens on multi-step
 // reasoning the gate/extraction tasks don't need (measured: ~100 reasoning
@@ -17,11 +21,12 @@ export const fastGoogleOptions = {
 };
 
 // Rough per-1M-token pricing for cost logging (agent_runs.cost), USD. Gemini
-// Flash/Pro list pricing as of this build — approximate on purpose, this is
-// for budget visibility (spec §12.4), not billing.
+// list pricing as of this build — approximate on purpose, this is for budget
+// visibility (spec §12.4), not billing. (Google runs temporary introductory
+// discounts on this model from time to time; this uses the standard
+// post-promo rate rather than chasing whatever's active right now.)
 const PRICE_PER_MILLION_TOKENS: Record<string, { input: number; output: number }> = {
-  "gemini-2.5-flash": { input: 0.3, output: 2.5 },
-  "gemini-2.5-pro": { input: 1.25, output: 10 },
+  "gemini-3.6-flash": { input: 1.5, output: 7.5 },
 };
 
 export function estimateCost(modelId: string, inputTokens: number, outputTokens: number): number {

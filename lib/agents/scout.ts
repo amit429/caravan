@@ -1,13 +1,13 @@
 import { generateObject } from "ai";
 import { z } from "zod";
-import { proModel, estimateCost } from "./model";
+import { flashModel, estimateCost } from "./model";
 import { logAgentRun } from "./log-run";
 import { postAgentMessage } from "./post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { groupBudgetCeiling } from "@/lib/budget";
 import type { FactRow } from "@/lib/database.types";
 
-const MODEL_ID = "gemini-2.5-pro";
+const MODEL_ID = "gemini-3.6-flash";
 
 const destinationOptionSchema = z.object({
   id: z.string(),
@@ -89,7 +89,7 @@ For each option give: the destination name, an estimated cost per head range in 
   const start = Date.now();
   let result: Awaited<ReturnType<typeof generateObject<typeof scoutOutputSchema>>>;
   try {
-    result = await generateObject({ model: proModel, schema: scoutOutputSchema, prompt });
+    result = await generateObject({ model: flashModel, schema: scoutOutputSchema, prompt });
   } catch (error) {
     await logAgentRun({
       tripId,

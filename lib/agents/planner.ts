@@ -1,13 +1,13 @@
 import { generateObject } from "ai";
 import { z } from "zod";
-import { proModel, estimateCost } from "./model";
+import { flashModel, estimateCost } from "./model";
 import { logAgentRun } from "./log-run";
 import { postAgentMessage } from "./post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { computeTopDateWindows } from "@/lib/date-solver";
 import type { AvailabilityRow, DecisionRow, FactRow, ItineraryDay, MemberRow } from "@/lib/database.types";
 
-const MODEL_ID = "gemini-2.5-pro";
+const MODEL_ID = "gemini-3.6-flash";
 const DEFAULT_TRIP_LENGTH_DAYS = 4;
 
 const activitySchema = z.object({ time: z.string(), description: z.string() });
@@ -88,7 +88,7 @@ For each day, give a short title/theme and 3-5 time-blocked activities. Keep pac
   const start = Date.now();
   let result: Awaited<ReturnType<typeof generateObject<typeof plannerOutputSchema>>>;
   try {
-    result = await generateObject({ model: proModel, schema: plannerOutputSchema, prompt });
+    result = await generateObject({ model: flashModel, schema: plannerOutputSchema, prompt });
   } catch (error) {
     await logAgentRun({
       tripId,

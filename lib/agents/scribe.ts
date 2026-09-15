@@ -6,7 +6,7 @@ import { postAgentMessage } from "./post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import type { MemberRow, MessageRow } from "@/lib/database.types";
 
-const MODEL_ID = "gemini-2.5-flash";
+const MODEL_ID = "gemini-3.6-flash";
 const CONFIDENCE_THRESHOLD = 0.7;
 
 const gateSchema = z.object({ containsExtractableInfo: z.boolean() });
