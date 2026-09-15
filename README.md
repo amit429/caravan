@@ -48,54 +48,87 @@ Caravan's product thesis rests on three bets:
 
 ## Screenshots
 
-> **A note on this section:** the screens below describe each flow rather than embedding pixel screenshots, because this README was generated in an environment with no browser/screenshot tooling available. If you're picking this repo up, the fastest way to fill this in properly:
->
-> 1. `npm run dev` and walk through each flow below in your own browser (or use `docs/design/screens.html` as a static visual reference for the original design intent — it's a self-contained mockup file you can open directly).
-> 2. Drop screenshots into `docs/screenshots/` using the filenames suggested under each flow.
-> 3. Replace the `> _(screenshot: ...)_` line under that flow with `` ![Flow name](docs/screenshots/filename.png) ``.
+Every screen below is a render of [`docs/design/screens.html`](docs/design/screens.html) — the hi-fi design spec this app was built from, organized into the same seven flows (A–G) the spec itself uses. **These are the design reference, not live-app screenshots** — a few details have since diverged as the build evolved (invite codes are plain 6-character codes now, not hyphenated; joining is Google OAuth for everyone, not a name/email form; Your Trips gained avatar stacks and richer status styling; and several screens below — the destination page, the per-member facts page, settings' danger zone — were redesigned past what's pictured here). Cross-reference against [Feature tour](#feature-tour) for what's actually implemented today.
 
-### Onboarding & trip creation
-- **Sign in** (`/sign-in`) — one Google button, real OAuth, no name/email form.
-- **New trip wizard** (`/trips/new/basics` → `/trips/new/vibe` → `/trips/new/invite`) — name + intent, starting vibe + budget slider + agent tone, then the room code / invite link.
-> _(screenshot: `docs/screenshots/new-trip-wizard.png`)_
+### A · Setting up a trip
 
-### Lobby (admin + member)
-- **Admin lobby** (`/trips/[tripId]/lobby`) — live member list as people join, copyable invite link, joining on/off toggle, gated "Open the room" (needs 3 people total, admin included) with a soft ambient glow and a live pulse indicator.
-- **Member lobby** (`/trip/[tripId]/member-lobby`) — "You're in" with an avatar stack of everyone already there, waits for the room to open, resilient to missed realtime events (polling fallback).
-> _(screenshot: `docs/screenshots/admin-lobby.png`, `docs/screenshots/member-lobby.png`)_
+<table><tr>
+<td align="center" width="150"><img src="docs/screens/A-setup/A1-landing.png" width="130"><br><sub><b>A1</b><br>Landing</sub></td>
+<td align="center" width="150"><img src="docs/screens/A-setup/A2-admin-sign-in.png" width="130"><br><sub><b>A2</b><br>Admin sign-in</sub></td>
+<td align="center" width="150"><img src="docs/screens/A-setup/A3-your-trips.png" width="130"><br><sub><b>A3</b><br>Your trips</sub></td>
+<td align="center" width="150"><img src="docs/screens/A-setup/A4-new-trip-basics.png" width="130"><br><sub><b>A4</b><br>New trip — basics</sub></td>
+</tr><tr>
+<td align="center" width="150"><img src="docs/screens/A-setup/A5-new-trip-vibe-and-tone.png" width="130"><br><sub><b>A5</b><br>New trip — vibe & tone</sub></td>
+<td align="center" width="150"><img src="docs/screens/A-setup/A6-new-trip-invite.png" width="130"><br><sub><b>A6</b><br>New trip — invite</sub></td>
+<td align="center" width="150"><img src="docs/screens/A-setup/A7-lobby-admin.png" width="130"><br><sub><b>A7</b><br>Lobby — admin</sub></td>
+</tr></table>
 
-### The five questions (private intake)
-- `/trip/[tripId]/intake` — a 5-step private thread with the agent: when you're free (tri-state drag calendar), budget (slider, never shown to anyone else), departure city, vibe tags, hard nos. Each step has its own illustrated icon and color.
-> _(screenshot: `docs/screenshots/intake-calendar.png`, `docs/screenshots/intake-budget.png`)_
+### B · Joining
 
-### The Room (group chat)
-- `/trip/[tripId]/room` — the shared feed: member messages, agent announcements (kickoff, decisions opening/locking/deleting, Scribe's "filed: ..." receipts), inline decision cards, a composer with link/vote/"ask the agent" actions.
-> _(screenshot: `docs/screenshots/room.png`)_
+<table><tr>
+<td align="center" width="150"><img src="docs/screens/B-join/B1-invite-landing.png" width="130"><br><sub><b>B1</b><br>Invite landing</sub></td>
+<td align="center" width="150"><img src="docs/screens/B-join/B2-join.png" width="130"><br><sub><b>B2</b><br>Join</sub></td>
+<td align="center" width="150"><img src="docs/screens/B-join/B3-lobby-member.png" width="130"><br><sub><b>B3</b><br>Lobby — member</sub></td>
+</tr></table>
 
-### Plan (the command center)
-- `/trip/[tripId]/plan` — trip snapshot: share card, party roster with intake status, date windows, budget ceiling, a link into everyone's answers, a link into "Where are we going," inline DATES/CUSTOM decisions, itinerary, prep checklist, bookings, ideas, cost.
-> _(screenshot: `docs/screenshots/plan.png`)_
+### C · Intake, in a thread with the agent
 
-### Where are we going (destination)
-- `/trip/[tripId]/destination` — Scout's three gradient-hero destination options, each with cost/travel-time/why-it-fits/who-it-fits-worst, vote/veto/lock actions, admin delete.
-> _(screenshot: `docs/screenshots/destination.png`)_
+<table><tr>
+<td align="center" width="150"><img src="docs/screens/C-intake/C1-intake-intro.png" width="130"><br><sub><b>C1</b><br>Intake — intro</sub></td>
+<td align="center" width="150"><img src="docs/screens/C-intake/C2-intake-when-youre-free.png" width="130"><br><sub><b>C2</b><br>Intake — when you're free</sub></td>
+<td align="center" width="150"><img src="docs/screens/C-intake/C3-intake-budget.png" width="130"><br><sub><b>C3</b><br>Intake — budget</sub></td>
+<td align="center" width="150"><img src="docs/screens/C-intake/C4-intake-where-from.png" width="130"><br><sub><b>C4</b><br>Intake — where from</sub></td>
+</tr><tr>
+<td align="center" width="150"><img src="docs/screens/C-intake/C5-intake-vibe.png" width="130"><br><sub><b>C5</b><br>Intake — vibe</sub></td>
+<td align="center" width="150"><img src="docs/screens/C-intake/C6-intake-hard-nos.png" width="130"><br><sub><b>C6</b><br>Intake — hard nos</sub></td>
+<td align="center" width="150"><img src="docs/screens/C-intake/C7-intake-done.png" width="130"><br><sub><b>C7</b><br>Intake — done</sub></td>
+</tr></table>
 
-### Everyone's answers (facts)
-- `/trip/[tripId]/facts` — one card per member, emoji chips grouped by category (departure city, vibe, hard nos), budget always excluded. A category simply doesn't render for someone who hasn't filed anything in it.
-> _(screenshot: `docs/screenshots/facts.png`)_
+### D · The room
 
-### Bookings, Ideas, Cost
-- `/trip/[tripId]/bookings` — flight/hotel/etc. tracked per item, a chip per member showing who's booked, nudge unbooked members.
-- `/trip/[tripId]/ideas` — paste a link (Instagram/YouTube/blog/anything), it turns into a card, upvote/downvote.
-- `/trip/[tripId]/cost` — Quartermaster's per-head range against the locked destination, and how many people it pushes over their (still-private) ceiling.
-> _(screenshot: `docs/screenshots/bookings.png`, `docs/screenshots/ideas.png`, `docs/screenshots/cost.png`)_
+<table><tr>
+<td align="center" width="150"><img src="docs/screens/D-room/D1-room-the-kickoff.png" width="130"><br><sub><b>D1</b><br>Room — the kickoff</sub></td>
+<td align="center" width="150"><img src="docs/screens/D-room/D2-room-in-motion.png" width="130"><br><sub><b>D2</b><br>Room — in motion</sub></td>
+<td align="center" width="150"><img src="docs/screens/D-room/D3-composer-open.png" width="130"><br><sub><b>D3</b><br>Composer, open</sub></td>
+<td align="center" width="150"><img src="docs/screens/D-room/D4-a-thread.png" width="130"><br><sub><b>D4</b><br>A thread</sub></td>
+</tr><tr>
+<td align="center" width="150"><img src="docs/screens/D-room/D5-agent-voice-all-five-modes.png" width="130"><br><sub><b>D5</b><br>Agent voice, all five modes</sub></td>
+</tr></table>
 
-### You (personal thread) & Settings
-- `/trip/[tripId]/you` — your 1:1 thread with the agent, your own filed facts, your tasks.
-- `/trip/[tripId]/settings` — joining toggle + invite link, member list with admin remove, locked-decision reopen, danger zone (delete the trip).
-> _(screenshot: `docs/screenshots/you.png`, `docs/screenshots/settings.png`)_
+### E · The plan
 
----
+<table><tr>
+<td align="center" width="150"><img src="docs/screens/E-plan/E1-plan-overview.png" width="130"><br><sub><b>E1</b><br>Plan — overview</sub></td>
+<td align="center" width="150"><img src="docs/screens/E-plan/E2-a-single-fact.png" width="130"><br><sub><b>E2</b><br>A single fact</sub></td>
+<td align="center" width="150"><img src="docs/screens/E-plan/E3-whos-in.png" width="130"><br><sub><b>E3</b><br>Who's in</sub></td>
+<td align="center" width="150"><img src="docs/screens/E-plan/E4-paste-into-whatsapp.png" width="130"><br><sub><b>E4</b><br>Paste into WhatsApp</sub></td>
+</tr></table>
+
+### F · Decisions
+
+<table><tr>
+<td align="center" width="150"><img src="docs/screens/F-decisions/F1-which-dates-actually-work.png" width="130"><br><sub><b>F1</b><br>Which dates actually work</sub></td>
+<td align="center" width="150"><img src="docs/screens/F-decisions/F2-a-decision-in-the-feed.png" width="130"><br><sub><b>F2</b><br>A decision, in the feed</sub></td>
+<td align="center" width="150"><img src="docs/screens/F-decisions/F3-decision-opened-up.png" width="130"><br><sub><b>F3</b><br>Decision, opened up</sub></td>
+<td align="center" width="150"><img src="docs/screens/F-decisions/F4-three-places-with-the-reasoning.png" width="130"><br><sub><b>F4</b><br>Three places, with the reasoning</sub></td>
+</tr><tr>
+<td align="center" width="150"><img src="docs/screens/F-decisions/F5-one-option-in-full.png" width="130"><br><sub><b>F5</b><br>One option, in full</sub></td>
+<td align="center" width="150"><img src="docs/screens/F-decisions/F6-locked.png" width="130"><br><sub><b>F6</b><br>Locked</sub></td>
+<td align="center" width="150"><img src="docs/screens/F-decisions/F7-when-a-veto-blocks-the-winner.png" width="130"><br><sub><b>F7</b><br>When a veto blocks the winner</sub></td>
+</tr></table>
+
+### G · After the decision
+
+<table><tr>
+<td align="center" width="150"><img src="docs/screens/G-after/G1-itinerary.png" width="130"><br><sub><b>G1</b><br>Itinerary</sub></td>
+<td align="center" width="150"><img src="docs/screens/G-after/G2-ideas-people-dropped.png" width="130"><br><sub><b>G2</b><br>Ideas people dropped</sub></td>
+<td align="center" width="150"><img src="docs/screens/G-after/G3-what-you-still-have-to-do.png" width="130"><br><sub><b>G3</b><br>What you still have to do</sub></td>
+<td align="center" width="150"><img src="docs/screens/G-after/G4-whos-booked-what.png" width="130"><br><sub><b>G4</b><br>Who's booked what</sub></td>
+</tr><tr>
+<td align="center" width="150"><img src="docs/screens/G-after/G5-what-its-going-to-cost.png" width="130"><br><sub><b>G5</b><br>What it's going to cost</sub></td>
+<td align="center" width="150"><img src="docs/screens/G-after/G6-admin-controls.png" width="130"><br><sub><b>G6</b><br>Admin controls</sub></td>
+<td align="center" width="150"><img src="docs/screens/G-after/G7-nudges-and-the-weekly-email.png" width="130"><br><sub><b>G7</b><br>Nudges and the weekly email</sub></td>
+</tr></table>
 
 ## Feature tour
 
