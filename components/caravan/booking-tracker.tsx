@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/caravan/use-confirm";
 import type { BookingRow, BookingStatusRow, MemberRow } from "@/lib/database.types";
 
 function BookingItem({
@@ -21,6 +22,7 @@ function BookingItem({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const { confirm, dialog } = useConfirm();
   const bookedCount = members.filter((m) => statusByMember.get(m.id)).length;
   const myBooked = statusByMember.get(myMemberId) ?? false;
 
@@ -43,7 +45,7 @@ function BookingItem({
   }
 
   async function remove() {
-    if (!window.confirm(`Stop tracking "${booking.item}"?`)) return;
+    if (!(await confirm(`Stop tracking "${booking.item}"?`, "This removes it for everyone.", { destructive: true }))) return;
     setPending(true);
     await fetch(`/api/trips/${tripId}/bookings/${booking.id}`, { method: "DELETE" });
     setPending(false);
@@ -52,6 +54,7 @@ function BookingItem({
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-line bg-card p-3">
+      {dialog}
       <div className="flex items-center gap-2">
         <span className="flex-1 text-sm font-semibold">{booking.item}</span>
         {isAdmin && (

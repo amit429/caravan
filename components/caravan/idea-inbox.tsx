@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/caravan/use-confirm";
 import type { IdeaRow, IdeaVoteRow } from "@/lib/database.types";
 
 export function IdeaInbox({
@@ -21,6 +22,7 @@ export function IdeaInbox({
   const [url, setUrl] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog } = useConfirm();
 
   const countsByIdea = new Map<string, number>();
   const votedByMe = new Set<string>();
@@ -53,13 +55,14 @@ export function IdeaInbox({
   }
 
   async function remove(ideaId: string) {
-    if (!window.confirm("Delete this idea?")) return;
+    if (!(await confirm("Delete this idea?", undefined, { destructive: true }))) return;
     await fetch(`/api/trips/${tripId}/ideas/${ideaId}`, { method: "DELETE" });
     router.refresh();
   }
 
   return (
     <div className="flex flex-col gap-3">
+      {dialog}
       <div className="flex gap-2">
         <input
           value={url}

@@ -25,6 +25,7 @@ export function FactsList({
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<FactRow | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pending, setPending] = useState(false);
 
   async function soften() {
@@ -42,12 +43,17 @@ export function FactsList({
 
   async function remove() {
     if (!selected) return;
-    if (!window.confirm("Delete this fact?")) return;
     setPending(true);
     await fetch(`/api/trips/${tripId}/facts/${selected.id}`, { method: "DELETE" });
     setPending(false);
+    setConfirmingDelete(false);
     setSelected(null);
     router.refresh();
+  }
+
+  function closeSheet() {
+    setSelected(null);
+    setConfirmingDelete(false);
   }
 
   if (facts.length === 0) {
@@ -80,48 +86,66 @@ export function FactsList({
         })}
       </div>
 
-      <BottomSheet open={!!selected} onClose={() => setSelected(null)}>
-        {selected && (
+      <BottomSheet open={!!selected} onClose={closeSheet}>
+        {selected && confirmingDelete ? (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              {selected.type === "HARD" && (
-                <span className="rounded-full bg-stop-t px-2 py-1 text-[10px] font-semibold text-stop">HARD</span>
-              )}
-              <span className="rounded-full bg-agent-t px-2 py-1 text-[10px] font-semibold text-agent">
-                {SOURCE_LABEL[selected.source].toUpperCase()}
-              </span>
+            <h2 className="font-display text-lg font-semibold">Delete this fact?</h2>
+            <p className="text-sm text-ink-2">&ldquo;{formatFactValue(selected.value)}&rdquo; will be gone for good.</p>
+            <div className="flex gap-2.5 pt-1">
+              <button
+                onClick={() => setConfirmingDelete(false)}
+                className="flex-1 rounded-xl border border-line py-3.5 font-semibold"
+              >
+                Cancel
+              </button>
+              <button disabled={pending} onClick={remove} className="flex-1 rounded-xl bg-stop py-3.5 font-semibold text-white disabled:opacity-40">
+                Delete
+              </button>
             </div>
-            <h2 className="font-display text-lg font-semibold">{formatFactValue(selected.value)}</h2>
-            <p className="text-xs text-ink-3">
-              {memberNames.get(selected.member_id)?.name ?? "Someone"}, {FACT_CATEGORY_LABEL[selected.category].toLowerCase()}
-            </p>
-            {isMine ? (
-              <div className="flex flex-col gap-0.5 pt-1">
+          </div>
+        ) : (
+          selected && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
                 {selected.type === "HARD" && (
+                  <span className="rounded-full bg-stop-t px-2 py-1 text-[10px] font-semibold text-stop">HARD</span>
+                )}
+                <span className="rounded-full bg-agent-t px-2 py-1 text-[10px] font-semibold text-agent">
+                  {SOURCE_LABEL[selected.source].toUpperCase()}
+                </span>
+              </div>
+              <h2 className="font-display text-lg font-semibold">{formatFactValue(selected.value)}</h2>
+              <p className="text-xs text-ink-3">
+                {memberNames.get(selected.member_id)?.name ?? "Someone"}, {FACT_CATEGORY_LABEL[selected.category].toLowerCase()}
+              </p>
+              {isMine ? (
+                <div className="flex flex-col gap-0.5 pt-1">
+                  {selected.type === "HARD" && (
+                    <button
+                      disabled={pending}
+                      onClick={soften}
+                      className="flex items-center justify-between py-2.5 text-sm font-medium disabled:opacity-40"
+                    >
+                      Make it a soft preference
+                      <span className="text-ink-3">&rsaquo;</span>
+                    </button>
+                  )}
                   <button
                     disabled={pending}
-                    onClick={soften}
-                    className="flex items-center justify-between py-2.5 text-sm font-medium disabled:opacity-40"
+                    onClick={() => setConfirmingDelete(true)}
+                    className="flex items-center justify-between py-2.5 text-sm font-medium text-stop disabled:opacity-40"
                   >
-                    Make it a soft preference
+                    This is wrong, delete it
                     <span className="text-ink-3">&rsaquo;</span>
                   </button>
-                )}
-                <button
-                  disabled={pending}
-                  onClick={remove}
-                  className="flex items-center justify-between py-2.5 text-sm font-medium text-stop disabled:opacity-40"
-                >
-                  This is wrong, delete it
-                  <span className="text-ink-3">&rsaquo;</span>
-                </button>
-              </div>
-            ) : (
-              <p className="pt-1 text-xs text-ink-3">
-                Only {memberNames.get(selected.member_id)?.name ?? "they"} can change this.
-              </p>
-            )}
-          </div>
+                </div>
+              ) : (
+                <p className="pt-1 text-xs text-ink-3">
+                  Only {memberNames.get(selected.member_id)?.name ?? "they"} can change this.
+                </p>
+              )}
+            </div>
+          )
         )}
       </BottomSheet>
     </>
