@@ -8,6 +8,14 @@ import type { DecisionRow, VoteRow } from "@/lib/database.types";
 
 type Block = { optionId: string; message: string };
 
+// Matches docs/design/screens.html's .dest .img / .img.b / .img.c gradients
+// exactly, cycled by option index.
+const DEST_GRADIENTS = [
+  "bg-gradient-to-br from-plum to-[#8A4A82]",
+  "bg-gradient-to-br from-agent to-[#3DA893]",
+  "bg-gradient-to-br from-[#B06A1C] to-[#D99A3F]",
+];
+
 export function DecisionCard({
   tripId,
   decision,
@@ -90,11 +98,89 @@ export function DecisionCard({
           </Link>
         )}
       </div>
-      <div className="flex flex-col">
-        {decision.options.map((opt) => {
+      <div className={decision.type === "DESTINATION" ? "flex flex-col gap-3 px-3.5 pb-3.5" : "flex flex-col"}>
+        {decision.options.map((opt, i) => {
           const count = counts.get(opt.id) ?? 0;
           const isVetoed = vetoed.has(opt.id);
           const isWinner = decision.locked_option === opt.id;
+          const actions = decision.state !== "LOCKED" && (
+            <>
+              <button
+                disabled={pending}
+                onClick={() => vote(opt.id, false)}
+                className="text-xs font-semibold text-plum px-2.5 py-1.5 rounded-full border border-line"
+              >
+                Vote
+              </button>
+              <button
+                disabled={pending}
+                onClick={() => vote(opt.id, true)}
+                title="This doesn't work for me at all"
+                className="text-xs text-ink-3"
+              >
+                &#128683;
+              </button>
+              {isAdmin && (
+                <button disabled={pending} onClick={() => lock(opt.id)} className="text-xs font-semibold text-ink-2 underline">
+                  Lock
+                </button>
+              )}
+            </>
+          );
+
+          // docs/design/screens.html's .dest card (F4/F8) — the hero
+          // treatment only makes sense for destination options, which are
+          // the only ones with this much reasoning attached (cost/travel/
+          // why-it-fits/who-it-fits-worst). Everything else (DATES, CUSTOM)
+          // keeps the compact row below.
+          if (decision.type === "DESTINATION" && opt.meta) {
+            return (
+              <div
+                key={opt.id}
+                className={`overflow-hidden rounded-lg border bg-card ${isWinner ? "border-signal-d" : "border-line"}`}
+              >
+                <div className={`flex h-[92px] items-end p-3.5 ${DEST_GRADIENTS[i % DEST_GRADIENTS.length]}`}>
+                  <h4 className="font-display text-lg font-bold text-white">{opt.label}</h4>
+                  {isWinner && (
+                    <span className="ml-auto rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-signal-d">
+                      LOCKED
+                    </span>
+                  )}
+                  {isVetoed && !isWinner && (
+                    <span className="ml-auto rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-stop">
+                      HARD NO
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-3.5 border-b border-line px-3.5 py-2.5">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-mono text-[9.5px] text-ink-3">A HEAD</span>
+                    <span className="text-[13px] font-semibold">{opt.meta.costPerHead}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-mono text-[9.5px] text-ink-3">DOOR TO DOOR</span>
+                    <span className="text-[13px] font-semibold">{opt.meta.travelTime}</span>
+                  </div>
+                  <div className="ml-auto flex flex-col gap-0.5 text-right">
+                    <span className="font-mono text-[9.5px] text-ink-3">VOTES</span>
+                    <span className="text-[13px] font-semibold">{count}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5 px-3.5 py-2.5">
+                  <p className="flex gap-2 text-[12.5px] leading-snug text-ink-2">
+                    <b className="w-3 shrink-0 font-bold text-signal-d">+</b>
+                    <span>{opt.meta.whyFits}</span>
+                  </p>
+                  <p className="flex gap-2 text-[12.5px] leading-snug text-ink-2">
+                    <b className="w-3 shrink-0 font-bold text-stop">&minus;</b>
+                    <span>{opt.meta.whoFitsWorst}</span>
+                  </p>
+                </div>
+                {actions && <div className="flex items-center gap-2.5 border-t border-line px-3.5 py-2.5">{actions}</div>}
+              </div>
+            );
+          }
+
           return (
             <div key={opt.id} className={`flex flex-col gap-1.5 px-3.5 py-2.5 border-t border-line ${isWinner ? "bg-signal/20" : ""}`}>
               <div className="flex items-center gap-2.5">
@@ -104,45 +190,8 @@ export function DecisionCard({
                   {isWinner && <span className="ml-1.5 text-[10px] font-semibold text-signal-d">locked</span>}
                 </div>
                 <span className="text-xs text-ink-3">{count}</span>
-                {decision.state !== "LOCKED" && (
-                  <>
-                    <button
-                      disabled={pending}
-                      onClick={() => vote(opt.id, false)}
-                      className="text-xs font-semibold text-plum px-2.5 py-1.5 rounded-full border border-line"
-                    >
-                      Vote
-                    </button>
-                    <button
-                      disabled={pending}
-                      onClick={() => vote(opt.id, true)}
-                      title="This doesn't work for me at all"
-                      className="text-xs text-ink-3"
-                    >
-                      &#128683;
-                    </button>
-                    {isAdmin && (
-                      <button disabled={pending} onClick={() => lock(opt.id)} className="text-xs font-semibold text-ink-2 underline">
-                        Lock
-                      </button>
-                    )}
-                  </>
-                )}
+                {actions}
               </div>
-              {opt.meta && (
-                <div className="flex flex-col gap-1 pl-0.5">
-                  <div className="flex gap-3 text-[11px] text-ink-3">
-                    <span>{opt.meta.costPerHead} / head</span>
-                    <span>{opt.meta.travelTime}</span>
-                  </div>
-                  <p className="text-xs text-ink-2">
-                    <span className="text-signal-d font-semibold">+</span> {opt.meta.whyFits}
-                  </p>
-                  <p className="text-xs text-ink-2">
-                    <span className="text-stop font-semibold">&minus;</span> {opt.meta.whoFitsWorst}
-                  </p>
-                </div>
-              )}
             </div>
           );
         })}
