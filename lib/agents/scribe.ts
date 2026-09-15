@@ -78,6 +78,7 @@ Message: "${body}"
 Rules:
 - A firm "I can't" / "no" statement is HARD. A preference ("I'd like", "maybe") is SOFT.
 - Only use category "budget", "departure_city", "vibe", or "hard_no" for facts.
+- For category "budget", value must be {"amount": <integer, INR per head>} — convert anything vague ("around 15k", "fifteen thousand") to a plain number, never a range or band.
 - Only extract availability (kind: "availability") when the message states specific or clearly-implied dates.
 - confidence is 0-1. If you're not confident, say so with a lower number rather than guessing.
 - rationale is a short (under 12 words) human-readable summary for a receipt message, e.g. "Karan can't travel Nov 20-25 (hard)".`;

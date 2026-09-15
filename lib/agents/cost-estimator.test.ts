@@ -50,8 +50,8 @@ describe("runCostEstimator", () => {
     mockDecisionsSelect.mockResolvedValue({ data: [lockedDestination], error: null });
     mockFactsSelect.mockResolvedValue({
       data: [
-        { member_id: "m1", category: "budget", value: { band: "under_10k" } },
-        { member_id: "m2", category: "budget", value: { band: "10k_20k" } },
+        { member_id: "m1", category: "budget", value: { amount: 8000 } },
+        { member_id: "m2", category: "budget", value: { amount: 18000 } },
       ],
       error: null,
     });

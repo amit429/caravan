@@ -60,7 +60,7 @@ import { POST } from "./route";
 
 const validIntake = {
   availability: [{ startDate: "2026-11-01", endDate: "2026-11-10", strength: "free" }],
-  budgetBand: "10-20k",
+  budgetAmount: 15000,
   departureCity: "Pune",
   vibe: ["Beach"],
   hardNos: ["No overnight buses"],
@@ -114,7 +114,7 @@ describe("POST /api/trips/[tripId]/intake", () => {
       expect.objectContaining({ category: "hard_no", type: "HARD", value: { items: ["No overnight buses"] } })
     );
     expect(factRows).toContainEqual(
-      expect.objectContaining({ category: "budget", type: "SOFT", value: { band: "10-20k" } })
+      expect.objectContaining({ category: "budget", type: "SOFT", value: { amount: 15000 } })
     );
     expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
     expect(mockPostAgentMessage).toHaveBeenCalledWith(

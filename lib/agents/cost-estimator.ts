@@ -4,7 +4,6 @@ import { flashModel, estimateCost } from "./model";
 import { logAgentRun } from "./log-run";
 import { postAgentMessage } from "./post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { budgetBandCeiling } from "@/lib/budget";
 import { flagMembersOverBudget } from "@/lib/cost-flags";
 import type { DecisionRow, FactRow } from "@/lib/database.types";
 
@@ -93,8 +92,7 @@ export async function runCostEstimator(tripId: string): Promise<CostEstimatorRes
 
   const memberCeilings = allFacts
     .filter((f) => f.category === "budget")
-    .map((f) => ({ memberId: f.member_id, ceiling: budgetBandCeiling((f.value as { band: string }).band) }))
-    .filter((c): c is { memberId: string; ceiling: number } => c.ceiling !== null);
+    .map((f) => ({ memberId: f.member_id, ceiling: (f.value as { amount: number }).amount }));
   const flagged = flagMembersOverBudget(maxPerHead, memberCeilings);
 
   const rangeText = `₹${minPerHead.toLocaleString("en-IN")}–${maxPerHead.toLocaleString("en-IN")} per head for ${destination}`;

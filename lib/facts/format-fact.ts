@@ -18,7 +18,7 @@ export function formatFactValue(value: unknown): string {
     if (Array.isArray(v.tags)) return v.tags.join(", ");
     if (typeof v.text === "string") return v.text;
     if (typeof v.city === "string") return v.city;
-    if (typeof v.band === "string") return v.band;
+    if (typeof v.amount === "number") return `₹${v.amount.toLocaleString("en-IN")} a head`;
   }
   if (typeof value === "string") return value;
   return "—";

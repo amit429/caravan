@@ -77,7 +77,7 @@ export async function POST(
   }
 
   const factRows = [
-    { category: "budget", type: "SOFT" as const, value: { band: parsed.data.budgetBand } },
+    { category: "budget", type: "SOFT" as const, value: { amount: parsed.data.budgetAmount } },
     { category: "departure_city", type: "SOFT" as const, value: { city: parsed.data.departureCity } },
     { category: "vibe", type: "SOFT" as const, value: { tags: parsed.data.vibe } },
     { category: "hard_no", type: "HARD" as const, value: { items: parsed.data.hardNos } },
@@ -105,7 +105,7 @@ export async function POST(
     agentName: "concierge",
     threadId,
     body: buildIntakeReceipt({
-      budgetBand: parsed.data.budgetBand,
+      budgetAmount: parsed.data.budgetAmount,
       departureCity: parsed.data.departureCity,
       vibe: parsed.data.vibe,
       hardNos: parsed.data.hardNos,

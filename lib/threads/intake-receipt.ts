@@ -3,12 +3,12 @@
 // the thread read as the agent actually listening rather than a form
 // swallowing input silently.
 export function buildIntakeReceipt(input: {
-  budgetBand: string;
+  budgetAmount: number;
   departureCity: string;
   vibe: string[];
   hardNos: string[];
 }): string {
-  const parts = [`${input.budgetBand} budget`, `from ${input.departureCity}`];
+  const parts = [`₹${input.budgetAmount.toLocaleString("en-IN")} budget`, `from ${input.departureCity}`];
   if (input.vibe.length > 0) parts.push(`${input.vibe.join(" + ")} vibe`);
 
   let receipt = `Got it — ${parts.join(", ")}.`;

@@ -22,7 +22,7 @@ export const intakeSchema = z.object({
     )
     .min(1)
     .max(20),
-  budgetBand: z.string().trim().min(1).max(40),
+  budgetAmount: z.number().int().min(5000).max(200000),
   departureCity: z.string().trim().min(1).max(80),
   vibe: z.array(z.string().trim().min(1).max(40)).max(12).default([]),
   hardNos: z.array(z.string().trim().min(1).max(80)).max(20).default([]),

@@ -20,8 +20,8 @@ describe("formatFactValue", () => {
     expect(formatFactValue({ city: "Pune" })).toBe("Pune");
   });
 
-  it("reads a band field", () => {
-    expect(formatFactValue({ band: "10-20k" })).toBe("10-20k");
+  it("formats an amount field as currency", () => {
+    expect(formatFactValue({ amount: 15000 })).toBe("₹15,000 a head");
   });
 
   it("falls back to a dash for an unrecognized shape", () => {

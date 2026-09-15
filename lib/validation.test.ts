@@ -21,7 +21,7 @@ describe("createTripSchema", () => {
 describe("intakeSchema", () => {
   const valid = {
     availability: [{ startDate: "2026-11-01", endDate: "2026-11-10", strength: "free" }],
-    budgetBand: "10-20k",
+    budgetAmount: 15000,
     departureCity: "Pune",
     vibe: ["Beach", "Food"],
     hardNos: ["No overnight buses"],

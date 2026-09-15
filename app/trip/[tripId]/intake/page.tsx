@@ -5,6 +5,7 @@ import { FlowShell } from "@/components/caravan/flow-shell";
 import { AppBar } from "@/components/caravan/app-bar";
 import { ProgressDots } from "@/components/caravan/progress-dots";
 import { Chip } from "@/components/caravan/chip";
+import { BudgetSlider } from "@/components/caravan/budget-slider";
 import { AvailabilityCalendar } from "@/components/caravan/availability-calendar";
 import { AmbientGlow } from "@/components/caravan/ambient-glow";
 import {
@@ -16,20 +17,9 @@ import {
   PartyPopperIllustration,
 } from "@/components/caravan/illustrations";
 import { coalesceAvailability, type Strength } from "@/lib/availability-calendar";
+import { VIBE_EMOJI } from "@/lib/facts/vibe-emoji";
 
-const BUDGET_OPTIONS = ["Under 10k", "10-20k", "20-35k", "Open"];
-const BUDGET_EMOJI: Record<string, string> = { "Under 10k": "🌱", "10-20k": "🙂", "20-35k": "💎", Open: "🚀" };
 const VIBE_OPTIONS = ["Beach", "Mountains", "Party", "Slow", "Road trip", "Food", "Trekking", "Cities"];
-const VIBE_EMOJI: Record<string, string> = {
-  Beach: "🏖️",
-  Mountains: "⛰️",
-  Party: "🎉",
-  Slow: "🌙",
-  "Road trip": "🚗",
-  Food: "🍜",
-  Trekking: "🥾",
-  Cities: "🏙️",
-};
 const HARD_NO_SUGGESTIONS = ["No flights", "No overnight buses", "No trekking", "Back by Sunday night"];
 const STEP_COUNT = 5; // availability, budget, departure city, vibe, hard nos
 
@@ -47,7 +37,7 @@ export default function IntakePage() {
 
   const [step, setStep] = useState(0);
   const [availabilityMarks, setAvailabilityMarks] = useState<Record<string, Strength>>({});
-  const [budgetBand, setBudgetBand] = useState(BUDGET_OPTIONS[1]);
+  const [budgetAmount, setBudgetAmount] = useState(15000);
   const [departureCity, setDepartureCity] = useState("");
   const [vibe, setVibe] = useState<string[]>([]);
   const [hardNoText, setHardNoText] = useState("");
@@ -79,7 +69,7 @@ export default function IntakePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         availability: coalesceAvailability(availabilityMarks),
-        budgetBand,
+        budgetAmount,
         departureCity,
         vibe,
         hardNos,
@@ -116,7 +106,7 @@ export default function IntakePage() {
 
   const canGoNext =
     (step === 0 && Object.keys(availabilityMarks).length > 0) ||
-    (step === 1 && budgetBand) ||
+    step === 1 ||
     (step === 2 && departureCity.trim()) ||
     step === 3 ||
     step === 4;
@@ -159,13 +149,7 @@ export default function IntakePage() {
                   only ever sees a ceiling the whole plan has to fit under.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {BUDGET_OPTIONS.map((b) => (
-                  <Chip key={b} selected={budgetBand === b} onClick={() => setBudgetBand(b)}>
-                    {BUDGET_EMOJI[b]} {b}
-                  </Chip>
-                ))}
-              </div>
+              <BudgetSlider value={budgetAmount} onChange={setBudgetAmount} />
             </>
           )}
 

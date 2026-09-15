@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { budgetBandCeiling } from "@/lib/budget";
 import { flagMembersOverBudget } from "@/lib/cost-flags";
 import { GenerateCostEstimateButton } from "@/components/caravan/generate-cost-estimate-button";
 import { EmptyState } from "@/components/caravan/empty-state";
@@ -27,9 +26,7 @@ export default async function CostPage({ params }: { params: Promise<{ tripId: s
   let overCount = 0;
   let underCount = 0;
   if (estimate) {
-    const ceilings = ((facts ?? []) as FactRow[])
-      .map((f) => budgetBandCeiling((f.value as { band: string }).band))
-      .filter((c): c is number => c !== null);
+    const ceilings = ((facts ?? []) as FactRow[]).map((f) => (f.value as { amount: number }).amount);
     overCount = flagMembersOverBudget(
       estimate.max_per_head,
       ceilings.map((ceiling, i) => ({ memberId: String(i), ceiling }))

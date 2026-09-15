@@ -12,7 +12,6 @@ import { PrepChecklist } from "@/components/caravan/prep-checklist";
 import { GenerateChecklistButton } from "@/components/caravan/generate-checklist-button";
 import { ShareSnapshot } from "@/components/caravan/share-snapshot";
 import { RealtimeRefresh } from "@/components/caravan/realtime-refresh";
-import { FactsList } from "@/components/caravan/facts-list";
 import { SummaryLinkCard } from "@/components/caravan/summary-link-card";
 import type {
   AvailabilityRow,
@@ -93,8 +92,8 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
     allAvailability,
     activeMembers.map((m) => m.id)
   );
-  const budgetBands = allFacts.filter((f) => f.category === "budget").map((f) => (f.value as { band: string }).band);
-  const groupCeiling = groupBudgetCeiling(budgetBands);
+  const budgetAmounts = allFacts.filter((f) => f.category === "budget").map((f) => (f.value as { amount: number }).amount);
+  const groupCeiling = groupBudgetCeiling(budgetAmounts);
   const hasDatesDecision = allDecisions.some((d) => d.type === "DATES");
   const hasDestinationDecision = allDecisions.some((d) => d.type === "DESTINATION");
   const lockedDestinationDecision = allDecisions.find((d) => d.type === "DESTINATION" && d.state === "LOCKED");
@@ -125,8 +124,7 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
   // Budget is never listed individually anywhere, even here — only the
   // aggregated group ceiling above is ever shown (spec: "individual budgets
   // are never shown here, to anyone, including the admin").
-  const shareableFacts = allFacts.filter((f) => f.category !== "budget");
-  const memberNames = new Map(activeMembers.map((m, i) => [m.id, { name: m.display_name, colorIndex: i }]));
+  const shareableFactsCount = allFacts.filter((f) => f.category !== "budget").length;
 
   // DESTINATION decisions get their own page (the three-options-with-reasoning
   // hero was the single biggest thing crowding this page) — everything else
@@ -219,11 +217,13 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
         </div>
       </section>
 
-      {shareableFacts.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h3 className="font-mono text-xs text-ink-3">FACTS</h3>
-          <FactsList tripId={tripId} facts={shareableFacts} memberNames={memberNames} myMemberId={caller.id} />
-        </section>
+      {shareableFactsCount > 0 && (
+        <SummaryLinkCard
+          href={`/trip/${tripId}/facts`}
+          label="ANSWERS"
+          title={`${shareableFactsCount} thing${shareableFactsCount === 1 ? "" : "s"} filed`}
+          subtitle="Departure cities, vibes, and hard nos — by person"
+        />
       )}
 
       <SummaryLinkCard

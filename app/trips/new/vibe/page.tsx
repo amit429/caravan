@@ -4,11 +4,17 @@ import { useState } from "react";
 import { AppBar } from "@/components/caravan/app-bar";
 import { ProgressDots } from "@/components/caravan/progress-dots";
 import { Chip } from "@/components/caravan/chip";
+import { BudgetSlider } from "@/components/caravan/budget-slider";
 import { writeDraft, readDraft } from "@/app/trips/new/new-trip-store";
 import { FlowShell } from "@/components/caravan/flow-shell";
 
 const VIBE_OPTIONS = ["Beach", "Mountains", "Party", "Slow", "Road trip", "Food", "Trekking", "Cities"];
-const BUDGET_OPTIONS = ["Under 10k", "10-20k", "20-35k", "Open"];
+
+function parseBudgetHint(hint: string): number {
+  const digits = hint.replace(/[^\d]/g, "");
+  const n = Number(digits);
+  return n >= 5000 && n <= 200000 ? n : 15000;
+}
 const TONES = [
   { value: "efficient" as const, label: "Efficient", desc: "Short. No jokes. Gets to the point." },
   { value: "warm" as const, label: "Warm", desc: "Friendly, a little chatty." },
@@ -19,7 +25,7 @@ export default function NewTripVibePage() {
   const router = useRouter();
   const draft = readDraft();
   const [vibe, setVibe] = useState<string[]>(draft.vibe);
-  const [budgetHint, setBudgetHint] = useState(draft.budgetHint || BUDGET_OPTIONS[1]);
+  const [budgetAmount, setBudgetAmount] = useState(draft.budgetHint ? parseBudgetHint(draft.budgetHint) : 15000);
   const [agentTone, setAgentTone] = useState(draft.agentTone);
 
   function toggleVibe(v: string) {
@@ -27,7 +33,7 @@ export default function NewTripVibePage() {
   }
 
   function next() {
-    writeDraft({ vibe, budgetHint, agentTone });
+    writeDraft({ vibe, budgetHint: `₹${budgetAmount.toLocaleString("en-IN")}`, agentTone });
     router.push(`/trips/new/invite`);
   }
 
@@ -48,13 +54,7 @@ export default function NewTripVibePage() {
           ))}
         </div>
         <label className="text-xs font-medium text-ink-2 mt-1.5">Rough budget a head</label>
-        <div className="flex flex-wrap gap-1.5">
-          {BUDGET_OPTIONS.map((b) => (
-            <Chip key={b} selected={budgetHint === b} onClick={() => setBudgetHint(b)}>
-              {b}
-            </Chip>
-          ))}
-        </div>
+        <BudgetSlider value={budgetAmount} onChange={setBudgetAmount} />
         <label className="text-xs font-medium text-ink-2 mt-1.5">How should the agent talk?</label>
         <div className="flex flex-col gap-2">
           {TONES.map((t) => (
