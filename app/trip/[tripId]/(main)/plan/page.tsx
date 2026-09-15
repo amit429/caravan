@@ -10,23 +10,19 @@ import { DecisionCard } from "@/components/caravan/decision-card";
 import { CreateDatesDecisionButton } from "@/components/caravan/create-dates-decision-button";
 import { GenerateDestinationsButton } from "@/components/caravan/generate-destinations-button";
 import { GenerateItineraryButton } from "@/components/caravan/generate-itinerary-button";
-import { IdeaInbox } from "@/components/caravan/idea-inbox";
 import { PrepChecklist } from "@/components/caravan/prep-checklist";
 import { GenerateChecklistButton } from "@/components/caravan/generate-checklist-button";
-import { BookingTracker } from "@/components/caravan/booking-tracker";
-import { GenerateCostEstimateButton } from "@/components/caravan/generate-cost-estimate-button";
 import { ShareSnapshot } from "@/components/caravan/share-snapshot";
 import { RealtimeRefresh } from "@/components/caravan/realtime-refresh";
 import { FactsList } from "@/components/caravan/facts-list";
+import { SummaryLinkCard } from "@/components/caravan/summary-link-card";
 import type {
   AvailabilityRow,
   BookingRow,
-  BookingStatusRow,
   CostEstimateRow,
   DecisionRow,
   FactRow,
   IdeaRow,
-  IdeaVoteRow,
   ItineraryRow,
   MemberRow,
   TaskRow,
@@ -81,16 +77,6 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
   const allBookings = (bookings ?? []) as BookingRow[];
   const tripCostEstimate = costEstimate as CostEstimateRow | null;
   const tripRow = trip as TripRow;
-
-  const ideaIds = allIdeas.map((i) => i.id);
-  const { data: ideaVotesData } = ideaIds.length
-    ? await supabase.from("idea_votes").select().in("idea_id", ideaIds)
-    : { data: [] as IdeaVoteRow[] };
-
-  const bookingIds = allBookings.map((b) => b.id);
-  const { data: bookingStatusData } = bookingIds.length
-    ? await supabase.from("booking_status").select().in("booking_id", bookingIds)
-    : { data: [] as BookingStatusRow[] };
 
   const decisionIds = allDecisions.map((d) => d.id);
   const { data: votesData } = decisionIds.length
@@ -300,29 +286,17 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
         </section>
       )}
 
-      {hasLockedDestination && (
-        <section className="flex flex-col gap-2">
-          <h3 className="font-mono text-xs text-ink-3">COST ESTIMATE</h3>
-          {tripCostEstimate ? (
-            <div className="flex flex-col gap-2 rounded-lg bg-card p-3.5">
-              <p className="text-sm">
-                <span className="font-semibold">
-                  &#8377;{tripCostEstimate.min_per_head.toLocaleString("en-IN")}&ndash;
-                  {tripCostEstimate.max_per_head.toLocaleString("en-IN")}
-                </span>{" "}
-                per head for {tripCostEstimate.destination}.
-              </p>
-              <p className="text-xs text-ink-2">{tripCostEstimate.assumptions}</p>
-              {isAdmin && <GenerateCostEstimateButton tripId={tripId} label="Re-estimate" />}
-            </div>
-          ) : isAdmin ? (
-            <div className="rounded-lg bg-card p-3.5">
-              <GenerateCostEstimateButton tripId={tripId} label="Estimate cost" />
-            </div>
-          ) : (
-            <div className="rounded-lg bg-sunk p-4 text-sm text-ink-2">No cost estimate yet.</div>
-          )}
-        </section>
+      {(hasLockedDestination || tripCostEstimate) && (
+        <SummaryLinkCard
+          href={`/trip/${tripId}/cost`}
+          label="COST"
+          title={
+            tripCostEstimate
+              ? `₹${tripCostEstimate.min_per_head.toLocaleString("en-IN")}–${tripCostEstimate.max_per_head.toLocaleString("en-IN")} a head`
+              : "No estimate yet"
+          }
+          subtitle={tripCostEstimate ? `for ${tripCostEstimate.destination}` : "Estimate what it'll cost"}
+        />
       )}
 
       {hasLockedDestination && hasLockedDates && (
@@ -340,28 +314,19 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
         </section>
       )}
 
-      <section className="flex flex-col gap-2">
-        <h3 className="font-mono text-xs text-ink-3">BOOKING TRACKER</h3>
-        <BookingTracker
-          tripId={tripId}
-          bookings={allBookings}
-          statuses={(bookingStatusData ?? []) as BookingStatusRow[]}
-          members={activeMembers}
-          myMemberId={caller.id}
-          isAdmin={isAdmin}
-        />
-      </section>
+      <SummaryLinkCard
+        href={`/trip/${tripId}/bookings`}
+        label="BOOKINGS"
+        title={allBookings.length > 0 ? `${allBookings.length} being tracked` : "Nothing tracked yet"}
+        subtitle="Who's booked what"
+      />
 
-      <section className="flex flex-col gap-2">
-        <h3 className="font-mono text-xs text-ink-3">IDEA INBOX</h3>
-        <IdeaInbox
-          tripId={tripId}
-          ideas={allIdeas}
-          votes={(ideaVotesData ?? []) as IdeaVoteRow[]}
-          myMemberId={caller.id}
-          isAdmin={isAdmin}
-        />
-      </section>
+      <SummaryLinkCard
+        href={`/trip/${tripId}/ideas`}
+        label="IDEAS"
+        title={allIdeas.length > 0 ? `${allIdeas.length} dropped` : "No ideas yet"}
+        subtitle="Places people pasted in"
+      />
 
       {openItems.length > 0 && (
         <section className="flex flex-col gap-2">
