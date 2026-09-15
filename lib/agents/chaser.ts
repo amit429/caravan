@@ -1,5 +1,6 @@
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { postAgentMessage } from "@/lib/agents/post-agent-message";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
 import { isPastDeadline, needsDeadlineReminder, nextNudgeTier } from "@/lib/agents/chaser-rules";
 import { pickWinningOption } from "@/lib/tally-votes";
 import type { DecisionRow, FactRow, MemberRow } from "@/lib/database.types";
@@ -98,6 +99,10 @@ export async function sweepIntakeNudges(tripId: string) {
     else if (tier === 2) tier2.push(member);
     else if (tier === 3) {
       await supabase.from("members").update({ nudge_tier: 3, flagged_at: now.toISOString() }).eq("id", member.id);
+      // Tier 3 is silent to the group (spec §8.2) but the admin's Plan page
+      // should still pick up the "flagged" badge live, same as every other
+      // state change — postAgentMessage doesn't run here, so broadcast directly.
+      await broadcastTripChange(tripId);
     }
   }
 

@@ -7,8 +7,10 @@ const mockDecisionsUpdate = vi.fn();
 const mockMembersSelect = vi.fn();
 const mockFactsSelect = vi.fn();
 const mockMembersUpdate = vi.fn();
+const mockBroadcast = vi.fn();
 
 vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
@@ -59,6 +61,7 @@ beforeEach(() => {
   mockMembersSelect.mockReset();
   mockFactsSelect.mockReset();
   mockMembersUpdate.mockReset().mockResolvedValue({ error: null });
+  mockBroadcast.mockReset();
 });
 
 describe("sweepDecisions", () => {
@@ -195,5 +198,6 @@ describe("sweepIntakeNudges", () => {
     expect(mockMembersUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ nudge_tier: 3, flagged_at: expect.any(String) })
     );
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 });
