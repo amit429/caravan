@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { getAdminUser } from "@/lib/auth/session";
 import { IdeaInbox } from "@/components/caravan/idea-inbox";
 import type { IdeaRow, IdeaVoteRow } from "@/lib/database.types";
 
@@ -13,10 +12,7 @@ export default async function IdeasPage({ params }: { params: Promise<{ tripId: 
   const caller = await resolveCaller(tripId, supabase);
   if (!caller || caller.status === "removed") notFound();
 
-  const [{ data: ideas }, admin] = await Promise.all([
-    supabase.from("ideas").select().eq("trip_id", tripId).order("created_at", { ascending: false }),
-    getAdminUser(),
-  ]);
+  const { data: ideas } = await supabase.from("ideas").select().eq("trip_id", tripId).order("created_at", { ascending: false });
 
   const allIdeas = (ideas ?? []) as IdeaRow[];
   const ideaIds = allIdeas.map((i) => i.id);
@@ -33,7 +29,7 @@ export default async function IdeasPage({ params }: { params: Promise<{ tripId: 
         <h1 className="font-display text-lg font-semibold">Ideas</h1>
       </div>
       <p className="text-xs text-ink-3">Everything anyone pasted into the room. Vote and it moves into the plan.</p>
-      <IdeaInbox tripId={tripId} ideas={allIdeas} votes={(votes ?? []) as IdeaVoteRow[]} myMemberId={caller.id} isAdmin={!!admin} />
+      <IdeaInbox tripId={tripId} ideas={allIdeas} votes={(votes ?? []) as IdeaVoteRow[]} myMemberId={caller.id} isAdmin={caller.role === "admin"} />
     </div>
   );
 }

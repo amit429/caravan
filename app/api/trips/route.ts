@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getAdminUser } from "@/lib/auth/session";
+import { getAuthUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { generateInviteCode } from "@/lib/invite-code";
 import { createTripSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const admin = await getAdminUser();
+  const admin = await getAuthUser();
   if (!admin) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
   const { error: memberError } = await supabase.from("members").insert({
     trip_id: trip.id,
-    display_name: admin.email.split("@")[0],
+    display_name: admin.name,
     email: admin.email,
     role: "admin",
     status: "active",
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  const admin = await getAdminUser();
+  const admin = await getAuthUser();
   if (!admin) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }

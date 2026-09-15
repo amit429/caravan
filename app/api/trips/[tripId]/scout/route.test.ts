@@ -4,7 +4,7 @@ const mockGetAdminUser = vi.fn();
 const mockRunScout = vi.fn();
 const mockTripSingle = vi.fn();
 
-vi.mock("@/lib/auth/session", () => ({ getAdminUser: () => mockGetAdminUser() }));
+vi.mock("@/lib/auth/session", () => ({ getAuthUser: () => mockGetAdminUser() }));
 vi.mock("@/lib/agents/scout", () => ({ runScout: (...args: unknown[]) => mockRunScout(...args) }));
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({

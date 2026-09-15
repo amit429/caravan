@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { getAdminUser } from "@/lib/auth/session";
 import { BookingTracker } from "@/components/caravan/booking-tracker";
 import type { BookingRow, BookingStatusRow, MemberRow } from "@/lib/database.types";
 
@@ -13,10 +12,9 @@ export default async function BookingsPage({ params }: { params: Promise<{ tripI
   const caller = await resolveCaller(tripId, supabase);
   if (!caller || caller.status === "removed") notFound();
 
-  const [{ data: bookings }, { data: members }, admin] = await Promise.all([
+  const [{ data: bookings }, { data: members }] = await Promise.all([
     supabase.from("bookings").select().eq("trip_id", tripId).order("created_at", { ascending: false }),
     supabase.from("members").select().eq("trip_id", tripId).eq("status", "active").order("joined_at", { ascending: true }),
-    getAdminUser(),
   ]);
 
   const allBookings = (bookings ?? []) as BookingRow[];
@@ -40,7 +38,7 @@ export default async function BookingsPage({ params }: { params: Promise<{ tripI
         statuses={(statuses ?? []) as BookingStatusRow[]}
         members={(members ?? []) as MemberRow[]}
         myMemberId={caller.id}
-        isAdmin={!!admin}
+        isAdmin={caller.role === "admin"}
       />
     </div>
   );

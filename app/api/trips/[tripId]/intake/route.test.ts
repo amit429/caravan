@@ -1,7 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const mockGetAdminUser = vi.fn();
-const mockGetMemberSession = vi.fn();
+const mockGetAuthUser = vi.fn();
 const mockInsertAvailability = vi.fn();
 const mockInsertFacts = vi.fn();
 const mockBroadcast = vi.fn();
@@ -13,8 +12,7 @@ vi.mock("@/lib/threads/ensure-thread", () => ({ ensureThread: (...args: unknown[
 vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
-  getAdminUser: () => mockGetAdminUser(),
-  getMemberSession: () => mockGetMemberSession(),
+  getAuthUser: () => mockGetAuthUser(),
 }));
 
 // A minimal thenable query-builder stand-in: every chain method returns itself,
@@ -75,9 +73,10 @@ function postRequest(body: unknown) {
   });
 }
 
+const authMember = { id: "u1", email: "rhea@example.com", name: "Rhea" };
+
 beforeEach(() => {
-  mockGetAdminUser.mockReset();
-  mockGetMemberSession.mockReset();
+  mockGetAuthUser.mockReset();
   mockInsertAvailability.mockReset().mockResolvedValue({ error: null });
   mockInsertFacts.mockReset().mockResolvedValue({ error: null });
   mockBroadcast.mockReset();
@@ -87,15 +86,13 @@ beforeEach(() => {
 
 describe("POST /api/trips/[tripId]/intake", () => {
   it("rejects a caller with no session", async () => {
-    mockGetAdminUser.mockResolvedValue(null);
-    mockGetMemberSession.mockResolvedValue(null);
+    mockGetAuthUser.mockResolvedValue(null);
     const res = await POST(postRequest(validIntake), { params: Promise.resolve({ tripId: "trip-1" }) });
     expect(res.status).toBe(401);
   });
 
   it("rejects an invalid body", async () => {
-    mockGetAdminUser.mockResolvedValue(null);
-    mockGetMemberSession.mockResolvedValue({ tripId: "trip-1", memberId: "member-1" });
+    mockGetAuthUser.mockResolvedValue(authMember);
     const res = await POST(postRequest({ ...validIntake, availability: [] }), {
       params: Promise.resolve({ tripId: "trip-1" }),
     });
@@ -103,8 +100,7 @@ describe("POST /api/trips/[tripId]/intake", () => {
   });
 
   it("saves availability and facts for a valid submission", async () => {
-    mockGetAdminUser.mockResolvedValue(null);
-    mockGetMemberSession.mockResolvedValue({ tripId: "trip-1", memberId: "member-1" });
+    mockGetAuthUser.mockResolvedValue(authMember);
     const res = await POST(postRequest(validIntake), { params: Promise.resolve({ tripId: "trip-1" }) });
     expect(res.status).toBe(201);
 

@@ -16,10 +16,11 @@ export default function MemberLobbyPage() {
   const [members, setMembers] = useState<MemberRow[]>([]);
 
   useEffect(() => {
-    // Members have no Supabase Auth session (spec §10), so RLS blocks direct
-    // table reads and postgres_changes never reaches them (see
-    // lib/realtime/broadcast) — this fetches through the dual-auth API route
-    // and listens on the broadcast channel like RealtimeRefresh does.
+    // RLS only grants read access to a trip's own admin_user_id, never a
+    // plain member — even though members authenticate through Supabase Auth
+    // too now (see lib/realtime/broadcast) — so this fetches through the
+    // dual-auth API route and listens on the broadcast channel like
+    // RealtimeRefresh does.
     let cancelled = false;
 
     async function load() {

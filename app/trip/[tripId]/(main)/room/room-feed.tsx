@@ -29,10 +29,10 @@ export function RoomFeed({
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
-    // Broadcast, not postgres_changes: members authenticate via a custom JWT
-    // (spec §10), not Supabase Auth, so they have no auth.uid() and
-    // postgres_changes' RLS-gated realtime never reaches them — only the
-    // admin would see live messages. The server broadcasts the exact row on
+    // Broadcast, not postgres_changes: the messages RLS policy only grants
+    // SELECT to a trip's own admin_user_id, so postgres_changes' RLS-gated
+    // realtime never reaches a plain member — only the admin would see live
+    // messages. The server broadcasts the exact row on
     // this channel after every insert (see lib/realtime/broadcast), so both
     // audiences append it the same way. Thread traffic uses a different
     // payload type, so it's naturally excluded here.

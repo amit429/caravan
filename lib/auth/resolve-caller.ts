@@ -1,38 +1,27 @@
 import { NextResponse } from "next/server";
-import { getAdminUser, getMemberSession } from "@/lib/auth/session";
+import { getAuthUser } from "@/lib/auth/session";
 import type { createServiceSupabaseClient } from "@/lib/supabase/service";
 
-export type CallerLookup = { id: string; status: "active" | "removed" } | null;
+export type CallerLookup = { id: string; status: "active" | "removed"; role: "member" | "admin" } | null;
 
-// Resolves whoever is calling — admin (Supabase Auth) or member (JWT cookie) —
-// down to their `members` row for this trip. Used by every route that both
-// admins and members can hit (messages, intake, votes): once resolved, the
-// caller's member_id is all that matters, not which identity system got them there.
+// Everyone — admin or member — authenticates through Supabase Auth now, so
+// resolving a caller is one lookup: their members row for this trip, by
+// email. A trip's admin is mirrored into members with role='admin' at
+// creation time (see app/api/trips/route.ts), so this single path naturally
+// covers both; there's no separate identity system to branch on anymore.
 export async function resolveCaller(
   tripId: string,
   supabase: ReturnType<typeof createServiceSupabaseClient>
 ): Promise<CallerLookup> {
-  const admin = await getAdminUser();
-  if (admin) {
-    const { data } = await supabase
-      .from("members")
-      .select("id, status")
-      .eq("trip_id", tripId)
-      .eq("email", admin.email)
-      .maybeSingle();
-    return data ?? null;
-  }
-  const memberSession = await getMemberSession();
-  if (memberSession && memberSession.tripId === tripId) {
-    const { data } = await supabase
-      .from("members")
-      .select("id, status")
-      .eq("trip_id", tripId)
-      .eq("id", memberSession.memberId)
-      .maybeSingle();
-    return data ?? null;
-  }
-  return null;
+  const authUser = await getAuthUser();
+  if (!authUser) return null;
+  const { data } = await supabase
+    .from("members")
+    .select("id, status, role")
+    .eq("trip_id", tripId)
+    .eq("email", authUser.email)
+    .maybeSingle();
+  return data ?? null;
 }
 
 // 401 = no session at all (never joined / never signed in). 403 = a real member/admin
@@ -44,7 +33,7 @@ export function callerAuthError(caller: CallerLookup) {
   return null;
 }
 
-export type TripOwnerResult = { admin: { id: string; email: string } } | { error: ReturnType<typeof NextResponse.json> };
+export type TripOwnerResult = { admin: { id: string; email: string; name: string } } | { error: ReturnType<typeof NextResponse.json> };
 
 // Admin-only routes that go through the service-role client (which bypasses RLS
 // entirely) must check ownership themselves — RLS-backed routes get this for free
@@ -54,7 +43,7 @@ export async function requireTripOwner(
   tripId: string,
   supabase: ReturnType<typeof createServiceSupabaseClient>
 ): Promise<TripOwnerResult> {
-  const admin = await getAdminUser();
+  const admin = await getAuthUser();
   if (!admin) return { error: NextResponse.json({ error: "unauthenticated" }, { status: 401 }) };
   const { data: trip } = await supabase.from("trips").select("admin_user_id").eq("id", tripId).maybeSingle();
   if (!trip) return { error: NextResponse.json({ error: "not_found" }, { status: 404 }) };

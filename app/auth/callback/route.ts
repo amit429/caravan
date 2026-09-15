@@ -4,6 +4,10 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  // Only ever an in-app path (set by JoinWithGoogleButton) — never trust an
+  // absolute or external URL out of a query param.
+  const next = searchParams.get("next");
+  const destination = next && next.startsWith("/") ? next : "/trips";
 
   // Google/Supabase redirect here with `error`/`error_description` instead of
   // `code` when the user denies consent or the OAuth attempt otherwise fails
@@ -23,5 +27,5 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/sign-in?error=${encodeURIComponent(error.message)}`);
   }
 
-  return NextResponse.redirect(`${origin}/trips`);
+  return NextResponse.redirect(`${origin}${destination}`);
 }

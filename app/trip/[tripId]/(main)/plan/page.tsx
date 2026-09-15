@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { getAdminUser } from "@/lib/auth/session";
 import { computeTopDateWindows } from "@/lib/date-solver";
 import { groupBudgetCeiling } from "@/lib/budget";
 import { MapRouteIllustration } from "@/components/caravan/illustrations";
@@ -89,7 +88,7 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
     votesByDecision.set(v.decision_id, list);
   }
 
-  const isAdmin = !!(await getAdminUser());
+  const isAdmin = caller.role === "admin";
   const membersWithIntake = new Set(allFacts.map((f) => f.member_id));
   const dateWindows = computeTopDateWindows(
     allAvailability,

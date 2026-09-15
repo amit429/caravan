@@ -8,7 +8,7 @@ const mockBroadcast = vi.fn();
 
 vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
-vi.mock("@/lib/auth/session", () => ({ getAdminUser: () => mockGetAdminUser() }));
+vi.mock("@/lib/auth/session", () => ({ getAuthUser: () => mockGetAdminUser() }));
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabaseClient: () => ({
     from: () => ({

@@ -9,12 +9,6 @@ export const createTripSchema = z.object({
 });
 export type CreateTripInput = z.infer<typeof createTripSchema>;
 
-export const joinTripSchema = z.object({
-  displayName: z.string().trim().min(1).max(60),
-  email: z.string().trim().email().max(120),
-});
-export type JoinTripInput = z.infer<typeof joinTripSchema>;
-
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD");
 
 export const intakeSchema = z.object({

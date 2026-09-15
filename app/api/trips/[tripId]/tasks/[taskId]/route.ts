@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
-import { getAdminUser } from "@/lib/auth/session";
 import { taskStatusSchema } from "@/lib/validation";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
@@ -31,8 +30,7 @@ export async function PATCH(
     .single();
   if (!task) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  const isAdmin = !!(await getAdminUser());
-  if (task.member_id && task.member_id !== caller!.id && !isAdmin) {
+  if (task.member_id && task.member_id !== caller!.id && caller!.role !== "admin") {
     return NextResponse.json({ error: "not_your_task" }, { status: 403 });
   }
 

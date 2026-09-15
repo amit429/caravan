@@ -5,7 +5,7 @@ const mockInsertTrip = vi.fn();
 const mockInsertMember = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
-  getAdminUser: () => mockGetAdminUser(),
+  getAuthUser: () => mockGetAdminUser(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -49,7 +49,7 @@ describe("POST /api/trips", () => {
   });
 
   it("rejects an invalid body", async () => {
-    mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "amit@example.com" });
+    mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "amit@example.com", name: "Amit" });
     const req = new Request("http://localhost/api/trips", {
       method: "POST",
       body: JSON.stringify({ name: "" }),
@@ -59,7 +59,7 @@ describe("POST /api/trips", () => {
   });
 
   it("creates a trip and mirrors the admin as a member", async () => {
-    mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "amit@example.com" });
+    mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "amit@example.com", name: "Amit" });
     mockInsertTrip.mockResolvedValue({
       data: { id: "trip-1", name: "Goa", admin_user_id: "admin-1", invite_code: "ABCDEF" },
       error: null,

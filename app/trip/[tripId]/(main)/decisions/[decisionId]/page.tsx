@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { getAdminUser } from "@/lib/auth/session";
 import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
 import { DecisionCard } from "@/components/caravan/decision-card";
 import { Avatar } from "@/components/caravan/avatar";
@@ -26,7 +25,7 @@ export default async function DecisionDetailPage({
   ]);
   if (!decision) notFound();
 
-  const isAdmin = !!(await getAdminUser());
+  const isAdmin = caller.role === "admin";
   const decisionRow = decision as DecisionRow;
   const allVotes = (votes ?? []) as VoteRow[];
   const activeMembers = (members ?? []) as MemberRow[];

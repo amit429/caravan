@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getAdminUser } from "@/lib/auth/session";
+import { getAuthUser } from "@/lib/auth/session";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { DECISION_TYPE_TITLE } from "@/lib/decision-titles";
 import { ToggleJoiningButton } from "@/components/caravan/toggle-joining-button";
@@ -14,7 +14,7 @@ const TONE_LABEL: Record<string, string> = {
 
 export default async function TripSettingsPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
-  const admin = await getAdminUser();
+  const admin = await getAuthUser();
   if (!admin) notFound();
 
   const supabase = createServiceSupabaseClient();

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminUser } from "@/lib/auth/session";
+import { getAuthUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
@@ -7,7 +7,7 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ tripId: string; memberId: string }> }
 ) {
-  const admin = await getAdminUser();
+  const admin = await getAuthUser();
   if (!admin) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
   const { tripId, memberId } = await params;

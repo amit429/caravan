@@ -12,7 +12,7 @@ vi.mock("@/lib/auth/resolve-caller", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/resolve-caller")>("@/lib/auth/resolve-caller");
   return { ...actual, resolveCaller: (...args: unknown[]) => mockResolveCaller(...args) };
 });
-vi.mock("@/lib/auth/session", () => ({ getAdminUser: () => mockGetAdminUser() }));
+vi.mock("@/lib/auth/session", () => ({ getAuthUser: () => mockGetAdminUser() }));
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
     from: () => ({
@@ -70,8 +70,7 @@ describe("PATCH /api/trips/[tripId]/tasks/[taskId]", () => {
   });
 
   it("lets the admin toggle anyone's task", async () => {
-    mockResolveCaller.mockResolvedValue({ id: "admin-member-id", status: "active" });
-    mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "amit@example.com" });
+    mockResolveCaller.mockResolvedValue({ id: "admin-member-id", status: "active", role: "admin" });
     mockSingle.mockResolvedValue({ data: { id: "task-1", member_id: "m2" }, error: null });
     const res = await PATCH(req({ done: true }), { params });
     expect(res.status).toBe(200);

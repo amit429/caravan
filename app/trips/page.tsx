@@ -1,40 +1,49 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getAdminUser } from "@/lib/auth/session";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { Card } from "@/components/caravan/card";
 import { CompassIllustration } from "@/components/caravan/illustrations";
 import { AccountMenu } from "@/components/caravan/account-menu";
+import type { TripRow } from "@/lib/database.types";
 
 export default async function MyTripsPage() {
-  const admin = await getAdminUser();
-  if (!admin) redirect("/sign-in");
+  const authUser = await getAuthUser();
+  if (!authUser) redirect("/sign-in");
 
-  const supabase = await createServerSupabaseClient();
-  const { data: trips } = await supabase
-    .from("trips")
-    .select()
-    .eq("admin_user_id", admin.id)
-    .order("created_at", { ascending: false });
+  // Everyone authenticates the same way now, so "your trips" is just every
+  // trip you have an active members row on — admin (role='admin', mirrored
+  // in at creation) and plain member both fall out of the same query.
+  const supabase = createServiceSupabaseClient();
+  const { data: rows } = await supabase
+    .from("members")
+    .select("role, trips(*)")
+    .eq("email", authUser.email)
+    .eq("status", "active")
+    .order("created_at", { referencedTable: "trips", ascending: false });
 
-  const hasTrips = (trips ?? []).length > 0;
+  const trips = ((rows ?? []) as unknown as { role: "member" | "admin"; trips: TripRow }[])
+    .filter((r) => r.trips)
+    .map((r) => ({ ...r.trips, myRole: r.role }));
+  const hasTrips = trips.length > 0;
+
+  function tripHref(trip: TripRow & { myRole: "member" | "admin" }) {
+    if (trip.status !== "lobby") return `/trip/${trip.id}/room`;
+    return trip.myRole === "admin" ? `/trips/${trip.id}/lobby` : `/trip/${trip.id}/member-lobby`;
+  }
 
   return (
     <main className="min-h-dvh flex flex-col mx-auto w-full max-w-md md:max-w-2xl px-5 pt-6 pb-10 gap-3 md:px-8">
       <div className="flex items-center mb-2">
         <h2 className="font-display text-2xl font-semibold">Your trips</h2>
         <div className="ml-auto">
-          <AccountMenu email={admin.email} />
+          <AccountMenu email={authUser.email} />
         </div>
       </div>
       {hasTrips ? (
         <div className="flex flex-col gap-3 md:grid md:grid-cols-2 md:gap-4">
-          {trips!.map((trip) => (
-            <Link
-              key={trip.id}
-              href={trip.status === "lobby" ? `/trips/${trip.id}/lobby` : `/trip/${trip.id}/room`}
-              className="block transition-transform active:scale-[0.98]"
-            >
+          {trips.map((trip) => (
+            <Link key={trip.id} href={tripHref(trip)} className="block transition-transform active:scale-[0.98]">
               <Card className="transition-colors hover:bg-sunk">
                 <div className="flex items-center">
                   <span className="font-display text-base font-semibold">{trip.name}</span>
@@ -42,6 +51,7 @@ export default async function MyTripsPage() {
                     {trip.status === "lobby" ? "Draft" : trip.status === "active" ? "Moving" : "Closed"}
                   </span>
                 </div>
+                {trip.myRole === "member" && <p className="mt-1 text-xs text-ink-3">You&rsquo;re a member</p>}
               </Card>
             </Link>
           ))}

@@ -9,7 +9,7 @@ const mockPostAgentMessage = vi.fn();
 vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
-  getAdminUser: () => mockGetAdminUser(),
+  getAuthUser: () => mockGetAdminUser(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({

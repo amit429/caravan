@@ -4,7 +4,7 @@ import { ChevronLeft, Settings } from "lucide-react";
 import { TabBar } from "@/components/caravan/tab-bar";
 import { SidebarNav } from "@/components/caravan/sidebar-nav";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { getAdminUser } from "@/lib/auth/session";
+import { getAuthUser } from "@/lib/auth/session";
 
 export default async function TripLayout({
   children,
@@ -17,7 +17,7 @@ export default async function TripLayout({
   const supabase = createServiceSupabaseClient();
   const [{ data: trip }, admin] = await Promise.all([
     supabase.from("trips").select("name, admin_user_id").eq("id", tripId).single(),
-    getAdminUser(),
+    getAuthUser(),
   ]);
   if (!trip) notFound();
   const isOwningAdmin = !!admin && trip.admin_user_id === admin.id;

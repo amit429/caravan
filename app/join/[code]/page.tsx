@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { getMemberSession } from "@/lib/auth/session";
+import { getAuthUser } from "@/lib/auth/session";
 import { FlowShell } from "@/components/caravan/flow-shell";
 import { ClosedGateIllustration } from "@/components/caravan/illustrations";
+import { JoinWithGoogleButton } from "@/components/caravan/join-with-google-button";
 
 export default async function InviteLandingPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -16,12 +17,11 @@ export default async function InviteLandingPage({ params }: { params: Promise<{ 
 
   if (!trip) notFound();
 
-  // Duplicate join attempt with a still-valid cookie for THIS trip: resume silently
-  // instead of showing the join form again (spec §8).
-  const memberSession = await getMemberSession();
-  if (memberSession && memberSession.tripId === trip.id) {
-    redirect(trip.status === "active" ? `/trip/${trip.id}/room` : `/trip/${trip.id}/member-lobby`);
-  }
+  // Already signed in: resolve straight through instead of asking them to
+  // tap "join" again — covers both "already a member, just resume" and "new
+  // here, but no extra auth step needed since the session already exists".
+  const authUser = await getAuthUser();
+  if (authUser) redirect(`/join/${code}/complete`);
 
   if (!trip.joining_open || trip.status === "closed") {
     return (
@@ -49,10 +49,14 @@ export default async function InviteLandingPage({ params }: { params: Promise<{ 
       {trip.rough_intent && <p className="text-[15px] text-ink-2">{trip.rough_intent}</p>}
       <p className="text-sm text-ink-2">{count ?? 0} already in</p>
       <div className="flex-1 md:hidden" />
-      <Link href={`/join/${code}/form`} className="w-full py-4 rounded-xl bg-plum text-white text-center font-semibold">
-        Join the trip
-      </Link>
-      <p className="text-xs text-ink-3 text-center">No account needed. Takes about twenty seconds.</p>
+      <JoinWithGoogleButton code={code} label="Join with Google" />
+      <p className="text-xs text-ink-3 text-center">
+        We use your Google account to confirm it&rsquo;s really you — no separate password, and you can find every trip
+        you&rsquo;re in from any device.
+      </p>
+      <p className="text-xs text-ink-3 text-center">
+        Not you? <Link href="/join" className="font-medium text-plum">Enter a different code</Link>
+      </p>
     </FlowShell>
   );
 }

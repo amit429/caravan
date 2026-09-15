@@ -1,11 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const mockTripSingle = vi.fn();
-const mockMemberMaybeSingle = vi.fn();
-const mockMemberInsertSingle = vi.fn();
-const mockBroadcast = vi.fn();
-
-vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
+const mockMembersCount = vi.fn();
 
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
@@ -14,86 +10,46 @@ vi.mock("@/lib/supabase/service", () => ({
         return { select: () => ({ eq: () => ({ single: () => mockTripSingle() }) }) };
       }
       if (table === "members") {
-        return {
-          select: () => ({
-            eq: () => ({ eq: () => ({ maybeSingle: () => mockMemberMaybeSingle() }) }),
-          }),
-          insert: () => ({ select: () => ({ single: () => mockMemberInsertSingle() }) }),
-        };
+        return { select: () => ({ eq: () => mockMembersCount() }) };
       }
       throw new Error(`unexpected table ${table}`);
     },
   }),
 }));
 
-vi.mock("@/lib/auth/member-jwt", () => ({
-  signMemberToken: vi.fn().mockResolvedValue("signed-token"),
-}));
-
-import { POST } from "./route";
+import { GET } from "./route";
 
 beforeEach(() => {
   mockTripSingle.mockReset();
-  mockMemberMaybeSingle.mockReset();
-  mockMemberInsertSingle.mockReset();
-  mockBroadcast.mockReset();
+  mockMembersCount.mockReset().mockResolvedValue({ count: 3 });
 });
 
-function joinRequest(body: unknown) {
-  return new Request("http://localhost/api/join/ABCDEF", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-}
-
-describe("POST /api/join/[code]", () => {
+describe("GET /api/join/[code]", () => {
   it("404s for an unknown invite code", async () => {
     mockTripSingle.mockResolvedValue({ data: null, error: { message: "not found" } });
-    const res = await POST(joinRequest({ displayName: "Ishaan", email: "i@example.com" }), {
-      params: Promise.resolve({ code: "ABCDEF" }),
-    });
+    const res = await GET(new Request("http://localhost"), { params: Promise.resolve({ code: "ABCDEF" }) });
     expect(res.status).toBe(404);
   });
 
-  it("409s when joining is closed", async () => {
+  it("returns the trip peek and joinable flag", async () => {
     mockTripSingle.mockResolvedValue({
-      data: { id: "trip-1", joining_open: false },
+      data: { id: "trip-1", name: "Goa, probably", rough_intent: "Beachy weekend", joining_open: true, status: "lobby" },
       error: null,
     });
-    const res = await POST(joinRequest({ displayName: "Ishaan", email: "i@example.com" }), {
-      params: Promise.resolve({ code: "ABCDEF" }),
-    });
-    expect(res.status).toBe(409);
+    const res = await GET(new Request("http://localhost"), { params: Promise.resolve({ code: "ABCDEF" }) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.trip).toEqual({ name: "Goa, probably", roughIntent: "Beachy weekend", memberCount: 3 });
+    expect(body.joinable).toBe(true);
   });
 
-  it("resumes an existing member by email instead of creating a duplicate", async () => {
-    mockTripSingle.mockResolvedValue({ data: { id: "trip-1", joining_open: true }, error: null });
-    mockMemberMaybeSingle.mockResolvedValue({
-      data: { id: "member-1", trip_id: "trip-1", email: "i@example.com" },
+  it("marks a closed trip as not joinable", async () => {
+    mockTripSingle.mockResolvedValue({
+      data: { id: "trip-1", name: "Goa, probably", rough_intent: null, joining_open: true, status: "closed" },
       error: null,
     });
-    const res = await POST(joinRequest({ displayName: "Ishaan", email: "i@example.com" }), {
-      params: Promise.resolve({ code: "ABCDEF" }),
-    });
-    expect(res.status).toBe(200);
-    expect(mockMemberInsertSingle).not.toHaveBeenCalled();
-    expect(mockBroadcast).not.toHaveBeenCalled();
-    const setCookie = res.headers.get("set-cookie");
-    expect(setCookie).toContain("caravan_member_token=signed-token");
-  });
-
-  it("creates a new member when the email hasn't joined yet", async () => {
-    mockTripSingle.mockResolvedValue({ data: { id: "trip-1", joining_open: true }, error: null });
-    mockMemberMaybeSingle.mockResolvedValue({ data: null, error: null });
-    mockMemberInsertSingle.mockResolvedValue({
-      data: { id: "member-2", trip_id: "trip-1", email: "new@example.com" },
-      error: null,
-    });
-    const res = await POST(joinRequest({ displayName: "New", email: "new@example.com" }), {
-      params: Promise.resolve({ code: "ABCDEF" }),
-    });
-    expect(res.status).toBe(200);
-    expect(mockMemberInsertSingle).toHaveBeenCalled();
-    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
+    const res = await GET(new Request("http://localhost"), { params: Promise.resolve({ code: "ABCDEF" }) });
+    const body = await res.json();
+    expect(body.joinable).toBe(false);
   });
 });

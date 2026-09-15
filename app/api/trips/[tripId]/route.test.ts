@@ -18,7 +18,7 @@ vi.mock("@/lib/auth/resolve-caller", async () => {
 });
 
 vi.mock("@/lib/auth/session", () => ({
-  getAdminUser: () => mockGetAdminUser(),
+  getAuthUser: () => mockGetAdminUser(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const mockGetAdminUser = vi.fn();
-const mockGetMemberSession = vi.fn();
+const mockGetAuthUser = vi.fn();
 const mockTripSingle = vi.fn();
 const mockMemberMaybeSingle = vi.fn();
 const mockInsertSingle = vi.fn();
@@ -12,8 +11,7 @@ const mockBroadcast = vi.fn();
 vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
-  getAdminUser: () => mockGetAdminUser(),
-  getMemberSession: () => mockGetMemberSession(),
+  getAuthUser: () => mockGetAuthUser(),
 }));
 
 // `after()` requires a real Next.js request scope, which a unit test never
@@ -53,9 +51,10 @@ vi.mock("@/lib/supabase/service", () => ({
 
 import { GET, POST } from "./route";
 
+const authMember = { id: "u1", email: "rhea@example.com", name: "Rhea" };
+
 beforeEach(() => {
-  mockGetAdminUser.mockReset();
-  mockGetMemberSession.mockReset();
+  mockGetAuthUser.mockReset();
   mockTripSingle.mockReset();
   mockMemberMaybeSingle.mockReset();
   mockInsertSingle.mockReset();
@@ -66,16 +65,14 @@ beforeEach(() => {
 
 describe("GET /api/trips/[tripId]/messages", () => {
   it("rejects a caller with no session", async () => {
-    mockGetAdminUser.mockResolvedValue(null);
-    mockGetMemberSession.mockResolvedValue(null);
+    mockGetAuthUser.mockResolvedValue(null);
     const res = await GET(new Request("http://localhost"), { params: Promise.resolve({ tripId: "trip-1" }) });
     expect(res.status).toBe(401);
   });
 
   it("lists only group-lane messages for a resolved caller", async () => {
-    mockGetAdminUser.mockResolvedValue(null);
-    mockGetMemberSession.mockResolvedValue({ tripId: "trip-1", memberId: "member-1" });
-    mockMemberMaybeSingle.mockResolvedValue({ data: { id: "member-1", status: "active" }, error: null });
+    mockGetAuthUser.mockResolvedValue(authMember);
+    mockMemberMaybeSingle.mockResolvedValue({ data: { id: "member-1", status: "active", role: "member" }, error: null });
     mockMessagesSelect.mockResolvedValue({ data: [{ id: "msg-1", lane: "group" }], error: null });
     const res = await GET(new Request("http://localhost"), { params: Promise.resolve({ tripId: "trip-1" }) });
     expect(res.status).toBe(200);
@@ -92,34 +89,30 @@ function postRequest(body: unknown) {
 }
 
 describe("POST /api/trips/[tripId]/messages", () => {
-  it("rejects a caller with neither admin nor member session", async () => {
-    mockGetAdminUser.mockResolvedValue(null);
-    mockGetMemberSession.mockResolvedValue(null);
+  it("rejects a caller with no session", async () => {
+    mockGetAuthUser.mockResolvedValue(null);
     const res = await POST(postRequest({ body: "hi" }), { params: Promise.resolve({ tripId: "trip-1" }) });
     expect(res.status).toBe(401);
   });
 
   it("blocks posting while the trip is still in the lobby", async () => {
-    mockGetAdminUser.mockResolvedValue(null);
-    mockGetMemberSession.mockResolvedValue({ tripId: "trip-1", memberId: "member-1" });
-    mockMemberMaybeSingle.mockResolvedValue({ data: { id: "member-1", status: "active" }, error: null });
+    mockGetAuthUser.mockResolvedValue(authMember);
+    mockMemberMaybeSingle.mockResolvedValue({ data: { id: "member-1", status: "active", role: "member" }, error: null });
     mockTripSingle.mockResolvedValue({ data: { id: "trip-1", status: "lobby" }, error: null });
     const res = await POST(postRequest({ body: "hi" }), { params: Promise.resolve({ tripId: "trip-1" }) });
     expect(res.status).toBe(409);
   });
 
   it("returns 403 for a removed member instead of posting", async () => {
-    mockGetAdminUser.mockResolvedValue(null);
-    mockGetMemberSession.mockResolvedValue({ tripId: "trip-1", memberId: "member-1" });
-    mockMemberMaybeSingle.mockResolvedValue({ data: { id: "member-1", status: "removed" }, error: null });
+    mockGetAuthUser.mockResolvedValue(authMember);
+    mockMemberMaybeSingle.mockResolvedValue({ data: { id: "member-1", status: "removed", role: "member" }, error: null });
     const res = await POST(postRequest({ body: "hi" }), { params: Promise.resolve({ tripId: "trip-1" }) });
     expect(res.status).toBe(403);
   });
 
   it("posts a message once the trip is active", async () => {
-    mockGetAdminUser.mockResolvedValue(null);
-    mockGetMemberSession.mockResolvedValue({ tripId: "trip-1", memberId: "member-1" });
-    mockMemberMaybeSingle.mockResolvedValue({ data: { id: "member-1", status: "active" }, error: null });
+    mockGetAuthUser.mockResolvedValue(authMember);
+    mockMemberMaybeSingle.mockResolvedValue({ data: { id: "member-1", status: "active", role: "member" }, error: null });
     mockTripSingle.mockResolvedValue({ data: { id: "trip-1", status: "active" }, error: null });
     mockInsertSingle.mockResolvedValue({
       data: { id: "msg-1", trip_id: "trip-1", body: "hi", author_id: "member-1" },

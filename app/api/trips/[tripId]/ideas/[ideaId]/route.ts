@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
-import { getAdminUser } from "@/lib/auth/session";
+import { getAuthUser } from "@/lib/auth/session";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
 // Whoever pasted the link can pull it back; the trip's own admin can too
@@ -21,7 +21,7 @@ export async function DELETE(
   if (!idea) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   if (idea.member_id !== caller!.id) {
-    const admin = await getAdminUser();
+    const admin = await getAuthUser();
     if (!admin) return NextResponse.json({ error: "not_your_idea" }, { status: 403 });
     const { data: trip } = await supabase.from("trips").select("admin_user_id").eq("id", tripId).single();
     if (!trip || trip.admin_user_id !== admin.id) {

@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
-import { getAdminUser } from "@/lib/auth/session";
 import { budgetBandCeiling } from "@/lib/budget";
 import { flagMembersOverBudget } from "@/lib/cost-flags";
 import { GenerateCostEstimateButton } from "@/components/caravan/generate-cost-estimate-button";
@@ -15,13 +14,12 @@ export default async function CostPage({ params }: { params: Promise<{ tripId: s
   const caller = await resolveCaller(tripId, supabase);
   if (!caller || caller.status === "removed") notFound();
 
-  const [{ data: costEstimate }, { data: facts }, admin] = await Promise.all([
+  const [{ data: costEstimate }, { data: facts }] = await Promise.all([
     supabase.from("cost_estimates").select().eq("trip_id", tripId).maybeSingle(),
     supabase.from("facts").select().eq("trip_id", tripId).is("superseded_by", null).eq("category", "budget"),
-    getAdminUser(),
   ]);
 
-  const isAdmin = !!admin;
+  const isAdmin = caller.role === "admin";
   const estimate = costEstimate as CostEstimateRow | null;
 
   let overCount = 0;

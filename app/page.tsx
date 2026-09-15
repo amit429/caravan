@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getAdminUser } from "@/lib/auth/session";
+import { getAuthUser } from "@/lib/auth/session";
 import { FlowShell } from "@/components/caravan/flow-shell";
 
 export default async function LandingPage() {
-  const admin = await getAdminUser();
+  const admin = await getAuthUser();
   if (admin) redirect("/trips");
 
   return (

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
-import { getAdminUser } from "@/lib/auth/session";
 import { bookingStatusSchema } from "@/lib/validation";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 
@@ -25,7 +24,7 @@ export async function PATCH(
   if (!booking) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const targetMemberId = parsed.data.memberId ?? caller!.id;
-  if (targetMemberId !== caller!.id && !(await getAdminUser())) {
+  if (targetMemberId !== caller!.id && caller!.role !== "admin") {
     return NextResponse.json({ error: "not_your_status" }, { status: 403 });
   }
 

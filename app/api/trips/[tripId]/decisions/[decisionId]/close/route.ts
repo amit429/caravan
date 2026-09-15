@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminUser } from "@/lib/auth/session";
+import { getAuthUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { closeDecisionSchema } from "@/lib/validation";
 import { pickWinningOption, tallyVotes } from "@/lib/tally-votes";
@@ -12,7 +12,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tripId: string; decisionId: string }> }
 ) {
-  const admin = await getAdminUser();
+  const admin = await getAuthUser();
   if (!admin) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
   const { tripId, decisionId } = await params;

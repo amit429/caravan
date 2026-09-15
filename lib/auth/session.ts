@@ -1,21 +1,17 @@
-import { cookies } from "next/headers";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { verifyMemberToken } from "@/lib/auth/member-jwt";
 
-export const MEMBER_TOKEN_COOKIE = "caravan_member_token";
+export type AuthUser = { id: string; email: string; name: string };
 
-export async function getAdminUser(): Promise<{ id: string; email: string } | null> {
+// Everyone authenticates through Supabase Auth (Google) now — admins and
+// members alike. There is no separate identity system anymore; the only
+// distinction between an admin and a member is their role on a given trip's
+// members row (see resolveCaller), not which auth mechanism got them there.
+export async function getAuthUser(): Promise<AuthUser | null> {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user || !user.email) return null;
-  return { id: user.id, email: user.email };
-}
-
-export async function getMemberSession(): Promise<{ tripId: string; memberId: string } | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(MEMBER_TOKEN_COOKIE)?.value;
-  if (!token) return null;
-  return verifyMemberToken(token);
+  const name = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email.split("@")[0];
+  return { id: user.id, email: user.email, name };
 }

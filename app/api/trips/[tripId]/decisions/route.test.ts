@@ -9,7 +9,7 @@ vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unkn
 vi.mock("@/lib/agents/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 
 vi.mock("@/lib/auth/session", () => ({
-  getAdminUser: () => mockGetAdminUser(),
+  getAuthUser: () => mockGetAdminUser(),
   getMemberSession: () => Promise.resolve(null),
 }));
 

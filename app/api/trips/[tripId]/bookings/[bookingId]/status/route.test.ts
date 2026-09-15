@@ -12,7 +12,7 @@ vi.mock("@/lib/auth/resolve-caller", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/resolve-caller")>("@/lib/auth/resolve-caller");
   return { ...actual, resolveCaller: (...args: unknown[]) => mockResolveCaller(...args) };
 });
-vi.mock("@/lib/auth/session", () => ({ getAdminUser: () => mockGetAdminUser() }));
+vi.mock("@/lib/auth/session", () => ({ getAuthUser: () => mockGetAdminUser() }));
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
     from: (table: string) => {
@@ -76,8 +76,7 @@ describe("PATCH /api/trips/[tripId]/bookings/[bookingId]/status", () => {
   });
 
   it("lets the admin set someone else's status", async () => {
-    mockResolveCaller.mockResolvedValue({ id: "admin-member-id", status: "active" });
-    mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "amit@example.com" });
+    mockResolveCaller.mockResolvedValue({ id: "admin-member-id", status: "active", role: "admin" });
     const res = await PATCH(req({ booked: true, memberId: "m2" }), { params });
     expect(res.status).toBe(200);
     expect(mockUpsert).toHaveBeenCalledWith(
