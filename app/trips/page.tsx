@@ -30,7 +30,10 @@ export default async function MyTripsPage() {
       {hasTrips ? (
         <div className="flex flex-col gap-3 md:grid md:grid-cols-2 md:gap-4">
           {trips!.map((trip) => (
-            <Link key={trip.id} href={`/trips/${trip.id}/lobby`}>
+            <Link
+              key={trip.id}
+              href={trip.status === "lobby" ? `/trips/${trip.id}/lobby` : `/trip/${trip.id}/room`}
+            >
               <Card>
                 <div className="flex items-center">
                   <span className="font-display text-base font-semibold">{trip.name}</span>

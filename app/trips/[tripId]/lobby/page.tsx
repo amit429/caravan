@@ -18,6 +18,14 @@ export default function AdminLobbyPage() {
 
     async function load() {
       const { data: tripData } = await supabase.from("trips").select().eq("id", tripId).single();
+      // This page is the pre-start "waiting for people to turn up" screen —
+      // once the trip has actually been opened (or closed out), the admin
+      // belongs in the room like everyone else, not back at a "still shut"
+      // screen that can't be re-opened (start rejects a non-lobby trip).
+      if (tripData && tripData.status !== "lobby") {
+        router.replace(`/trip/${tripId}/room`);
+        return;
+      }
       setTrip(tripData);
       const { data: memberData } = await supabase
         .from("members")
@@ -40,7 +48,7 @@ export default function AdminLobbyPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [tripId]);
+  }, [tripId, router]);
 
   async function startTrip() {
     const res = await fetch(`/api/trips/${tripId}`, {
@@ -48,7 +56,9 @@ export default function AdminLobbyPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "start" }),
     });
-    if (res.ok) router.push(`/trip/${tripId}/room`);
+    // Even if this 409s because someone else already opened it in the
+    // meantime, the room is the right place to land, not a silent no-op.
+    if (res.ok || res.status === 409) router.push(`/trip/${tripId}/room`);
   }
 
   async function toggleJoining() {
