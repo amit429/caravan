@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { POST_AUTH_REDIRECT_COOKIE, safePostAuthDestination } from "@/lib/auth/post-auth-redirect";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  // Only ever an in-app path (set by JoinWithGoogleButton) — never trust an
-  // absolute or external URL out of a query param.
-  const next = searchParams.get("next");
-  const destination = next && next.startsWith("/") ? next : "/trips";
 
   // Google/Supabase redirect here with `error`/`error_description` instead of
   // `code` when the user denies consent or the OAuth attempt otherwise fails
@@ -27,5 +25,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/sign-in?error=${encodeURIComponent(error.message)}`);
   }
 
-  return NextResponse.redirect(`${origin}${destination}`);
+  const cookieStore = await cookies();
+  const destination = safePostAuthDestination(cookieStore.get(POST_AUTH_REDIRECT_COOKIE)?.value);
+  const response = NextResponse.redirect(`${origin}${destination}`);
+  // One-shot — clear it so a later plain sign-in doesn't replay a stale join.
+  response.cookies.delete(POST_AUTH_REDIRECT_COOKIE);
+  return response;
 }
