@@ -9,7 +9,7 @@ export default async function YouPage({ params }: { params: Promise<{ tripId: st
   const { tripId } = await params;
   const supabase = createServiceSupabaseClient();
   const caller = await resolveCaller(tripId, supabase);
-  if (!caller) notFound();
+  if (!caller || caller.status === "removed") notFound();
 
   const { count } = await supabase
     .from("facts")

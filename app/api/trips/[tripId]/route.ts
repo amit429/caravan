@@ -1,6 +1,40 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { resolveCaller, callerAuthError } from "@/lib/auth/resolve-caller";
+import { broadcastTripChange } from "@/lib/realtime/broadcast";
+
+// Dual-auth: the member lobby needs this before the trip goes active, when the
+// only realtime channel members can hear is the broadcast one (see
+// lib/realtime/broadcast) — this is the fetch RealtimeRefresh-style clients
+// re-run on each broadcast, same as Plan/Room do via their server components.
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ tripId: string }> }
+) {
+  const { tripId } = await params;
+  const supabase = createServiceSupabaseClient();
+  const caller = await resolveCaller(tripId, supabase);
+  const authError = callerAuthError(caller);
+  if (authError) return authError;
+
+  const { data: trip } = await supabase
+    .from("trips")
+    .select("id, name, status")
+    .eq("id", tripId)
+    .single();
+  if (!trip) return NextResponse.json({ error: "not_found" }, { status: 404 });
+
+  const { data: members } = await supabase
+    .from("members")
+    .select()
+    .eq("trip_id", tripId)
+    .eq("status", "active")
+    .order("created_at", { ascending: true });
+
+  return NextResponse.json({ trip, members: members ?? [] });
+}
 
 export async function PATCH(
   request: Request,
@@ -37,6 +71,7 @@ export async function PATCH(
       .select()
       .single();
     if (error) return NextResponse.json({ error: "update_failed" }, { status: 500 });
+    await broadcastTripChange(tripId);
     return NextResponse.json({ trip: data });
   }
 
@@ -48,6 +83,7 @@ export async function PATCH(
       .select()
       .single();
     if (error) return NextResponse.json({ error: "update_failed" }, { status: 500 });
+    await broadcastTripChange(tripId);
     return NextResponse.json({ trip: data });
   }
 

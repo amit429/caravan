@@ -7,7 +7,7 @@ export default async function RoomPage({ params }: { params: Promise<{ tripId: s
   const { tripId } = await params;
   const supabase = createServiceSupabaseClient();
   const caller = await resolveCaller(tripId, supabase);
-  if (!caller) notFound();
+  if (!caller || caller.status === "removed") notFound();
 
   const { data: trip } = await supabase.from("trips").select().eq("id", tripId).single();
   if (!trip) notFound();

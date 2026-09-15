@@ -3,6 +3,17 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const mockGetAdminUser = vi.fn();
 const mockSingle = vi.fn();
 const mockUpdate = vi.fn();
+const mockBroadcast = vi.fn();
+const mockResolveCaller = vi.fn();
+const mockTripGet = vi.fn();
+const mockMembersGet = vi.fn();
+
+vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
+
+vi.mock("@/lib/auth/resolve-caller", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/auth/resolve-caller")>("@/lib/auth/resolve-caller");
+  return { ...actual, resolveCaller: (...args: unknown[]) => mockResolveCaller(...args) };
+});
 
 vi.mock("@/lib/auth/session", () => ({
   getAdminUser: () => mockGetAdminUser(),
@@ -27,12 +38,53 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-import { PATCH } from "./route";
+vi.mock("@/lib/supabase/service", () => ({
+  createServiceSupabaseClient: () => ({
+    from: (table: string) => {
+      if (table === "trips") return { select: () => ({ eq: () => ({ single: () => mockTripGet() }) }) };
+      if (table === "members") return { select: () => ({ eq: () => ({ eq: () => ({ order: () => mockMembersGet() }) }) }) };
+      throw new Error(`unexpected table ${table}`);
+    },
+  }),
+}));
+
+import { GET, PATCH } from "./route";
+
+const params = Promise.resolve({ tripId: "trip-1" });
 
 beforeEach(() => {
   mockGetAdminUser.mockReset();
   mockSingle.mockReset();
-  mockUpdate.mockReset();
+  mockUpdate.mockReset().mockResolvedValue({ data: { id: "trip-1", status: "active" }, error: null });
+  mockBroadcast.mockReset();
+  mockResolveCaller.mockReset();
+  mockTripGet.mockReset();
+  mockMembersGet.mockReset().mockResolvedValue({ data: [], error: null });
+});
+
+describe("GET /api/trips/[tripId]", () => {
+  it("rejects a caller with no session", async () => {
+    mockResolveCaller.mockResolvedValue(null);
+    const res = await GET(new Request("http://localhost"), { params });
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects a removed member", async () => {
+    mockResolveCaller.mockResolvedValue({ id: "m1", status: "removed" });
+    const res = await GET(new Request("http://localhost"), { params });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns trip status and active members for a resolved caller", async () => {
+    mockResolveCaller.mockResolvedValue({ id: "m1", status: "active" });
+    mockTripGet.mockResolvedValue({ data: { id: "trip-1", name: "Goa", status: "lobby" }, error: null });
+    mockMembersGet.mockResolvedValue({ data: [{ id: "m1", display_name: "Rhea" }], error: null });
+    const res = await GET(new Request("http://localhost"), { params });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.trip).toEqual({ id: "trip-1", name: "Goa", status: "lobby" });
+    expect(body.members).toHaveLength(1);
+  });
 });
 
 function patchRequest(action: string) {
@@ -64,5 +116,6 @@ describe("PATCH /api/trips/[tripId]", () => {
     const res = await PATCH(patchRequest("start"), { params: Promise.resolve({ tripId: "trip-1" }) });
     expect(res.status).toBe(200);
     expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ status: "active" }));
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 });
