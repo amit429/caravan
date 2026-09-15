@@ -63,3 +63,52 @@ export function ClosedGateIllustration({ className = "", size = 112 }: Illustrat
     </svg>
   );
 }
+
+// A suitcase with a boarding-pass tag — "nothing booked or tracked yet."
+export function SuitcaseIllustration({ className = "", size = 112 }: IllustrationProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" className={className} {...base}>
+      <rect x="16" y="34" width="64" height="42" rx="6" />
+      <path d="M36 34 v-8 a6 6 0 0 1 6 -6 h12 a6 6 0 0 1 6 6 v8" />
+      <path d="M16 52 h64" />
+      <path d="M62 24 L80 20 L78 34" />
+    </svg>
+  );
+}
+
+// A pin dropping onto a card — "nothing pasted in yet."
+export function BookmarkIllustration({ className = "", size = 112 }: IllustrationProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" className={className} {...base}>
+      <rect x="16" y="20" width="64" height="48" rx="8" />
+      <path d="M30 34 h36" />
+      <path d="M30 44 h24" />
+      <path d="M62 62 v22 l10 -8 l10 8 v-22" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// A torn receipt with a rupee mark — "nothing costed out yet."
+export function ReceiptIllustration({ className = "", size = 112 }: IllustrationProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" className={className} {...base}>
+      <path d="M26 12 h44 v66 l-8 -6 l-8 6 l-8 -6 l-8 6 l-8 -6 l-8 6 Z" strokeLinejoin="round" />
+      <path d="M36 30 h24" />
+      <path d="M36 42 h24" />
+      <path d="M36 54 h14" />
+    </svg>
+  );
+}
+
+// A clipboard with one item checked off — "nothing on the list yet."
+export function ChecklistIllustration({ className = "", size = 112 }: IllustrationProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" className={className} {...base}>
+      <rect x="22" y="18" width="52" height="64" rx="6" />
+      <rect x="36" y="12" width="24" height="12" rx="3" />
+      <path d="M32 40 L38 46 L48 34" />
+      <path d="M32 58 h32" />
+      <path d="M32 68 h32" />
+    </svg>
+  );
+}

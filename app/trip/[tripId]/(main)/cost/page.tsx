@@ -6,6 +6,8 @@ import { resolveCaller } from "@/lib/auth/resolve-caller";
 import { budgetBandCeiling } from "@/lib/budget";
 import { flagMembersOverBudget } from "@/lib/cost-flags";
 import { GenerateCostEstimateButton } from "@/components/caravan/generate-cost-estimate-button";
+import { EmptyState } from "@/components/caravan/empty-state";
+import { ReceiptIllustration } from "@/components/caravan/illustrations";
 import type { CostEstimateRow, FactRow } from "@/lib/database.types";
 
 export default async function CostPage({ params }: { params: Promise<{ tripId: string }> }) {
@@ -79,11 +81,18 @@ export default async function CostPage({ params }: { params: Promise<{ tripId: s
           )}
         </>
       ) : isAdmin ? (
-        <div className="rounded-lg bg-card p-3.5">
-          <GenerateCostEstimateButton tripId={tripId} label="Estimate cost" />
-        </div>
+        <EmptyState
+          icon={<ReceiptIllustration size={96} />}
+          title="No cost estimate yet"
+          body="Once a destination's locked, the agent can put together a realistic per-head range."
+          action={<GenerateCostEstimateButton tripId={tripId} label="Estimate cost" />}
+        />
       ) : (
-        <div className="rounded-lg bg-sunk p-4 text-sm text-ink-2">No cost estimate yet.</div>
+        <EmptyState
+          icon={<ReceiptIllustration size={96} />}
+          title="No cost estimate yet"
+          body="The admin generates this once a destination's locked in."
+        />
       )}
     </div>
   );

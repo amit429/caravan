@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { useConfirm } from "@/components/caravan/use-confirm";
+import { EmptyState } from "@/components/caravan/empty-state";
+import { BookmarkIllustration } from "@/components/caravan/illustrations";
 import type { IdeaRow, IdeaVoteRow } from "@/lib/database.types";
 
 export function IdeaInbox({
@@ -80,7 +82,11 @@ export function IdeaInbox({
       </div>
       {error && <p className="text-xs text-stop">{error}</p>}
       {ideas.length === 0 ? (
-        <p className="text-sm text-ink-2">No ideas yet — paste a link to a place or activity.</p>
+        <EmptyState
+          icon={<BookmarkIllustration size={88} />}
+          title="No ideas yet"
+          body="Paste a link to a place or activity above — Instagram, YouTube, a blog, anything — and it'll turn into a card here."
+        />
       ) : (
         <div className="flex flex-col gap-2">
           {ideas.map((idea) => (

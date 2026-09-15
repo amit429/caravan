@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { useConfirm } from "@/components/caravan/use-confirm";
+import { EmptyState } from "@/components/caravan/empty-state";
+import { SuitcaseIllustration } from "@/components/caravan/illustrations";
 import type { BookingRow, BookingStatusRow, MemberRow } from "@/lib/database.types";
 
 function BookingItem({
@@ -165,7 +167,15 @@ export function BookingTracker({
         </div>
       )}
       {bookings.length === 0 ? (
-        <p className="text-sm text-ink-2">Nothing being tracked yet.</p>
+        <EmptyState
+          icon={<SuitcaseIllustration size={88} />}
+          title="Nothing being tracked yet"
+          body={
+            isAdmin
+              ? "Add a flight, a stay, anything the group needs to book — everyone can mark it done from their side."
+              : "Once the admin adds something to book, it'll show up here."
+          }
+        />
       ) : (
         <div className="flex flex-col gap-2">
           {bookings.map((b) => (

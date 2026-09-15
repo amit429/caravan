@@ -5,6 +5,8 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
 import { DecisionCard } from "@/components/caravan/decision-card";
 import { GenerateDestinationsButton } from "@/components/caravan/generate-destinations-button";
+import { EmptyState } from "@/components/caravan/empty-state";
+import { CompassIllustration } from "@/components/caravan/illustrations";
 import type { DecisionRow, VoteRow } from "@/lib/database.types";
 
 // F4/F8 (docs/design/screens.html): the hero moment — three places with real
@@ -44,11 +46,18 @@ export default async function DestinationPage({ params }: { params: Promise<{ tr
       {destinationDecision ? (
         <DecisionCard tripId={tripId} decision={destinationDecision} votes={votes} isAdmin={isAdmin} showDetailLink={false} />
       ) : isAdmin ? (
-        <div className="rounded-lg bg-card p-3.5">
-          <GenerateDestinationsButton tripId={tripId} />
-        </div>
+        <EmptyState
+          icon={<CompassIllustration size={96} />}
+          title="Nobody's picked a direction yet"
+          body="Once the group has shared budgets, vibes, and a departure city, the agent can put together three real options."
+          action={<GenerateDestinationsButton tripId={tripId} />}
+        />
       ) : (
-        <div className="rounded-lg bg-sunk p-4 text-sm text-ink-2">Nobody&rsquo;s put together options yet.</div>
+        <EmptyState
+          icon={<CompassIllustration size={96} />}
+          title="Nobody's put together options yet"
+          body="The admin generates these once the group's shared enough to work with."
+        />
       )}
     </div>
   );
