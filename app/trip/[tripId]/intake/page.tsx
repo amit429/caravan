@@ -5,6 +5,8 @@ import { FlowShell } from "@/components/caravan/flow-shell";
 import { AppBar } from "@/components/caravan/app-bar";
 import { ProgressDots } from "@/components/caravan/progress-dots";
 import { Chip } from "@/components/caravan/chip";
+import { AvailabilityCalendar } from "@/components/caravan/availability-calendar";
+import { coalesceAvailability, type Strength } from "@/lib/availability-calendar";
 
 const BUDGET_OPTIONS = ["Under 10k", "10-20k", "20-35k", "Open"];
 const VIBE_OPTIONS = ["Beach", "Mountains", "Party", "Slow", "Road trip", "Food", "Trekking", "Cities"];
@@ -15,8 +17,7 @@ export default function IntakePage() {
   const router = useRouter();
 
   const [step, setStep] = useState(0);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [availabilityMarks, setAvailabilityMarks] = useState<Record<string, Strength>>({});
   const [budgetBand, setBudgetBand] = useState(BUDGET_OPTIONS[1]);
   const [departureCity, setDepartureCity] = useState("");
   const [vibe, setVibe] = useState<string[]>([]);
@@ -48,7 +49,7 @@ export default function IntakePage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        availability: [{ startDate, endDate, strength: "free" }],
+        availability: coalesceAvailability(availabilityMarks),
         budgetBand,
         departureCity,
         vibe,
@@ -81,7 +82,7 @@ export default function IntakePage() {
   }
 
   const canGoNext =
-    (step === 0 && startDate && endDate && startDate <= endDate) ||
+    (step === 0 && Object.keys(availabilityMarks).length > 0) ||
     (step === 1 && budgetBand) ||
     (step === 2 && departureCity.trim()) ||
     step === 3 ||
@@ -95,26 +96,11 @@ export default function IntakePage() {
 
         {step === 0 && (
           <>
-            <h1 className="font-display text-2xl font-semibold">When are you free?</h1>
-            <p className="text-sm text-ink-2">Give your widest possible window — the group figures out the overlap.</p>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-ink-2">From</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-card border border-line rounded-md p-3.5"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-ink-2">To</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-card border border-line rounded-md p-3.5"
-              />
-            </div>
+            <h1 className="font-display text-2xl font-semibold">When could you go?</h1>
+            <p className="text-sm text-ink-2">
+              Drag across the days. Tap once for free, tap again for &ldquo;could work but it&rsquo;s tight&rdquo;, again for can&rsquo;t.
+            </p>
+            <AvailabilityCalendar marks={availabilityMarks} onChange={setAvailabilityMarks} />
           </>
         )}
 
