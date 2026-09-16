@@ -3,6 +3,9 @@
 **The agentic group trip planner.** Caravan replaces the unpaid "trip mom" inside every group chat — the one person who DMs everyone for dates, aggregates them by hand, proposes destinations, absorbs 200 forwarded reels, and sends the reminders — with a team of purpose-built AI agents living inside a shared trip room.
 
 > One admin creates a trip and shares a code. Everyone else joins with Google, in about twenty seconds. The agents extract constraints from what people say, run the date math, force decisions to close, propose destinations with real reasoning, build the itinerary, and chase the stragglers — so the group chat converges on a plan instead of dying in a pile of "so are we doing this or not?"
+>
+
+Live Deployment: https://caravan.amitpile.com/
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
