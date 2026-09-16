@@ -80,7 +80,54 @@ const extractionItemSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
-const scribeOutputSchema = z.object({ extractions: z.array(extractionItemSchema) });
+// Live-observed failure modes for this exact schema (agent_runs on the trip
+// this was built for, an "I don't have budget more than 70k" message that
+// failed extraction — and stayed failed — twice, even with the retry's own
+// repair-prompt echoing the error back): the model reliably nails the
+// *content* but is flaky about this schema's exact shape in several
+// different, non-overlapping ways run to run — "value" JSON-stringified
+// instead of nested, a fact's HARD/SOFT field renamed to "strength" (bleeding
+// over from availability's own field) or "constraint_type", snake_case keys
+// ("member_id"), and sometimes "memberId" dropped entirely. A stronger prompt
+// alone didn't fix it (same mistake survived the repair retry unprompted) —
+// this normalizes the raw JSON before Zod ever sees it, so generation
+// doesn't have to be perfect for extraction to succeed. authorMemberId is
+// the one piece of real context to default a missing memberId to — always
+// correct here, since a single Scribe call only ever extracts what one known
+// author said about themselves (runScribe's own filter already assumes this).
+export function normalizeExtractionItem(item: unknown, authorMemberId: string): unknown {
+  if (typeof item !== "object" || item === null) return item;
+  const snakeToCamel = (key: string) => key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+  const obj: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(item as Record<string, unknown>)) {
+    obj[snakeToCamel(key)] = value;
+  }
+
+  if (obj.memberId === undefined) obj.memberId = authorMemberId;
+
+  if (obj.kind === "fact") {
+    if (obj.type === undefined && typeof obj.strength === "string") obj.type = obj.strength;
+    if (obj.type === undefined && typeof obj.constraintType === "string") obj.type = obj.constraintType;
+    if (typeof obj.type === "string") obj.type = obj.type.toUpperCase();
+    if (typeof obj.value === "string") {
+      try {
+        obj.value = JSON.parse(obj.value);
+      } catch {
+        // leave as-is — fails validation with a clear error either way
+      }
+    }
+  }
+  return obj;
+}
+
+function buildScribeOutputSchema(authorMemberId: string) {
+  return z.object({
+    extractions: z.preprocess(
+      (val) => (Array.isArray(val) ? val.map((item) => normalizeExtractionItem(item, authorMemberId)) : val),
+      z.array(extractionItemSchema)
+    ),
+  });
+}
 
 // The bug this fixes: "2nd march", "before 1st march" etc. have no year and
 // no reference point in the raw message text — buildScribePrompt used to
@@ -169,7 +216,7 @@ Message: "${body}"
 Rules:
 - A firm "I can't" / "no" statement is HARD. A preference ("I'd like", "maybe") is SOFT.
 - Only use category "budget", "departure_city", "vibe", or "hard_no" for kind "fact".
-- For category "budget", value must be {"amount": <integer, INR per head>} — convert anything vague ("around 15k", "fifteen thousand") to a plain number, never a range or band.
+- For category "budget", value must be {"amount": <integer, INR per head>} — convert anything vague ("around 15k", "fifteen thousand") to a plain number, never a range or band. "k" means thousand (70k = 70000); "L"/"lakh"/"lac" means one hundred thousand (1.5L = 150000, 2 lac = 200000).
 - Extract kind "availability" whenever the message states or clearly implies specific dates — including relative asks ("before the 1st", "can we finish a day earlier"). startDate/endDate must be real YYYY-MM-DD values, resolved using the date context above. Never emit a placeholder or partial date.
 - Extract kind "idea" only for an actual proposal or a link — "let's go scuba diving", "we should check out X", or any URL. A vague vibe comment ("I like beaches") is NOT an idea — leave it out entirely. category: "stay" for hotel/accommodation links or suggestions, "travel" for flight/train/bus links or timing/schedule info, "activity" for everything else (things to do, food, nightlife, general suggestions). If the message contains a URL, put it verbatim in "url". The place/activity name goes in a field called exactly "title" — never "label" or "name".
 - confidence is 0-1. If you're not confident, say so with a lower number rather than guessing.
@@ -192,15 +239,16 @@ Rules:
 // both back is a far stronger repair signal than a generic nudge, since the
 // model is now correcting its own literal mistake instead of guessing what
 // might be wrong.
-async function extractWithRetry(prompt: string) {
+async function extractWithRetry(prompt: string, authorMemberId: string) {
+  const schema = buildScribeOutputSchema(authorMemberId);
   try {
-    return await generateObject({ model: flashModel, schema: scribeOutputSchema, providerOptions: fastGoogleOptions, prompt });
+    return await generateObject({ model: flashModel, schema, providerOptions: fastGoogleOptions, prompt });
   } catch (error) {
     const raw = NoObjectGeneratedError.isInstance(error) ? error.text : undefined;
     const repairPrompt = raw
       ? `${prompt}\n\nYour previous attempt produced this, which does not match the required schema:\n${raw}\n\nValidation errors: ${String(error)}\n\nFix it: match every field name and type in the schema exactly (e.g. "strength" must be one of "free"/"partial"/"blocked", not an "isSoft" boolean; a "fact"'s "value" must be an object, never a bare string). Return corrected, complete JSON.`
       : `${prompt}\n\nYour previous attempt at this didn't produce valid output. Double-check: every "startDate"/"endDate" must be a real YYYY-MM-DD value (never a placeholder, never partial), and every field the schema requires must be present.`;
-    return await generateObject({ model: flashModel, schema: scribeOutputSchema, providerOptions: fastGoogleOptions, prompt: repairPrompt });
+    return await generateObject({ model: flashModel, schema, providerOptions: fastGoogleOptions, prompt: repairPrompt });
   }
 }
 
@@ -229,9 +277,9 @@ export async function runScribe(params: {
   const prompt = buildScribePrompt(params.authorMember, params.message.body, dateContext);
 
   const start = Date.now();
-  let result: Awaited<ReturnType<typeof generateObject<typeof scribeOutputSchema>>>;
+  let result: Awaited<ReturnType<typeof extractWithRetry>>;
   try {
-    result = await extractWithRetry(prompt);
+    result = await extractWithRetry(prompt, params.authorMember.id);
   } catch (error) {
     if (process.env.SCRIBE_DEBUG) console.log("[scribe debug] extraction failed after retry:", error);
     await logAgentRun({

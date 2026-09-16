@@ -69,7 +69,7 @@ vi.mock("@/lib/supabase/service", () => ({
   }),
 }));
 
-import { runScribe } from "./scribe";
+import { runScribe, normalizeExtractionItem } from "./scribe";
 
 const member: MemberRow = {
   id: "member-1",
@@ -113,6 +113,54 @@ beforeEach(() => {
   mockIdeasExistingLookup.mockReset().mockResolvedValue({ data: null });
   mockExtractIdeaMetadata.mockReset().mockResolvedValue({ title: "Scraped Title", note: "Scraped note", imageUrl: null });
   mockAvailabilitySelect.mockReset().mockRejectedValue(new Error("no mock configured"));
+});
+
+describe("normalizeExtractionItem", () => {
+  const authorId = "member-1";
+
+  it("passes through an already-correct fact item unchanged", () => {
+    const item = { kind: "fact", memberId: authorId, category: "budget", type: "HARD", value: { amount: 70000 }, confidence: 0.9, rationale: "x" };
+    expect(normalizeExtractionItem(item, authorId)).toEqual(item);
+  });
+
+  it("parses a JSON-stringified value into a real object", () => {
+    const item = { kind: "fact", memberId: authorId, category: "budget", type: "HARD", value: "{\"amount\": 70000}", confidence: 0.9, rationale: "x" };
+    const result = normalizeExtractionItem(item, authorId) as { value: unknown };
+    expect(result.value).toEqual({ amount: 70000 });
+  });
+
+  it("renames 'strength' to 'type' for a fact item (bled over from the availability schema)", () => {
+    const item = { kind: "fact", memberId: authorId, category: "budget", strength: "hard", value: { amount: 70000 }, confidence: 0.9, rationale: "x" };
+    const result = normalizeExtractionItem(item, authorId) as { type: string; strength?: string };
+    expect(result.type).toBe("HARD");
+  });
+
+  it("renames 'constraint_type' to 'type' for a fact item", () => {
+    const item = { kind: "fact", member_id: authorId, category: "budget", constraint_type: "HARD", value: { amount: 70000 }, confidence: 0.9, rationale: "x" };
+    const result = normalizeExtractionItem(item, authorId) as { type: string; memberId: string };
+    expect(result.type).toBe("HARD");
+    expect(result.memberId).toBe(authorId);
+  });
+
+  it("uppercases a lowercase 'type' value", () => {
+    const item = { kind: "fact", memberId: authorId, category: "budget", type: "hard", value: { amount: 70000 }, confidence: 0.9, rationale: "x" };
+    const result = normalizeExtractionItem(item, authorId) as { type: string };
+    expect(result.type).toBe("HARD");
+  });
+
+  it("converts snake_case keys to camelCase generally, not just for known aliases", () => {
+    const item = { kind: "availability", member_id: authorId, start_date: "2027-02-27", end_date: "2027-03-02", strength: "free", confidence: 0.9, rationale: "x" };
+    const result = normalizeExtractionItem(item, authorId) as { memberId: string; startDate: string; endDate: string };
+    expect(result.memberId).toBe(authorId);
+    expect(result.startDate).toBe("2027-02-27");
+    expect(result.endDate).toBe("2027-03-02");
+  });
+
+  it("defaults a missing memberId to the message author's own id", () => {
+    const item = { kind: "fact", category: "budget", type: "HARD", value: { amount: 70000 }, confidence: 0.9, rationale: "x" };
+    const result = normalizeExtractionItem(item, authorId) as { memberId: string };
+    expect(result.memberId).toBe(authorId);
+  });
 });
 
 describe("runScribe", () => {
