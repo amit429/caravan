@@ -12,7 +12,7 @@ Live Deployment: https://caravan.amitpile.com/
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%7C%20Auth%20%7C%20Realtime-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Vercel AI SDK](https://img.shields.io/badge/Vercel%20AI%20SDK-v7-000000?logo=vercel&logoColor=white)](https://sdk.vercel.ai)
-[![Vitest](https://img.shields.io/badge/tests-253%20passing-2ecc71?logo=vitest&logoColor=white)](#testing)
+[![Vitest](https://img.shields.io/badge/tests-308%20passing-2ecc71?logo=vitest&logoColor=white)](#testing)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -46,6 +46,7 @@ Caravan's product thesis rests on three bets:
 1. **Convergence, not note-taking.** An agent that summarizes the chat is a toy. An agent that says *"3 of 5 want Goa, Rhea's budget caps things at ₹15k so Nov 12–15 beats Dec 20–24, voting closes Friday 6pm, silence counts as a yes"* is the organiser. Deadlines, quorum, and defaults-on-silence are the core mechanic — not the LLM.
 2. **Private inputs, public consensus.** People don't say "I can't afford ₹20k" in a group of eight. Every member gets a private 1:1 lane with the agent — budgets and hard constraints go in privately; only the aggregate ("the plan needs to land under ₹16k/head") ever surfaces publicly.
 3. **The state is the product, chat is just the input.** Dates, budget ceilings, the locked destination, the itinerary — these are real rows in a database with a lifecycle, not something buried thirty messages back.
+4. **The system nudges before an admin has to.** A decision locks the instant everyone's voted — no deadline required, no admin tap. The moment it locks, the next thing (itinerary, cost, checklist) generates on its own. If a vote stalls on 1-2 people, they get a private, specific nudge instead of the admin having to notice and DM them. If the group's been talking for a while, an agent recaps it and surfaces what's clearly emerging as an idea.
 
 ---
 
@@ -151,33 +152,48 @@ Every screen below is a render of [`docs/design/screens.html`](docs/design/scree
 - Budget slider, ₹5k–₹2L, with one-tap presets — **never shown to anyone, including the admin**. Only the aggregated group ceiling (the tightest submitted number) ever surfaces.
 - Departure city, vibe tags, hard nos (with one-tap common suggestions).
 - The agent "confirms what it heard" back in your thread instead of a silent form-save.
+- A private **scrapbook** (You tab) aggregates everything a member has told the trip — their own facts, *including budget* (hiding it is about other people not seeing your number, not about hiding it from yourself) — plus every idea they've filed, in one place.
 
 ### Continuous extraction from chat
 - **Scribe** gates every group/thread message ("does this contain a constraint, date, budget, or preference?") before spending a full extraction call on it.
 - Extracted facts/availability are attributed only to their own author, filed at a confidence floor, and a receipt is posted back.
 - A later chat correction — either direction ("actually I can't make the 5th" or "turns out I can now") — properly overrides an earlier answer: availability resolves per-day by *recency*, and budget/departure-city facts get superseded by the newer statement instead of sitting alongside a stale one.
+- Extraction is anchored to the trip's own established year and leading date-window context, so a rephrased request ("can we do it before March 1st instead?") resolves against the trip's real timeline instead of guessing.
+- A free-text place/activity mention ("let's do scuba diving and snorkeling") gets filed as an **Idea** automatically, the same as a pasted link — categorized as activity, stay, or travel.
+- If extraction fails, Scribe retries once with its own invalid output and the exact validation error echoed back for self-correction; if it still can't parse the message, it posts an honest "couldn't pin down the specifics — mind rephrasing?" reply instead of staying silent.
 
 ### Decisions
 - Five types: **DATES, DESTINATION, BUDGET, STAY, ACTIVITY, CUSTOM**. Vote, veto ("hard no" — can never be voted away), lock.
 - Deterministic date solver: slides a window across everyone's submitted availability, scores by attendance, and collapses consecutive identical-scoring candidates into one real option instead of chopping one comfortable stretch into arbitrary slices.
 - Locking with a hard-no conflict shows the admin the runner-up and requires an explicit, logged override to force it anyway.
-- Deadlines auto-lock and nudge non-responders via a scheduled sweep (Chaser) — pure rule-based, no LLM.
+- **Auto-locks the instant every active member has voted** — independent of any deadline, no admin tap required. Deadlines still work the way they always did (auto-lock + 24h reminder on expiry) as a separate, optional path. Both fire from the same scheduled sweep (Chaser) — pure rule-based, no LLM.
 - Admin can delete any decision (locked or not); the agent announces the deletion in the room and invites the group to discuss and regenerate.
+
+### Autonomous coordination — zero admin taps
+The core thing this layer removes: an admin having to notice a vote closed, or a decision stalled, and manually tap a button.
+- The moment a decision locks (by quorum *or* deadline, manually *or* automatically), the next generation step fires on its own: **destination locks → Planner + Quartermaster's cost estimate run immediately; once both destination and dates are locked → Quartermaster's checklist generates.** No admin has to remember to come back and tap "Generate."
+- **Scout auto-fires** once every active member has answered at least one intake question and no destination decision exists yet — same gate as the manual button, just triggered by the sweep instead of a click.
+- **The DATES decision auto-opens** once every active member has submitted availability and the date solver finds at least one real window — same window computation and copy the manual "Put these to a vote" button already used.
+- **Date-minority outreach:** when a majority of active members fit the trip's leading date window but 1-2 don't, each of them gets one private, specific message in their own thread asking if they could shift — grounded in their *own* filed availability, so it never invents a reason they can't make it, and never posted more than once per decision.
+- **Periodic digest:** every ~30-minute sweep checks whether it's been 3+ hours since the last digest *and* there's been enough new group discussion; if so, an agent posts a short recap plus — only when the chat clearly points to one — a concrete suggestion (e.g. surfacing a repeatedly-mentioned activity as a formal idea before anyone's formally proposed it).
+- All of the above is Chaser's cron sweep deciding *whether* and *when* to act (plain rules, no LLM); the agents it triggers (Scout, Planner, Quartermaster, Date Outreach, Digest) are the ones that write actual content.
 
 ### Destination generation (Scout)
 - Gated on having at least one real budget answer — never proposes from thin constraints.
 - Weighs the group's aggregated budget ceiling, departure cities, vibe tags, hard nos, **and the trip's own name/original pitch** (so a trip literally called "Bali 2027" doesn't get ignored just because nobody's intake happened to mention it).
 - Optional live web research via Tavily; works without it, just with less current pricing/context.
 - Three options, each with cost/head, door-to-door travel time, why it fits this specific group, and an honest "who it fits worst."
+- Fires from an admin tap, or auto-fires — see [Autonomous coordination](#autonomous-coordination--zero-admin-taps).
 
 ### Itinerary, cost, checklist
 - **Planner** builds a day-by-day itinerary once a destination is locked, paced to the group's vibe.
 - **Quartermaster** estimates a per-head cost range for the locked destination and deterministically flags how many members it pushes over their (still-private) ceiling — the LLM estimates, arithmetic decides who's over.
 - **Quartermaster** also generates a prep checklist (docs / bookings / packing / other), personal + shared.
+- All three fire from an admin tap, or cascade automatically the moment the relevant decision(s) lock — see [Autonomous coordination](#autonomous-coordination--zero-admin-taps).
 
 ### Bookings & Ideas
 - Track logistics items (flights, hotels, ...) with a per-member "booked" chip and one-tap nudges.
-- An inbox for pasted links (Instagram/YouTube/anything) that becomes a votable card.
+- An inbox for pasted links (Instagram/YouTube/anything) *or* plain text (no link required) that becomes a votable card — categorized **activity / stay / travel**. A dropped hotel or flight link surfaces as a suggested stay/travel card on Bookings instead of getting lost in a flat activity inbox; the admin can promote one straight into a tracked booking.
 - Both fully admin-deletable behind a destructive confirm, same as decisions.
 
 ### Member management
@@ -205,7 +221,7 @@ Every screen below is a render of [`docs/design/screens.html`](docs/design/scree
 | Search | **Tavily API** (optional) | Live web context for Scout's destination research; the app degrades gracefully without it |
 | Background jobs | **Inngest** | Cron-driven Chaser sweep (deadline nudges/auto-lock), every 30 minutes |
 | Validation | **Zod 4** | Every mutating API route parses its body through a schema in `lib/validation.ts` |
-| Testing | **Vitest** | 253 tests across 54 files — pure logic and API routes are unit-tested; no component/E2E layer yet |
+| Testing | **Vitest** | 308 tests across 59 files — pure logic and API routes are unit-tested; no component/E2E layer yet |
 | Containerization | **Docker** (multi-stage, standalone output) | Optional — Vercel needs none of this; see [Docker](#docker) |
 
 ---
@@ -226,16 +242,18 @@ flowchart TB
 
     subgraph Supabase["Supabase"]
         Auth["Auth<br/>Google OAuth — admin & members alike"]
-        PG[("Postgres<br/>15 tables, RLS on every one")]
+        PG[("Postgres<br/>17 tables, RLS on every one")]
         RT["Realtime<br/>custom broadcast channel"]
     end
 
     subgraph Agents["AI agent layer (lib/agents/*)"]
-        Scribe["Scribe — gate + extract facts/availability from every message"]
+        Scribe["Scribe — gate + extract facts/availability/ideas from every message"]
         Scout["Scout — destination generation"]
         Planner["Planner — itinerary"]
         QM["Quartermaster — cost estimate + prep checklist"]
-        Chaser["Chaser — deadline nudges/auto-lock (no LLM)"]
+        Chaser["Chaser — deadline + quorum auto-lock, auto-generation triggers (no LLM)"]
+        DateOutreach["Date Outreach — private nudge for date-minority members"]
+        Digest["Digest — periodic recap + suggestion"]
         Concierge["Concierge — kickoff & lifecycle announcements"]
     end
 
@@ -256,7 +274,12 @@ flowchart TB
     RT -->|"broadcast('change')"| CC
     CC -.->|polling fallback| API
     Inngest -->|sweep| Chaser
-    Chaser --> API
+    Chaser -->|quorum/deadline lock| API
+    Chaser -->|auto-trigger| Scout
+    Chaser -->|majority fits, 1-2 don't| DateOutreach
+    Chaser -->|3h + volume gate| Digest
+    API -->|decision just locked| Planner
+    API -->|decision just locked| QM
     Auth --- PG
     Pages --> RSC
 ```
@@ -274,18 +297,20 @@ Every agent follows the same **deterministic core, LLM shell** principle: anythi
 | Agent | Posts as | Trigger | What it does | LLM? |
 |---|---|---|---|---|
 | **Concierge** | `concierge` | Room opens, decision opened/locked/reopened/deleted, intake submitted | Narrates lifecycle events into the room/thread with a receipt — nothing happens silently | No — templated |
-| **Scribe** | `scribe` | Every new message | Gates ("does this contain extractable info?"), then extracts facts/availability attributed to the author only, files them, posts a receipt | Yes — gate + extraction |
-| **Scout** | `scout` | Admin requests destination options | Deterministic budget-ceiling gate → optional Tavily search → 3 destination options with cost/travel/reasoning, weighing the trip's own name/pitch alongside aggregated facts | Yes — `generateObject` |
-| **Planner** | `planner` | Admin requests itinerary (destination must be locked) | Day-by-day itinerary paced to party size, vibe, hard constraints | Yes — `generateObject` |
-| **Quartermaster** | `quartermaster` | Admin requests cost estimate / checklist | LLM estimates a per-head range; **deterministic** arithmetic (not the model) decides who's over budget. Also generates the prep checklist | Yes (estimate) + No (flagging) |
-| **Chaser** | *(system, via Concierge-style messages)* | Cron, every 30 minutes | Pure rule sweep: deadline reminders inside a 24h window, auto-lock on expiry, nudge tiers for non-responders | No — pure rules |
+| **Scribe** | `scribe` | Every new message | Gates ("does this contain extractable info?"), then extracts facts/availability/ideas attributed to the author only and files them; retries once with its own invalid output + the exact validation error echoed back if extraction fails; posts a receipt — or an honest "couldn't pin it down" reply if it still can't parse the message | Yes — gate + extraction |
+| **Scout** | `scout` | Admin requests destination options, or auto-fires once every active member has answered intake and no destination decision exists | Deterministic budget-ceiling gate → optional Tavily search → 3 destination options with cost/travel/reasoning, weighing the trip's own name/pitch alongside aggregated facts | Yes — `generateObject` |
+| **Planner** | `planner` | Admin requests an itinerary, or auto-fires the instant the destination decision locks | Day-by-day itinerary paced to party size, vibe, hard constraints | Yes — `generateObject` |
+| **Quartermaster** | `quartermaster` | Admin requests a cost estimate/checklist, or auto-fires on decision lock (estimate: destination locks; checklist: destination + dates both locked) | LLM estimates a per-head range; **deterministic** arithmetic (not the model) decides who's over budget. Also generates the prep checklist | Yes (estimate) + No (flagging) |
+| **Date Outreach** | `chaser` | Chaser's sweep — a majority of active members fit the trip's leading date window but 1-2 don't; fires once per member per decision | Privately asks each member outside the window if they could shift, grounded in their own filed availability — posted to their own thread, never the group | Yes — `generateText` |
+| **Digest** | `concierge` | Chaser's sweep — ≥3h since the last digest *and* ≥5 new member messages in the group | Recaps recent group discussion and, only when it clearly points to one, adds a concrete suggestion | Yes — `generateText` |
+| **Chaser** | *(system — triggers the agents above)* | Cron, every 30 minutes | Pure rule sweep: deadline reminders/auto-lock inside a 24h window, quorum auto-lock the instant everyone's voted, auto-runs Scout / auto-opens the DATES decision once everyone's answered, nudge tiers for non-responders, and decides when Date Outreach / Digest should speak | No — pure rules; delegates all content-writing to the agents it triggers |
 | *(Q&A)* | — | "Ask the agent" from the composer | Answers plain-language questions about costs/dates/who's-said-what strictly from what the deterministic layer already computed — never does its own arithmetic | Yes — `generateText` |
 
 ---
 
 ## Database schema
 
-15 tables, every one RLS-enabled, pulled directly from the live Supabase schema.
+17 tables, every one RLS-enabled, pulled directly from the live Supabase schema.
 
 ```mermaid
 erDiagram
@@ -314,6 +339,8 @@ erDiagram
     members ||--o{ booking_status : "marks"
 
     decisions ||--o{ votes : "receives"
+    decisions ||--o{ date_outreach_nudges : "gates"
+    members ||--o{ date_outreach_nudges : "nudged"
     ideas ||--o{ idea_votes : "receives"
     bookings ||--o{ booking_status : "tracked_by"
     threads ||--o{ messages : "contains"
@@ -394,6 +421,11 @@ erDiagram
         text option_id
         bool is_veto
     }
+    date_outreach_nudges {
+        uuid id PK
+        uuid decision_id FK
+        uuid member_id FK "unique(decision_id, member_id) — never nudged twice"
+    }
     threads {
         uuid id PK
         uuid trip_id FK
@@ -403,10 +435,11 @@ erDiagram
         uuid id PK
         uuid trip_id FK
         uuid member_id FK
-        text url
+        text url "nullable — a text-only idea has no link"
         text title
         text note
         text image_url
+        text category "activity | stay | travel"
     }
     idea_votes {
         uuid id PK
@@ -467,6 +500,7 @@ erDiagram
 - `messages.lane` + `thread_id` is how the group feed and every member's private 1:1 thread share one table without ever leaking into each other.
 - `agent_runs` is a full LLM observability log — tokens, estimated cost, latency, outcome — per call, per agent, per trip.
 - Every child table cascades on `trip_id` (`on delete cascade`), which is what makes trip deletion a genuine one-shot teardown with zero orphaned rows.
+- `date_outreach_nudges` has no `trip_id` of its own (same shape as `votes` — reachable only through `decision_id`); its `unique(decision_id, member_id)` constraint is the entire "never nudge the same person twice about the same decision" guarantee, enforced by the database rather than application logic.
 
 ---
 
@@ -527,7 +561,7 @@ Nothing Inngest- or Google-OAuth-client-related belongs in this file — see §3
 
 ### 5. Inngest — where the cron setup goes
 
-The whole integration is two files: `lib/inngest/client.ts` (defines the client + the trip ID) and `app/api/inngest/route.ts` (the single HTTP endpoint — `serve()` from the `inngest/next` package turns it into `GET`/`POST`/`PUT` handlers). `lib/inngest/functions.ts` defines the actual cron job (`chaser-sweep`, `*/30 * * * *`).
+The whole integration is two files: `lib/inngest/client.ts` (defines the client + the trip ID) and `app/api/inngest/route.ts` (the single HTTP endpoint — `serve()` from the `inngest/next` package turns it into `GET`/`POST`/`PUT` handlers). `lib/inngest/functions.ts` defines the actual cron job (`chaser-sweep`, `*/30 * * * *`), which per active trip runs five sweeps in sequence: deadline/quorum decision lock, auto-generation (Scout/DATES), date-minority outreach, the periodic digest, and intake nudges.
 
 - **Local dev:** run the Inngest Dev Server alongside `next dev` — it auto-discovers `/api/inngest` with zero config, no env vars needed:
   ```bash
@@ -595,23 +629,30 @@ app/
     intake/                    # the 5 private questions
     member-lobby/               # member's pre-open waiting screen
     (main)/                     # everything behind the trip shell (tab bar + sidebar)
-      room/ plan/ you/ settings/
+      room/ plan/ you/ you/scrapbook/ settings/
       destination/ facts/ bookings/ ideas/ cost/
       decisions/[decisionId]/
   join/[code]/                 # invite landing → OAuth → auto-join → redirect
   api/trips/[tripId]/...       # every mutation: decisions, votes, intake, ideas,
                                 #   bookings, member removal, scout/planner/quartermaster
-components/caravan/            # the whole design system — cards, sheets, chips,
-                                #   illustrations, the calendar, decision cards
+components/caravan/            # the whole design system, organized by domain —
+                                #   primitives/ layout/ auth/ intake/ decisions/
+                                #   plan/ room/ generate/ sharing/ settings/ shared/
 lib/
-  agents/                      # Scribe, Scout, Planner, Quartermaster, Chaser, model config
+  agents/                      # Scribe, Scout, Planner, Quartermaster, Chaser,
+                                #   Date Outreach, Digest, runtime/ (model, logging, posting)
+  dates/                       # date-solver.ts — the deterministic date-window core
+  budget/                      # budget.ts, cost-flags.ts
+  decisions/                   # tally-votes.ts, on-decision-locked.ts (the lock → generation
+                                #   cascade), opened-message.ts, decision-titles.ts
+  facts/, ideas/, bookings/, threads/, trips/   # small domain-scoped helpers
   auth/                        # session + caller resolution
   supabase/                    # browser / server / service-role clients
   realtime/                    # the custom broadcast layer
-  date-solver.ts, budget.ts, cost-flags.ts, tally-votes.ts   # the deterministic core
+  inngest/                     # client, functions (the cron sweep)
   validation.ts                # every Zod schema
   database.types.ts            # hand-maintained row types for every table
-supabase/migrations/           # 11 migrations, schema history
+supabase/migrations/           # 14 migrations, schema history
 docs/design/                   # PRD, UI spec, and a static HTML hi-fi mockup (screens.html)
 ```
 
@@ -623,7 +664,7 @@ docs/design/                   # PRD, UI spec, and a static HTML hi-fi mockup (s
 npm test
 ```
 
-253 tests across 54 files. The test strategy follows the deterministic-core/LLM-shell split: pure logic (`lib/date-solver.ts`, `lib/budget.ts`, `lib/tally-votes.ts`, `lib/cost-flags.ts`, `lib/agents/chaser-rules.ts`, ...) and every API route are unit-tested with mocked Supabase/AI-SDK clients; agent LLM calls are tested for their deterministic surrounding logic (gating, prompt construction, fact filing, error handling), not for model output itself. There's no component or end-to-end browser test layer yet — see [Known limitations](#known-limitations--roadmap).
+308 tests across 59 files. The test strategy follows the deterministic-core/LLM-shell split: pure logic (`lib/dates/date-solver.ts`, `lib/budget/budget.ts`, `lib/decisions/tally-votes.ts`, `lib/budget/cost-flags.ts`, `lib/agents/chaser-rules.ts`, `lib/decisions/on-decision-locked.ts`, ...) and every API route are unit-tested with mocked Supabase/AI-SDK clients; agent LLM calls are tested for their deterministic surrounding logic (gating, prompt construction, fact filing, error handling), not for model output itself. Verified live against a real trip via Supabase MCP is the additional bar used for every agentic-coordination phase — see the commit history for `lib/agents/chaser.ts`. There's no component or end-to-end browser test layer yet — see [Known limitations](#known-limitations--roadmap).
 
 ---
 
@@ -662,6 +703,7 @@ Kept here on purpose so this stays an honest README, not a marketing page:
 - **Itinerary is regenerate-only.** Planner rebuilds the whole itinerary each time rather than supporting inline day edits.
 - **Single AI provider.** Everything runs on one Gemini model; swapping providers/tiers per-agent is a one-line change (the AI SDK abstracts it) but isn't wired up as a runtime option.
 - **No dark theme.** The design system is a single warm paper/plum palette.
+- **Autonomous-coordination thresholds are fixed constants, not admin-configurable.** The digest's 3h/5-message gate and date outreach's "majority but not everyone" bar live in code (`lib/agents/chaser.ts`), not a per-trip setting.
 
 ---
 
