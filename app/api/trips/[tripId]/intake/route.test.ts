@@ -22,6 +22,7 @@ function chainable(resolvedValue: unknown) {
   const builder: Record<string, unknown> = {
     select: () => builder,
     eq: () => builder,
+    in: () => builder,
     is: () => builder,
     delete: () => builder,
     maybeSingle: () => Promise.resolve(resolvedValue),
@@ -50,6 +51,14 @@ vi.mock("@/lib/supabase/service", () => ({
           delete: () => chainable({ error: null }),
           insert: (rows: unknown) => mockInsertFacts(rows),
         };
+      }
+      if (table === "trips") {
+        return { select: () => chainable({ data: { preferred_trip_days: 7 }, error: null }) };
+      }
+      if (table === "decisions") {
+        // No OPEN DATES decision in these tests — refreshDatesDecisionIfStale
+        // (called after every intake submission) short-circuits immediately.
+        return { select: () => chainable({ data: [], error: null }) };
       }
       throw new Error(`unexpected table ${table}`);
     },

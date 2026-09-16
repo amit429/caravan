@@ -80,32 +80,34 @@ function buildStatusMap(availability: AvailabilityRow[]): Map<string, Map<string
   return map;
 }
 
-/**
- * Deterministic date solver (F6). No LLM involved: plain interval math over
- * submitted availability. Slides a fixed-length window across the submitted
- * date span, scores each by attendance (partial counts half), and returns
- * up to the top 3 non-overlapping windows.
- */
-export function computeTopDateWindows(
-  availability: AvailabilityRow[],
+// Slides one fixed-length window across the span, scoring each offset by
+// attendance (partial counts half). Sliding one day at a time across a long,
+// evenly-free stretch produces dozens of candidates with identical
+// attendance — e.g. a group that's wide open for two weeks straight yields
+// the same "everyone's in" outcome at every offset. Surfacing each as its
+// own vote option isn't 3 real choices, it's the same good news chopped into
+// arbitrary consecutive slices (the literal bug report this fixes: 27 Feb–2
+// Mar / 3–6 / 7–10 out of one continuous free run). Collapse consecutive
+// candidates with the same score and the same attendance into a single run
+// — candidates are already date-adjacent by construction (the offset loop
+// advances one day at a time), so it's enough to compare each one to the
+// immediately preceding candidate, not to the frozen start of whatever run
+// is currently open, to tell whether it's still the same stretch or new.
+function computeRunsForLength(
+  statusMap: Map<string, Map<string, { strength: Status; createdAt: string }>>,
+  spanStart: string,
+  spanEnd: string,
   activeMemberIds: string[],
-  windowLengthDays = 4
+  length: number
 ): DateWindow[] {
-  if (availability.length === 0 || activeMemberIds.length === 0) return [];
-
-  const statusMap = buildStatusMap(availability);
-  const allDates = availability.flatMap((row) => [row.start_date, row.end_date]);
-  const spanStart = allDates.reduce((a, b) => (a < b ? a : b));
-  const spanEnd = allDates.reduce((a, b) => (a > b ? a : b));
-  const spanLengthDays = daysBetween(spanStart, spanEnd) + 1;
-  const effectiveWindowLength = Math.min(windowLengthDays, spanLengthDays);
-  const lastPossibleOffset = daysBetween(spanStart, spanEnd) - effectiveWindowLength + 1;
+  const lastPossibleOffset = daysBetween(spanStart, spanEnd) - length + 1;
+  if (lastPossibleOffset < 0) return [];
 
   const candidates: DateWindow[] = [];
 
   for (let offset = 0; offset <= lastPossibleOffset; offset++) {
     const windowStart = addDays(spanStart, offset);
-    const windowEnd = addDays(windowStart, effectiveWindowLength - 1);
+    const windowEnd = addDays(windowStart, length - 1);
     const windowDays = enumerateDays(windowStart, windowEnd);
 
     const membersIn: string[] = [];
@@ -138,20 +140,6 @@ export function computeTopDateWindows(
     candidates.push({ startDate: windowStart, endDate: windowEnd, membersIn, membersPartial, membersOut, score });
   }
 
-  // Sliding a fixed-length window one day at a time across a long, evenly-free
-  // stretch produces dozens of candidates with identical attendance — e.g. a
-  // group that's wide open for two weeks straight yields the same "everyone's
-  // in" outcome at every offset. Surfacing each as its own vote option isn't 3
-  // real choices, it's the same good news chopped into arbitrary consecutive
-  // slices (the literal bug report this fixes: 27 Feb–2 Mar / 3–6 / 7–10 out
-  // of one continuous free run). Collapse consecutive candidates with the same
-  // score and the same attendance into a single run, so an option only shows
-  // up again when something about it is actually different.
-  // Candidates are already date-adjacent by construction (the offset loop
-  // above advances one day at a time), so it's enough to compare each one
-  // to the immediately preceding candidate — not to the frozen start of
-  // whatever run is currently open — to tell whether it's still the same
-  // stretch or a genuinely new one.
   const runs: DateWindow[] = [];
   let previousCandidate: DateWindow | null = null;
   for (const candidate of candidates) {
@@ -159,20 +147,84 @@ export function computeTopDateWindows(
     if (!continuesRun) runs.push(candidate); // first offset of a new run represents the whole stretch
     previousCandidate = candidate;
   }
-
-  runs.sort((a, b) => b.score - a.score || (a.startDate < b.startDate ? -1 : 1));
-
-  const results: DateWindow[] = [];
-  for (const run of runs) {
-    const overlapsExisting = results.some((r) => !(run.endDate < r.startDate || run.startDate > r.endDate));
-    if (!overlapsExisting) results.push(run);
-    if (results.length === 3) break;
-  }
-
-  return results;
+  return runs;
 }
 
 function sameMembers(a: DateWindow, b: DateWindow): boolean {
-  const key = (w: DateWindow) => [...w.membersIn].sort().join(",") + "|" + [...w.membersPartial].sort().join(",");
-  return key(a) === key(b);
+  return membershipKey(a) === membershipKey(b);
+}
+
+function membershipKey(w: DateWindow): string {
+  return [...w.membersIn].sort().join(",") + "|" + [...w.membersPartial].sort().join(",");
+}
+
+/**
+ * Deterministic date solver (F6). No LLM involved: plain interval math over
+ * submitted availability, prioritized by the group's preferred trip length
+ * (n days = n-1 nights, same convention throughout the app).
+ *
+ * Option 1 is always the best window at the *full* preferred length,
+ * regardless of whether a shorter window elsewhere scores higher — the
+ * group asked for an n-day trip, so that's the first thing on the table,
+ * not just whatever slice happens to fit the most people.
+ *
+ * Options 2 and 3 trade duration for attendance: every window at every
+ * length from the preferred length down to a single day is a candidate,
+ * ranked by attendance first (more people fitting beats a longer trip),
+ * then by longer duration as a tiebreak among equally-attended options,
+ * then by earliest start. These are deliberately allowed to overlap option
+ * 1 in date range — a shorter, more-inclusive window is a genuinely
+ * different proposal from the full-length one, not a competing slice of the
+ * same calendar slot (the group votes for exactly one of the three; they're
+ * alternatives, not a non-overlapping schedule). What IS excluded is an
+ * option with a membership signature already claimed by an earlier
+ * (always-longer, since lengths are processed longest-first) option, so a
+ * 1-day slice of the exact same "everyone's still free" stretch option 1
+ * already represents never gets surfaced as if it were new information.
+ */
+export function computeTopDateWindows(
+  availability: AvailabilityRow[],
+  activeMemberIds: string[],
+  preferredDays = 7
+): DateWindow[] {
+  if (availability.length === 0 || activeMemberIds.length === 0) return [];
+
+  const statusMap = buildStatusMap(availability);
+  const allDates = availability.flatMap((row) => [row.start_date, row.end_date]);
+  const spanStart = allDates.reduce((a, b) => (a < b ? a : b));
+  const spanEnd = allDates.reduce((a, b) => (a > b ? a : b));
+  const spanLengthDays = daysBetween(spanStart, spanEnd) + 1;
+  const topLength = Math.min(preferredDays, spanLengthDays);
+
+  const runsByLength: DateWindow[] = [];
+  for (let length = topLength; length >= 1; length--) {
+    runsByLength.push(...computeRunsForLength(statusMap, spanStart, spanEnd, activeMemberIds, length));
+  }
+
+  const fullLengthRuns = runsByLength
+    .filter((r) => daysBetween(r.startDate, r.endDate) + 1 === topLength)
+    .sort((a, b) => b.score - a.score || (a.startDate < b.startDate ? -1 : 1));
+
+  const results: DateWindow[] = [];
+  if (fullLengthRuns.length > 0) results.push(fullLengthRuns[0]);
+
+  const seenSignatures = new Set(results.map(membershipKey));
+  const remaining = runsByLength
+    .filter((r) => !seenSignatures.has(membershipKey(r)))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const lengthA = daysBetween(a.startDate, a.endDate);
+      const lengthB = daysBetween(b.startDate, b.endDate);
+      if (lengthB !== lengthA) return lengthB - lengthA; // longer trip wins when attendance ties
+      return a.startDate < b.startDate ? -1 : 1;
+    });
+
+  for (const run of remaining) {
+    if (results.length === 3) break;
+    if (seenSignatures.has(membershipKey(run))) continue; // an earlier, longer run with the same signature already claimed this slot
+    results.push(run);
+    seenSignatures.add(membershipKey(run));
+  }
+
+  return results;
 }

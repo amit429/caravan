@@ -31,6 +31,7 @@ export async function POST(request: Request) {
         vibe: parsed.data.vibe,
         budget_hint: parsed.data.budgetHint ?? null,
         agent_tone: parsed.data.agentTone,
+        preferred_trip_days: parsed.data.preferredTripDays,
       })
       .select()
       .single();

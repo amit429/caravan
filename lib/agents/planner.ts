@@ -8,7 +8,6 @@ import { computeTopDateWindows } from "@/lib/dates/date-solver";
 import type { AvailabilityRow, DecisionRow, FactRow, ItineraryDay, MemberRow } from "@/lib/database.types";
 
 const MODEL_ID = "gemini-3.6-flash";
-const DEFAULT_TRIP_LENGTH_DAYS = 4;
 
 const activitySchema = z.object({ time: z.string(), description: z.string() });
 const dayPlanSchema = z.object({
@@ -23,19 +22,22 @@ type PlannerResult = { ok: true } | { ok: false; reason: string };
 // The locked DATES decision only stores a formatted label ("Nov 12 – Nov 15"),
 // not raw dates — its option id ("window-N") is positional against the date
 // solver's output at creation time, so re-running the solver now recovers the
-// real start/end dates as long as availability hasn't shifted the ranking
-// since. Falls back to a default length if that assumption doesn't hold.
+// real start/end dates as long as availability (or the preferred-duration
+// preference) hasn't shifted the ranking since. Falls back to the trip's own
+// preferred length if that assumption doesn't hold — a real, current number
+// rather than an arbitrary constant.
 function resolveTripLengthDays(
   datesDecision: DecisionRow | undefined,
   availability: AvailabilityRow[],
-  activeMemberIds: string[]
+  activeMemberIds: string[],
+  preferredDays: number
 ): number {
-  if (!datesDecision?.locked_option) return DEFAULT_TRIP_LENGTH_DAYS;
+  if (!datesDecision?.locked_option) return preferredDays;
   const match = datesDecision.locked_option.match(/^window-(\d+)$/);
-  if (!match) return DEFAULT_TRIP_LENGTH_DAYS;
-  const windows = computeTopDateWindows(availability, activeMemberIds);
+  if (!match) return preferredDays;
+  const windows = computeTopDateWindows(availability, activeMemberIds, preferredDays);
   const window = windows[Number(match[1])];
-  if (!window) return DEFAULT_TRIP_LENGTH_DAYS;
+  if (!window) return preferredDays;
   const days = Math.round(
     (new Date(`${window.endDate}T00:00:00Z`).getTime() - new Date(`${window.startDate}T00:00:00Z`).getTime()) /
       (24 * 60 * 60 * 1000)
@@ -48,11 +50,12 @@ function resolveTripLengthDays(
 // generates and regenerates the whole thing, it doesn't support inline edits.
 export async function runPlanner(tripId: string): Promise<PlannerResult> {
   const supabase = createServiceSupabaseClient();
-  const [{ data: decisions }, { data: members }, { data: facts }, { data: availability }] = await Promise.all([
+  const [{ data: decisions }, { data: members }, { data: facts }, { data: availability }, { data: trip }] = await Promise.all([
     supabase.from("decisions").select().eq("trip_id", tripId),
     supabase.from("members").select().eq("trip_id", tripId).eq("status", "active"),
     supabase.from("facts").select().eq("trip_id", tripId).is("superseded_by", null),
     supabase.from("availability").select().eq("trip_id", tripId),
+    supabase.from("trips").select("preferred_trip_days").eq("id", tripId).single(),
   ]);
 
   const allDecisions = (decisions ?? []) as DecisionRow[];
@@ -68,7 +71,8 @@ export async function runPlanner(tripId: string): Promise<PlannerResult> {
   const tripLengthDays = resolveTripLengthDays(
     datesDecision,
     (availability ?? []) as AvailabilityRow[],
-    activeMembers.map((m) => m.id)
+    activeMembers.map((m) => m.id),
+    (trip as { preferred_trip_days: number } | null)?.preferred_trip_days ?? 7
   );
 
   const allFacts = (facts ?? []) as FactRow[];

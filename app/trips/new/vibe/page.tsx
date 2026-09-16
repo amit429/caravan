@@ -7,6 +7,7 @@ import { Chip } from "@/components/caravan/primitives/chip";
 import { BudgetSlider } from "@/components/caravan/intake/budget-slider";
 import { writeDraft, readDraft } from "@/app/trips/new/new-trip-store";
 import { FlowShell } from "@/components/caravan/primitives/flow-shell";
+import { TRIP_DURATION_PRESETS } from "@/lib/database.types";
 
 const VIBE_OPTIONS = ["Beach", "Mountains", "Party", "Slow", "Road trip", "Food", "Trekking", "Cities"];
 
@@ -27,13 +28,14 @@ export default function NewTripVibePage() {
   const [vibe, setVibe] = useState<string[]>(draft.vibe);
   const [budgetAmount, setBudgetAmount] = useState(draft.budgetHint ? parseBudgetHint(draft.budgetHint) : 15000);
   const [agentTone, setAgentTone] = useState(draft.agentTone);
+  const [preferredTripDays, setPreferredTripDays] = useState(draft.preferredTripDays);
 
   function toggleVibe(v: string) {
     setVibe((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]));
   }
 
   function next() {
-    writeDraft({ vibe, budgetHint: `₹${budgetAmount.toLocaleString("en-IN")}`, agentTone });
+    writeDraft({ vibe, budgetHint: `₹${budgetAmount.toLocaleString("en-IN")}`, agentTone, preferredTripDays });
     router.push(`/trips/new/invite`);
   }
 
@@ -55,6 +57,14 @@ export default function NewTripVibePage() {
         </div>
         <label className="text-xs font-medium text-ink-2 mt-1.5">Rough budget a head</label>
         <BudgetSlider value={budgetAmount} onChange={setBudgetAmount} />
+        <label className="text-xs font-medium text-ink-2 mt-1.5">How many days?</label>
+        <div className="flex flex-wrap gap-1.5">
+          {TRIP_DURATION_PRESETS.map((days) => (
+            <Chip key={days} selected={preferredTripDays === days} onClick={() => setPreferredTripDays(days)}>
+              {days} days
+            </Chip>
+          ))}
+        </div>
         <label className="text-xs font-medium text-ink-2 mt-1.5">How should the agent talk?</label>
         <div className="flex flex-col gap-2">
           {TONES.map((t) => (

@@ -3,6 +3,7 @@ import { getAuthUser } from "@/lib/auth/session";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { DECISION_TYPE_TITLE } from "@/lib/decisions/decision-titles";
 import { ToggleJoiningButton } from "@/components/caravan/settings/toggle-joining-button";
+import { TripDurationButtons } from "@/components/caravan/settings/trip-duration-buttons";
 import { ReopenDecisionButton } from "@/components/caravan/decisions/reopen-decision-button";
 import { RemoveMemberButton } from "@/components/caravan/settings/remove-member-button";
 import { InviteLinkCard } from "@/components/caravan/sharing/invite-link-card";
@@ -50,6 +51,15 @@ export default async function TripSettingsPage({ params }: { params: Promise<{ t
               <div className="text-sm font-medium">Agent tone</div>
               <div className="mt-0.5 text-xs text-ink-3">{TONE_LABEL[trip.agent_tone] ?? trip.agent_tone}</div>
             </div>
+          </div>
+          <div className="flex flex-col gap-2 px-3.5 py-3">
+            <div>
+              <div className="text-sm font-medium">Trip duration</div>
+              <div className="mt-0.5 text-xs text-ink-3">
+                Used to prioritize date options — changing this refreshes any open vote.
+              </div>
+            </div>
+            <TripDurationButtons tripId={tripId} preferredTripDays={trip.preferred_trip_days} />
           </div>
         </div>
       </section>

@@ -79,5 +79,28 @@ describe("POST /api/trips", () => {
         role: "admin",
       })
     );
+    expect(mockInsertTrip).toHaveBeenCalledWith(expect.objectContaining({ preferred_trip_days: 7 }));
+  });
+
+  it("accepts an explicit preferred trip duration from the presets", async () => {
+    mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "amit@example.com", name: "Amit" });
+    mockInsertTrip.mockResolvedValue({ data: { id: "trip-1", invite_code: "ABCDEF" }, error: null });
+    const req = new Request("http://localhost/api/trips", {
+      method: "POST",
+      body: JSON.stringify({ name: "Goa", preferredTripDays: 10 }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(201);
+    expect(mockInsertTrip).toHaveBeenCalledWith(expect.objectContaining({ preferred_trip_days: 10 }));
+  });
+
+  it("rejects a preferred trip duration outside the presets", async () => {
+    mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "amit@example.com", name: "Amit" });
+    const req = new Request("http://localhost/api/trips", {
+      method: "POST",
+      body: JSON.stringify({ name: "Goa", preferredTripDays: 6 }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
   });
 });

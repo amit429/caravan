@@ -65,16 +65,19 @@ describe("computeTopDateWindows", () => {
   });
 
   it("puts a member with a blocked day inside the window in membersOut, without excluding the window", () => {
-    // Availability spans exactly one window's length, so there is no better-scoring
-    // alternative window for the solver to prefer instead — this isolates the
-    // classification logic itself rather than the window-selection ranking.
+    // Availability spans exactly the preferred length, so option 1 (the best
+    // full-length window) is the one and only length-4 candidate — this
+    // isolates the classification logic itself. Shorter windows elsewhere in
+    // the span may still surface as options 2/3 (that's the multi-length
+    // exploration working as intended), so this only asserts on option 1.
     const availability = [
       avail("m1", "2026-11-01", "2026-11-04"),
       avail("m2", "2026-11-01", "2026-11-04"),
       avail("m2", "2026-11-03", "2026-11-03", "blocked"),
     ];
     const windows = computeTopDateWindows(availability, ["m1", "m2"], 4);
-    expect(windows).toHaveLength(1);
+    expect(windows[0].startDate).toBe("2026-11-01");
+    expect(windows[0].endDate).toBe("2026-11-04");
     expect(windows[0].membersOut).toContain("m2");
     expect(windows[0].membersIn).toContain("m1");
   });
@@ -86,7 +89,8 @@ describe("computeTopDateWindows", () => {
       avail("m2", "2026-11-01", "2026-11-01", "partial"),
     ];
     const windows = computeTopDateWindows(availability, ["m1", "m2"], 4);
-    expect(windows).toHaveLength(1);
+    expect(windows[0].startDate).toBe("2026-11-01");
+    expect(windows[0].endDate).toBe("2026-11-04");
     expect(windows[0].membersPartial).toContain("m2");
     expect(windows[0].membersIn).toContain("m1");
     expect(windows[0].score).toBe(1.5);
@@ -142,5 +146,67 @@ describe("computeTopDateWindows", () => {
         expect(overlaps).toBe(false);
       }
     }
+  });
+
+  it("defaults to a 7-day preferred length when none is given", () => {
+    const windows = computeTopDateWindows([avail("m1", "2026-11-01", "2026-11-20")], ["m1"]);
+    expect(windows[0].endDate).toBe("2026-11-07"); // Nov 1 + 6 = a 7-day window
+  });
+
+  it("option 1 is always the best full-preferred-length window, even if a shorter window elsewhere fits more people", () => {
+    // m1 is free the whole month; m2 only overlaps for a 3-day stretch.
+    // A 7-day preference: option 1 must still be a real 7-day window (only
+    // m1 fits it), not the 3-day window where both fit — that's what
+    // options 2/3 are for.
+    const availability = [avail("m1", "2026-11-01", "2026-11-30"), avail("m2", "2026-11-10", "2026-11-12")];
+    const windows = computeTopDateWindows(availability, ["m1", "m2"], 7);
+    expect(windows[0].startDate).toBe("2026-11-01");
+    expect(windows[0].endDate).toBe("2026-11-07");
+    expect(windows[0].membersIn).toEqual(["m1"]);
+  });
+
+  it("offers a shorter, more-inclusive window as option 2 when the full-length window doesn't fit everyone", () => {
+    const availability = [avail("m1", "2026-11-01", "2026-11-30"), avail("m2", "2026-11-10", "2026-11-12")];
+    const windows = computeTopDateWindows(availability, ["m1", "m2"], 7);
+    expect(windows.length).toBeGreaterThanOrEqual(2);
+    expect(windows[1].membersIn.sort()).toEqual(["m1", "m2"]);
+    expect(windows[1].startDate).toBe("2026-11-10");
+    expect(windows[1].endDate).toBe("2026-11-12");
+    // The 3-day everyone-fits window beats the 7-day some-fit window on
+    // attendance, but it's still ranked behind option 1, never ahead of it.
+    expect(windows[1].score).toBeGreaterThan(windows[0].score);
+  });
+
+  it("lets a more-inclusive shorter window overlap option 1's date range, since they're alternative proposals, not a shared calendar grid", () => {
+    // m1 free Feb22-Mar5, m2 free Feb27-Mar14, m3 free Feb24-Mar3. No 7-day
+    // window fits everyone (the 3-way overlap is only Feb27-Mar3, 5 days),
+    // so option 1 is the best 7-day window some pair fits, but a shorter
+    // window where all THREE fit (within Feb27-Mar3) should still surface as
+    // option 2, even though its dates sit inside option 1's range.
+    const availability = [
+      avail("m1", "2026-02-22", "2026-03-05"),
+      avail("m2", "2026-02-27", "2026-03-14"),
+      avail("m3", "2026-02-24", "2026-03-03"),
+    ];
+    const windows = computeTopDateWindows(availability, ["m1", "m2", "m3"], 7);
+    expect(windows[0].membersIn.length + windows[0].membersPartial.length).toBeLessThan(3);
+    const allThreeFit = windows.find((w) => w.membersIn.length === 3);
+    expect(allThreeFit).toBeDefined();
+  });
+
+  it("does not surface a shorter slice of the exact same stretch option 1 already represents", () => {
+    // Single member, free the whole span — every length/offset shares one
+    // membership signature (only m1, fully in), so there's nothing left to
+    // offer as options 2/3 even though "search down to 1 day" would
+    // otherwise generate dozens of candidates here.
+    const windows = computeTopDateWindows([avail("m1", "2026-11-01", "2026-11-30")], ["m1"], 7);
+    expect(windows).toHaveLength(1);
+  });
+
+  it("clamps the preferred length to the actual data span instead of returning nothing", () => {
+    const windows = computeTopDateWindows([avail("m1", "2026-11-01", "2026-11-04")], ["m1"], 14);
+    expect(windows).toHaveLength(1);
+    expect(windows[0].startDate).toBe("2026-11-01");
+    expect(windows[0].endDate).toBe("2026-11-04");
   });
 });

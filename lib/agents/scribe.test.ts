@@ -11,6 +11,7 @@ const mockAvailabilityInsert = vi.fn();
 const mockIdeasInsert = vi.fn();
 const mockIdeasExistingLookup = vi.fn();
 const mockExtractIdeaMetadata = vi.fn();
+const mockAvailabilitySelect = vi.fn();
 
 vi.mock("ai", () => ({
   generateObject: (...args: unknown[]) => mockGenerateObject(...args),
@@ -42,12 +43,19 @@ vi.mock("@/lib/supabase/service", () => ({
           }),
         };
       }
-      if (table === "availability") return { insert: (row: unknown) => mockAvailabilityInsert(row) };
-      // No "decisions" branch here on purpose: buildDateContext's lookups are
-      // best-effort (wrapped in try/catch) and this mock intentionally
-      // doesn't implement `.select()` for either table above, or `decisions`
-      // at all — every existing test exercises that graceful-degradation
-      // path, not a happy one, and still passes.
+      if (table === "availability") {
+        return {
+          insert: (row: unknown) => mockAvailabilityInsert(row),
+          // Defaults to rejecting (see beforeEach) so every existing test
+          // still exercises buildDateContext's graceful-degradation path —
+          // only the dedicated month-anchor test below overrides it.
+          select: () => ({ eq: () => ({ order: () => ({ limit: () => mockAvailabilitySelect() }) }) }),
+        };
+      }
+      // No "decisions" branch here on purpose: buildDateContext's leading-
+      // windows lookup is separately best-effort (wrapped in its own
+      // try/catch) and this mock doesn't implement `decisions` at all —
+      // every existing test exercises that graceful-degradation path too.
       if (table === "ideas") {
         return {
           select: () => ({
@@ -104,6 +112,7 @@ beforeEach(() => {
   mockIdeasInsert.mockReset().mockResolvedValue({ error: null });
   mockIdeasExistingLookup.mockReset().mockResolvedValue({ data: null });
   mockExtractIdeaMetadata.mockReset().mockResolvedValue({ title: "Scraped Title", note: "Scraped note", imageUrl: null });
+  mockAvailabilitySelect.mockReset().mockRejectedValue(new Error("no mock configured"));
 });
 
 describe("runScribe", () => {
@@ -454,5 +463,21 @@ describe("runScribe", () => {
       });
     const result = await runScribe({ tripId: "trip-1", message, authorMember: member });
     expect(result).toEqual({ posted: true });
+  });
+
+  it("anchors an ambiguous date to the trip's own established month, not just its year", async () => {
+    // The literal bug this fixes: with only a year as context (no month),
+    // "I can also make it from 27th to 5th" was extracted as Sep 27 - Oct 5
+    // (nearest future "27th" from today) instead of the trip's real Feb/Mar
+    // window, because the trip's earliest availability row is Feb 2027.
+    mockAvailabilitySelect.mockResolvedValue({ data: [{ start_date: "2027-02-22" }], error: null });
+    mockGenerateObject.mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() }).mockResolvedValueOnce({
+      object: { extractions: [] },
+      usage: usage(),
+    });
+    await runScribe({ tripId: "trip-1", message, authorMember: member });
+    const prompt = mockGenerateObject.mock.calls[1][0].prompt as string;
+    expect(prompt).toContain("February 2027");
+    expect(prompt).not.toContain("No year or month has been established");
   });
 });

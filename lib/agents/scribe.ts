@@ -5,6 +5,7 @@ import { logAgentRun } from "./runtime/log-run";
 import { postAgentMessage } from "./runtime/post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { extractIdeaMetadata } from "@/lib/ideas/extract-idea";
+import { refreshDatesDecisionIfStale } from "@/lib/decisions/refresh-dates-decision";
 import type { DecisionRow, MemberRow, MessageRow } from "@/lib/database.types";
 
 const MODEL_ID = "gemini-3.6-flash";
@@ -90,15 +91,28 @@ const scribeOutputSchema = z.object({ extractions: z.array(extractionItemSchema)
 // (whatever's already in availability, if anything) and surfaces the
 // group's actual proposed date window(s) so a relative ask like "can we
 // finish a day earlier" resolves against something real instead of guessing.
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 async function buildDateContext(
   tripId: string,
   supabase: ReturnType<typeof createServiceSupabaseClient>
 ): Promise<string> {
   const today = new Date().toISOString().slice(0, 10);
   let anchorYear: number | null = null;
+  let anchorMonth: number | null = null; // 1-12
   let leadingWindows: string[] = [];
 
   try {
+    // The earliest-filed row, not the most recent — this is meant to capture
+    // the month the trip was originally anchored to (from intake or the
+    // first chat mention), which a later ambiguous message ("27th to 5th",
+    // no month given) should resolve against. The literal bug this fixes:
+    // that exact message got extracted as Sep-Oct (the nearest future "27th"
+    // from today) instead of the trip's real Feb/Mar window, because only a
+    // year was ever given as context, never a month.
     const { data: earliestAvailability } = await supabase
       .from("availability")
       .select("start_date")
@@ -106,7 +120,10 @@ async function buildDateContext(
       .order("created_at", { ascending: true })
       .limit(1);
     const firstRow = earliestAvailability?.[0] as { start_date: string } | undefined;
-    if (firstRow) anchorYear = Number(firstRow.start_date.slice(0, 4));
+    if (firstRow) {
+      anchorYear = Number(firstRow.start_date.slice(0, 4));
+      anchorMonth = Number(firstRow.start_date.slice(5, 7));
+    }
   } catch {
     // Best-effort context only — a failed lookup here should never block
     // extraction, it just means the model falls back to "nearest future date."
@@ -127,11 +144,13 @@ async function buildDateContext(
   }
 
   const lines = [`Today's date is ${today}.`];
-  lines.push(
-    anchorYear
-      ? `This trip's other members have already shared dates around ${anchorYear} — use that year for any date mentioned without one, unless the message clearly states a different year.`
-      : `No year has been established for this trip yet — assume the nearest sensible future occurrence of any date mentioned.`
-  );
+  if (anchorYear && anchorMonth) {
+    lines.push(
+      `This trip's other members have already shared dates around ${MONTH_NAMES[anchorMonth - 1]} ${anchorYear} — use that exact month and year for any date mentioned without one (e.g. "the 27th" or "27th to 5th" means the 27th of ${MONTH_NAMES[anchorMonth - 1]}, running into the following month if the end day is smaller than the start day), unless the message clearly states a different month or year. Do not default to the nearest calendar occurrence from today's date — the trip's own established month always wins.`
+    );
+  } else {
+    lines.push(`No year or month has been established for this trip yet — assume the nearest sensible future occurrence of any date mentioned.`);
+  }
   if (leadingWindows.length > 0) {
     lines.push(
       `The group's current proposed date option(s): ${leadingWindows.join(", ")}. Resolve relative requests ("before X", "a day earlier", "can we skip the last night") against these into concrete startDate/endDate values.`
@@ -261,6 +280,7 @@ export async function runScribe(params: {
   if (applied.length === 0) return { posted: false };
 
   const receipts: string[] = [];
+  let filedAvailability = false;
 
   for (const item of applied) {
     if (item.kind === "fact") {
@@ -304,6 +324,7 @@ export async function runScribe(params: {
         end_date: item.endDate,
         strength: item.strength,
       });
+      filedAvailability = true;
     } else {
       // idea — dedupe by exact URL within the trip first so the same link
       // pasted twice (or mentioned once and already filed via the explicit
@@ -351,6 +372,17 @@ export async function runScribe(params: {
     metadata: { sourceMessageId: params.message.id },
     threadId: params.threadId,
   });
+
+  // A new/changed availability row can invalidate an already-OPEN DATES
+  // vote's options — best-effort, same as every other cascade in this file;
+  // never lets a refresh failure take down the filing that already succeeded.
+  if (filedAvailability) {
+    try {
+      await refreshDatesDecisionIfStale(params.tripId, "availability");
+    } catch (error) {
+      if (process.env.SCRIBE_DEBUG) console.log("[scribe debug] dates refresh failed:", error);
+    }
+  }
 
   return { posted: true };
 }

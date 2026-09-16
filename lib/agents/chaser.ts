@@ -130,7 +130,8 @@ export async function sweepDecisions(tripId: string) {
 // nudge infrastructure (sweepIntakeNudges), not a new dependency.
 export async function sweepAutoGeneration(tripId: string) {
   const supabase = createServiceSupabaseClient();
-  const [{ data: activeMembers }, { data: facts }, { data: availability }, { data: decisions }] = await Promise.all([
+  const [{ data: trip }, { data: activeMembers }, { data: facts }, { data: availability }, { data: decisions }] = await Promise.all([
+    supabase.from("trips").select("preferred_trip_days").eq("id", tripId).single(),
     supabase.from("members").select("id").eq("trip_id", tripId).eq("status", "active"),
     supabase.from("facts").select("member_id").eq("trip_id", tripId),
     supabase.from("availability").select().eq("trip_id", tripId),
@@ -154,7 +155,8 @@ export async function sweepAutoGeneration(tripId: string) {
   const membersWithAvailability = new Set(allAvailability.map((a) => a.member_id));
   const everyoneSharedDates = activeMemberIds.every((id) => membersWithAvailability.has(id));
   if (everyoneSharedDates && !existingDecisionTypes.has("DATES")) {
-    const windows = computeTopDateWindows(allAvailability, activeMemberIds);
+    const preferredDays = (trip as { preferred_trip_days: number } | null)?.preferred_trip_days ?? 7;
+    const windows = computeTopDateWindows(allAvailability, activeMemberIds, preferredDays);
     if (windows.length > 0) {
       const { data: decision } = await supabase
         .from("decisions")
@@ -187,7 +189,8 @@ export async function sweepAutoGeneration(tripId: string) {
 // outside it worth privately asking, once, ever, per decision.
 export async function sweepDateOutreach(tripId: string) {
   const supabase = createServiceSupabaseClient();
-  const [{ data: decisions }, { data: activeMembers }, { data: availability }] = await Promise.all([
+  const [{ data: trip }, { data: decisions }, { data: activeMembers }, { data: availability }] = await Promise.all([
+    supabase.from("trips").select("preferred_trip_days").eq("id", tripId).single(),
     supabase.from("decisions").select().eq("trip_id", tripId).eq("type", "DATES").in("state", ["OPEN", "VOTING"]),
     supabase.from("members").select().eq("trip_id", tripId).eq("status", "active"),
     supabase.from("availability").select().eq("trip_id", tripId),
@@ -199,7 +202,8 @@ export async function sweepDateOutreach(tripId: string) {
   const activeMemberIds = activeMemberRows.map((m) => m.id);
   if (activeMemberIds.length === 0) return;
 
-  const windows = computeTopDateWindows((availability ?? []) as AvailabilityRow[], activeMemberIds);
+  const preferredDays = (trip as { preferred_trip_days: number } | null)?.preferred_trip_days ?? 7;
+  const windows = computeTopDateWindows((availability ?? []) as AvailabilityRow[], activeMemberIds, preferredDays);
   const leading = windows[0];
   if (!leading) return;
 

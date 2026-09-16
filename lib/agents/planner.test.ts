@@ -8,6 +8,7 @@ const mockMembersSelect = vi.fn();
 const mockFactsSelect = vi.fn();
 const mockAvailabilitySelect = vi.fn();
 const mockItinerariesUpsert = vi.fn();
+const mockTripSelect = vi.fn();
 
 vi.mock("ai", () => ({ generateObject: (...args: unknown[]) => mockGenerateObject(...args) }));
 vi.mock("./runtime/log-run", () => ({ logAgentRun: (...args: unknown[]) => mockLogAgentRun(...args) }));
@@ -21,6 +22,7 @@ vi.mock("@/lib/supabase/service", () => ({
       if (table === "facts") return { select: () => ({ eq: () => ({ is: () => mockFactsSelect() }) }) };
       if (table === "availability") return { select: () => ({ eq: () => mockAvailabilitySelect() }) };
       if (table === "itineraries") return { upsert: (row: unknown, opts: unknown) => mockItinerariesUpsert(row, opts) };
+      if (table === "trips") return { select: () => ({ eq: () => ({ single: () => mockTripSelect() }) }) };
       throw new Error(`unexpected table ${table}`);
     },
   }),
@@ -52,6 +54,7 @@ beforeEach(() => {
   mockFactsSelect.mockReset().mockResolvedValue({ data: [], error: null });
   mockAvailabilitySelect.mockReset().mockResolvedValue({ data: [], error: null });
   mockDecisionsSelect.mockReset();
+  mockTripSelect.mockReset().mockResolvedValue({ data: { preferred_trip_days: 7 }, error: null });
 });
 
 describe("runPlanner", () => {
@@ -91,14 +94,15 @@ describe("runPlanner", () => {
     );
   });
 
-  it("falls back to the default trip length when no dates are locked", async () => {
+  it("falls back to the trip's preferred length when no dates are locked", async () => {
     mockDecisionsSelect.mockResolvedValue({ data: [destinationDecision], error: null });
+    mockTripSelect.mockResolvedValue({ data: { preferred_trip_days: 10 }, error: null });
     mockGenerateObject.mockResolvedValue({ object: threeDayPlan, usage: { inputTokens: 50, outputTokens: 300 } });
 
     await runPlanner("trip-1");
 
     const prompt = mockGenerateObject.mock.calls[0][0].prompt as string;
-    expect(prompt).toContain("4-day");
+    expect(prompt).toContain("10-day");
   });
 
   it("threads hard-no facts into the prompt", async () => {

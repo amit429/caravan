@@ -7,6 +7,7 @@ const mockMembersSelect = vi.fn();
 const mockAvailabilitySelect = vi.fn();
 const mockTasksSelect = vi.fn();
 const mockTasksInsert = vi.fn();
+const mockTripSelect = vi.fn();
 
 vi.mock("./runtime/log-run", () => ({ logAgentRun: (...args: unknown[]) => mockLogAgentRun(...args) }));
 vi.mock("./runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
@@ -22,6 +23,7 @@ vi.mock("@/lib/supabase/service", () => ({
           insert: (rows: unknown) => mockTasksInsert(rows),
         };
       }
+      if (table === "trips") return { select: () => ({ eq: () => ({ single: () => mockTripSelect() }) }) };
       throw new Error(`unexpected table ${table}`);
     },
   }),
@@ -40,6 +42,7 @@ beforeEach(() => {
   mockAvailabilitySelect.mockReset().mockResolvedValue({ data: [], error: null });
   mockTasksSelect.mockReset().mockResolvedValue({ data: [], error: null });
   mockTasksInsert.mockReset().mockResolvedValue({ error: null });
+  mockTripSelect.mockReset().mockResolvedValue({ data: { preferred_trip_days: 7 }, error: null });
 });
 
 describe("runQuartermaster", () => {

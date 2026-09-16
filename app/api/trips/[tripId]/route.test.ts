@@ -11,9 +11,13 @@ const mockPostAgentMessage = vi.fn();
 const mockTripOwnerCheck = vi.fn();
 const mockTripDelete = vi.fn();
 const mockMemberCount = vi.fn();
+const mockRefreshDatesDecision = vi.fn();
 
 vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
 vi.mock("@/lib/agents/runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
+vi.mock("@/lib/decisions/refresh-dates-decision", () => ({
+  refreshDatesDecisionIfStale: (...args: unknown[]) => mockRefreshDatesDecision(...args),
+}));
 
 vi.mock("@/lib/auth/resolve-caller", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/resolve-caller")>("@/lib/auth/resolve-caller");
@@ -77,6 +81,7 @@ beforeEach(() => {
   mockTripOwnerCheck.mockReset();
   mockTripDelete.mockReset().mockResolvedValue({ error: null });
   mockMemberCount.mockReset().mockResolvedValue({ count: 3, error: null });
+  mockRefreshDatesDecision.mockReset().mockResolvedValue(undefined);
 });
 
 describe("GET /api/trips/[tripId]", () => {
@@ -151,6 +156,33 @@ describe("PATCH /api/trips/[tripId]", () => {
     expect(mockPostAgentMessage).toHaveBeenCalledWith(
       expect.objectContaining({ tripId: "trip-1", agentName: "concierge", body: expect.stringContaining("Beachy weekend") })
     );
+  });
+
+  it("rejects a trip duration outside the presets", async () => {
+    mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "x@example.com" });
+    mockSingle.mockResolvedValue({ data: { id: "trip-1", admin_user_id: "admin-1" }, error: null });
+    const req = new Request("http://localhost/api/trips/trip-1", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "set_trip_duration", preferredTripDays: 6 }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ tripId: "trip-1" }) });
+    expect(res.status).toBe(400);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("updates the trip duration and refreshes any open DATES decision", async () => {
+    mockGetAdminUser.mockResolvedValue({ id: "admin-1", email: "x@example.com" });
+    mockSingle.mockResolvedValue({ data: { id: "trip-1", admin_user_id: "admin-1" }, error: null });
+    mockUpdate.mockResolvedValue({ data: { id: "trip-1", preferred_trip_days: 10 }, error: null });
+    const req = new Request("http://localhost/api/trips/trip-1", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "set_trip_duration", preferredTripDays: 10 }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ tripId: "trip-1" }) });
+    expect(res.status).toBe(200);
+    expect(mockUpdate).toHaveBeenCalledWith({ preferred_trip_days: 10 });
+    expect(mockRefreshDatesDecision).toHaveBeenCalledWith("trip-1", "duration");
+    expect(mockBroadcast).toHaveBeenCalledWith("trip-1");
   });
 });
 

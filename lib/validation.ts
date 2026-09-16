@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRIP_DURATION_PRESETS } from "@/lib/database.types";
 
 export const createTripSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -6,6 +7,14 @@ export const createTripSchema = z.object({
   vibe: z.array(z.string()).max(12).optional().default([]),
   budgetHint: z.string().trim().max(40).optional(),
   agentTone: z.enum(["efficient", "warm", "dry"]).optional().default("efficient"),
+  preferredTripDays: z
+    .number()
+    .int()
+    .refine((d): d is (typeof TRIP_DURATION_PRESETS)[number] => (TRIP_DURATION_PRESETS as readonly number[]).includes(d), {
+      message: `must be one of ${TRIP_DURATION_PRESETS.join(", ")}`,
+    })
+    .optional()
+    .default(7),
 });
 export type CreateTripInput = z.infer<typeof createTripSchema>;
 

@@ -7,6 +7,8 @@ import { broadcastTripChange } from "@/lib/realtime/broadcast";
 import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import { buildKickoffMessage } from "@/lib/trips/kickoff-message";
 import { MIN_MEMBERS_TO_OPEN } from "@/lib/trips/constants";
+import { refreshDatesDecisionIfStale } from "@/lib/decisions/refresh-dates-decision";
+import { TRIP_DURATION_PRESETS } from "@/lib/database.types";
 
 // Dual-auth: the member lobby needs this before the trip goes active, when the
 // only realtime channel members can hear is the broadcast one (see
@@ -48,7 +50,7 @@ export async function PATCH(
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
   const { tripId } = await params;
-  const { action } = await request.json();
+  const { action, preferredTripDays } = await request.json();
 
   const supabase = await createServerSupabaseClient();
   const { data: trip, error: fetchError } = await supabase
@@ -104,6 +106,22 @@ export async function PATCH(
       .select()
       .single();
     if (error) return NextResponse.json({ error: "update_failed" }, { status: 500 });
+    await broadcastTripChange(tripId);
+    return NextResponse.json({ trip: data });
+  }
+
+  if (action === "set_trip_duration") {
+    if (!TRIP_DURATION_PRESETS.includes(preferredTripDays)) {
+      return NextResponse.json({ error: "invalid_duration" }, { status: 400 });
+    }
+    const { data, error } = await supabase
+      .from("trips")
+      .update({ preferred_trip_days: preferredTripDays })
+      .eq("id", tripId)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: "update_failed" }, { status: 500 });
+    await refreshDatesDecisionIfStale(tripId, "duration");
     await broadcastTripChange(tripId);
     return NextResponse.json({ trip: data });
   }

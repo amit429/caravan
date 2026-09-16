@@ -9,8 +9,11 @@ export type TripRow = {
   vibe: string[];
   budget_hint: string | null;
   agent_tone: "efficient" | "warm" | "dry";
+  preferred_trip_days: number;
   created_at: string;
 };
+
+export const TRIP_DURATION_PRESETS = [2, 3, 5, 7, 10, 14] as const;
 
 export type MemberRow = {
   id: string;

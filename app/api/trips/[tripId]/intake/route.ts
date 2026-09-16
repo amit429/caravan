@@ -6,6 +6,7 @@ import { broadcastTripChange } from "@/lib/realtime/broadcast";
 import { ensureThread } from "@/lib/threads/ensure-thread";
 import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import { buildIntakeReceipt } from "@/lib/threads/intake-receipt";
+import { refreshDatesDecisionIfStale } from "@/lib/decisions/refresh-dates-decision";
 
 export async function GET(
   _request: Request,
@@ -112,6 +113,7 @@ export async function POST(
     }),
   });
 
+  await refreshDatesDecisionIfStale(tripId, "availability");
   await broadcastTripChange(tripId);
   return NextResponse.json({ ok: true }, { status: 201 });
 }

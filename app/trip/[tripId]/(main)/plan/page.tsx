@@ -90,7 +90,8 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
   const membersWithIntake = new Set(allFacts.map((f) => f.member_id));
   const dateWindows = computeTopDateWindows(
     allAvailability,
-    activeMembers.map((m) => m.id)
+    activeMembers.map((m) => m.id),
+    tripRow.preferred_trip_days
   );
   // computeTopDateWindows already knows exactly who's in/partial/out per
   // window (membersIn/membersPartial/membersOut) — this just turns those id

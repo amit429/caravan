@@ -17,12 +17,13 @@ function addDays(iso: string, days: number): string {
 function resolveTripStartDate(
   datesDecision: DecisionRow | undefined,
   availability: AvailabilityRow[],
-  activeMemberIds: string[]
+  activeMemberIds: string[],
+  preferredDays: number
 ): string | null {
   if (!datesDecision?.locked_option) return null;
   const match = datesDecision.locked_option.match(/^window-(\d+)$/);
   if (!match) return null;
-  const windows = computeTopDateWindows(availability, activeMemberIds);
+  const windows = computeTopDateWindows(availability, activeMemberIds, preferredDays);
   return windows[Number(match[1])]?.startDate ?? null;
 }
 
@@ -52,11 +53,15 @@ export async function runQuartermaster(tripId: string): Promise<QuartermasterRes
   const { data: members } = await supabase.from("members").select().eq("trip_id", tripId).eq("status", "active");
   const activeMembers = (members ?? []) as MemberRow[];
 
-  const { data: availability } = await supabase.from("availability").select().eq("trip_id", tripId);
+  const [{ data: availability }, { data: trip }] = await Promise.all([
+    supabase.from("availability").select().eq("trip_id", tripId),
+    supabase.from("trips").select("preferred_trip_days").eq("id", tripId).single(),
+  ]);
   const startDate = resolveTripStartDate(
     datesDecision,
     (availability ?? []) as AvailabilityRow[],
-    activeMembers.map((m) => m.id)
+    activeMembers.map((m) => m.id),
+    (trip as { preferred_trip_days: number } | null)?.preferred_trip_days ?? 7
   );
 
   type NewTask = { trip_id: string; member_id: string | null; title: string; category: TaskCategory; due_date: string | null };
