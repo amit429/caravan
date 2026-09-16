@@ -12,7 +12,7 @@ Live Deployment: https://caravan.amitpile.com/
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%7C%20Auth%20%7C%20Realtime-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Vercel AI SDK](https://img.shields.io/badge/Vercel%20AI%20SDK-v7-000000?logo=vercel&logoColor=white)](https://sdk.vercel.ai)
-[![Vitest](https://img.shields.io/badge/tests-308%20passing-2ecc71?logo=vitest&logoColor=white)](#testing)
+[![Vitest](https://img.shields.io/badge/tests-383%20passing-2ecc71?logo=vitest&logoColor=white)](#testing)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -159,12 +159,13 @@ Every screen below is a render of [`docs/design/screens.html`](docs/design/scree
 - Extracted facts/availability are attributed only to their own author, filed at a confidence floor, and a receipt is posted back.
 - A later chat correction — either direction ("actually I can't make the 5th" or "turns out I can now") — properly overrides an earlier answer: availability resolves per-day by *recency*, and budget/departure-city facts get superseded by the newer statement instead of sitting alongside a stale one.
 - Extraction is anchored to the trip's own established year and leading date-window context, so a rephrased request ("can we do it before March 1st instead?") resolves against the trip's real timeline instead of guessing.
-- A free-text place/activity mention ("let's do scuba diving and snorkeling") gets filed as an **Idea** automatically, the same as a pasted link — categorized as activity, stay, or travel.
-- If extraction fails, Scribe retries once with its own invalid output and the exact validation error echoed back for self-correction; if it still can't parse the message, it posts an honest "couldn't pin down the specifics — mind rephrasing?" reply instead of staying silent.
+- A free-text place/activity mention ("let's do scuba diving and snorkeling") gets filed as an **Idea** automatically, the same as a pasted link. A hotel mention or link routes straight to [Accommodations](#accommodations--travel-options), a flight/bus/train/ferry mention to [Travel options](#accommodations--travel-options) — each gets AI-enriched (price, area, or mode) on the spot, not just a generic card.
+- If extraction fails, Scribe retries once with its own invalid output and the exact validation error echoed back for self-correction — but a live-reproduced failure mode (the model flaking on the same field's exact shape in several different, non-overlapping ways run to run: a stringified value, a renamed field, snake_case keys, a dropped author id) survived that retry unprompted. Fixed at the boundary instead: the raw JSON is normalized (key casing, known field aliases, missing-author defaulting) before Zod ever validates it, so generation doesn't have to be perfect for extraction to succeed. If it still can't parse the message, Scribe posts an honest "couldn't pin down the specifics — mind rephrasing?" reply instead of staying silent.
 
 ### Decisions
 - Five types: **DATES, DESTINATION, BUDGET, STAY, ACTIVITY, CUSTOM**. Vote, veto ("hard no" — can never be voted away), lock.
-- Deterministic date solver: slides a window across everyone's submitted availability, scores by attendance, and collapses consecutive identical-scoring candidates into one real option instead of chopping one comfortable stretch into arbitrary slices.
+- Deterministic date solver, prioritized by the trip's **preferred duration** (2/3/5/7/10/14-day presets, set at trip creation and changeable later in Settings — existing trips default to 7): option 1 is always the best window at the *full* preferred length; options 2 and 3 explore every shorter length, trading duration for attendance, so a majority-fits-but-not-everyone stretch and a shorter everyone-fits compromise both show up as real, distinct choices — not just whatever slice happens to score highest.
+- **Auto-refreshes** an already-OPEN DATES vote the moment it goes stale — a new availability row from chat, an intake edit, or a changed duration preference — by dropping and cleanly recomputing it, with a message explaining why. Previously the options were a one-time snapshot from whenever the vote opened; a correction in chat ("actually I can do the 27th to the 5th") had no way to reach it.
 - Locking with a hard-no conflict shows the admin the runner-up and requires an explicit, logged override to force it anyway.
 - **Auto-locks the instant every active member has voted** — independent of any deadline, no admin tap required. Deadlines still work the way they always did (auto-lock + 24h reminder on expiry) as a separate, optional path. Both fire from the same scheduled sweep (Chaser) — pure rule-based, no LLM.
 - Admin can delete any decision (locked or not); the agent announces the deletion in the room and invites the group to discuss and regenerate.
@@ -187,13 +188,26 @@ The core thing this layer removes: an admin having to notice a vote closed, or a
 
 ### Itinerary, cost, checklist
 - **Planner** builds a day-by-day itinerary once a destination is locked, paced to the group's vibe.
-- **Quartermaster** estimates a per-head cost range for the locked destination and deterministically flags how many members it pushes over their (still-private) ceiling — the LLM estimates, arithmetic decides who's over.
+- **Quartermaster** estimates a per-head cost range for the locked destination and deterministically flags who it pushes over their (still-private) ceiling — the LLM estimates, arithmetic decides who's over, comparing against the estimate's **midpoint**, not its pessimistic upper bound (comparing against the max flagged almost everyone whenever the range was wide, which it usually is — the midpoint is the realistic single-number read of what the trip will probably actually cost).
 - **Quartermaster** also generates a prep checklist (docs / bookings / packing / other), personal + shared.
 - All three fire from an admin tap, or cascade automatically the moment the relevant decision(s) lock — see [Autonomous coordination](#autonomous-coordination--zero-admin-taps).
 
+### Budget renegotiation
+The other half of the cost estimate actually meaning something: once someone's flagged, they get asked, not just counted.
+- A newly-flagged member gets an interactive card in their own You-tab thread — the first "buttons inside a chat bubble" content this app has, not just agent text — asking if they can stretch to the realistic threshold or if it's a hard limit.
+- **Yes** updates their budget fact to that threshold and confirms privately — no group post, budget amounts stay exactly as private as everywhere else in the app.
+- **Hard no** prompts for a reason inline, then posts it to the group — named, so the admin knows who to coordinate with, but never the actual number — suggesting the group coordinate budgets, adjust dates, or look for cheaper stays.
+- One pending ask per member at a time, enforced at the database level; a later re-estimate can ask again once they've answered.
+
+### Accommodations & Travel options
+Hotel and transport mentions get their own richer homes instead of sitting in a flat idea inbox.
+- **Accommodations**: a hotel link or plain-text mention ("staying at Alaya Ubud") is AI-enriched with a price and city/area (Tavily search + a small extraction call, same whether it came from chat or was added by hand) and grouped by area on its own page — so a multi-city trip's stays sort themselves. Votable; the admin can **lock any number at once**, each with its own date range (a 7-8 day trip commonly books 2-3 different stays across cities — locking was previously all-or-nothing).
+- **Travel options**: a flight/bus/train/ferry mention is AI-classified by mode (Air / Road / Water) with timing and price where findable, grouped by mode on its own page. Votable; members **self-assign** to whichever option they're actually on ("I'm on this") — unlike accommodations, travel genuinely splits, since some fly and some drive. The admin can lock any number at once.
+- Both reuse the same enrichment pattern: OG-tag scraping for a link's title/image, Tavily for live context, and a model call that only ever tidies what the search actually found — never invents a price, area, or mode.
+
 ### Bookings & Ideas
-- Track logistics items (flights, hotels, ...) with a per-member "booked" chip and one-tap nudges.
-- An inbox for pasted links (Instagram/YouTube/anything) *or* plain text (no link required) that becomes a votable card — categorized **activity / stay / travel**. A dropped hotel or flight link surfaces as a suggested stay/travel card on Bookings instead of getting lost in a flat activity inbox; the admin can promote one straight into a tracked booking.
+- **Bookings**: a flat, generic checklist for logistics items (anything not already covered above) with a per-member "booked" chip and one-tap nudges — links out to Accommodations and Travel options rather than duplicating them.
+- **Ideas**: an inbox for pasted links (Instagram/YouTube/anything) *or* plain text (no link required) that becomes a votable card — activities and places only now that stays and travel have their own dedicated homes above.
 - Both fully admin-deletable behind a destructive confirm, same as decisions.
 
 ### Member management
@@ -218,10 +232,10 @@ The core thing this layer removes: an admin having to notice a vote closed, or a
 | UI | **React 19**, **Tailwind CSS v4** (`@theme` tokens), `tw-animate-css`, `lucide-react` | Warm paper/plum/signal-green design system, hand-drawn SVG illustrations, no external UI kit |
 | Backend / DB | **Supabase** — Postgres, Auth (Google OAuth), Realtime | Row-Level Security everywhere; a custom broadcast layer covers what RLS-gated `postgres_changes` can't reach for members (see [Architecture](#architecture)) |
 | AI | **Vercel AI SDK v7** + **Google Gemini 3.6 Flash** (`@ai-sdk/google`) | One model across every agent; `generateObject` for structured output, `generateText` for the Q&A surface |
-| Search | **Tavily API** (optional) | Live web context for Scout's destination research; the app degrades gracefully without it |
+| Search | **Tavily API** (optional) | Live web context for Scout's destination research, and for Accommodations/Travel options' price/area/mode enrichment (`lib/search/tavily.ts`, one shared client); the app degrades gracefully without it |
 | Background jobs | **Inngest** | Cron-driven Chaser sweep (deadline nudges/auto-lock), every 30 minutes |
 | Validation | **Zod 4** | Every mutating API route parses its body through a schema in `lib/validation.ts` |
-| Testing | **Vitest** | 308 tests across 59 files — pure logic and API routes are unit-tested; no component/E2E layer yet |
+| Testing | **Vitest** | 383 tests across 70 files — pure logic and API routes are unit-tested; no component/E2E layer yet |
 | Containerization | **Docker** (multi-stage, standalone output) | Optional — Vercel needs none of this; see [Docker](#docker) |
 
 ---
@@ -242,7 +256,7 @@ flowchart TB
 
     subgraph Supabase["Supabase"]
         Auth["Auth<br/>Google OAuth — admin & members alike"]
-        PG[("Postgres<br/>17 tables, RLS on every one")]
+        PG[("Postgres<br/>23 tables, RLS on every one")]
         RT["Realtime<br/>custom broadcast channel"]
     end
 
@@ -297,10 +311,10 @@ Every agent follows the same **deterministic core, LLM shell** principle: anythi
 | Agent | Posts as | Trigger | What it does | LLM? |
 |---|---|---|---|---|
 | **Concierge** | `concierge` | Room opens, decision opened/locked/reopened/deleted, intake submitted | Narrates lifecycle events into the room/thread with a receipt — nothing happens silently | No — templated |
-| **Scribe** | `scribe` | Every new message | Gates ("does this contain extractable info?"), then extracts facts/availability/ideas attributed to the author only and files them; retries once with its own invalid output + the exact validation error echoed back if extraction fails; posts a receipt — or an honest "couldn't pin it down" reply if it still can't parse the message | Yes — gate + extraction |
+| **Scribe** | `scribe` | Every new message | Gates ("does this contain extractable info?"), then extracts facts/availability/ideas attributed to the author only and files them — a stay/travel idea routes straight to Accommodations/Travel options instead, AI-enriched with price/area/mode on the spot; retries once with its own invalid output + the exact validation error echoed back if extraction fails, and normalizes known schema-shape mistakes before Zod validates rather than trusting a retry alone; posts a receipt — or an honest "couldn't pin it down" reply if it still can't parse the message | Yes — gate + extraction |
 | **Scout** | `scout` | Admin requests destination options, or auto-fires once every active member has answered intake and no destination decision exists | Deterministic budget-ceiling gate → optional Tavily search → 3 destination options with cost/travel/reasoning, weighing the trip's own name/pitch alongside aggregated facts | Yes — `generateObject` |
 | **Planner** | `planner` | Admin requests an itinerary, or auto-fires the instant the destination decision locks | Day-by-day itinerary paced to party size, vibe, hard constraints | Yes — `generateObject` |
-| **Quartermaster** | `quartermaster` | Admin requests a cost estimate/checklist, or auto-fires on decision lock (estimate: destination locks; checklist: destination + dates both locked) | LLM estimates a per-head range; **deterministic** arithmetic (not the model) decides who's over budget. Also generates the prep checklist | Yes (estimate) + No (flagging) |
+| **Quartermaster** | `quartermaster` | Admin requests a cost estimate/checklist, or auto-fires on decision lock (estimate: destination locks; checklist: destination + dates both locked) | LLM estimates a per-head range; **deterministic** arithmetic (not the model) decides who's over budget, comparing against the range's midpoint. Also generates the prep checklist, and triggers a private budget-check ask for anyone newly flagged | Yes (estimate) + No (flagging) |
 | **Date Outreach** | `chaser` | Chaser's sweep — a majority of active members fit the trip's leading date window but 1-2 don't; fires once per member per decision | Privately asks each member outside the window if they could shift, grounded in their own filed availability — posted to their own thread, never the group | Yes — `generateText` |
 | **Digest** | `concierge` | Chaser's sweep — ≥3h since the last digest *and* ≥5 new member messages in the group | Recaps recent group discussion and, only when it clearly points to one, adds a concrete suggestion | Yes — `generateText` |
 | **Chaser** | *(system — triggers the agents above)* | Cron, every 30 minutes | Pure rule sweep: deadline reminders/auto-lock inside a 24h window, quorum auto-lock the instant everyone's voted, auto-runs Scout / auto-opens the DATES decision once everyone's answered, nudge tiers for non-responders, and decides when Date Outreach / Digest should speak | No — pure rules; delegates all content-writing to the agents it triggers |
@@ -310,7 +324,7 @@ Every agent follows the same **deterministic core, LLM shell** principle: anythi
 
 ## Database schema
 
-17 tables, every one RLS-enabled, pulled directly from the live Supabase schema.
+23 tables, every one RLS-enabled, pulled directly from the live Supabase schema.
 
 ```mermaid
 erDiagram
@@ -326,6 +340,9 @@ erDiagram
     trips ||--o{ bookings : "has"
     trips ||--o| cost_estimates : "has"
     trips ||--o{ threads : "has"
+    trips ||--o{ budget_checks : "has"
+    trips ||--o{ accommodations : "has"
+    trips ||--o{ travel_options : "has"
 
     members ||--o{ facts : "files"
     members ||--o{ availability : "submits"
@@ -337,11 +354,20 @@ erDiagram
     members |o--o{ decisions : "locked_by"
     members ||--o{ ideas : "posts"
     members ||--o{ booking_status : "marks"
+    members ||--o{ budget_checks : "asked"
+    members ||--o{ accommodations : "suggests"
+    members ||--o{ accommodation_votes : "casts"
+    members ||--o{ travel_options : "suggests"
+    members ||--o{ travel_option_votes : "casts"
+    members ||--o{ travel_option_members : "joins"
 
     decisions ||--o{ votes : "receives"
     decisions ||--o{ date_outreach_nudges : "gates"
     members ||--o{ date_outreach_nudges : "nudged"
     ideas ||--o{ idea_votes : "receives"
+    accommodations ||--o{ accommodation_votes : "receives"
+    travel_options ||--o{ travel_option_votes : "receives"
+    travel_options ||--o{ travel_option_members : "carries"
     bookings ||--o{ booking_status : "tracked_by"
     threads ||--o{ messages : "contains"
     messages |o--o{ facts : "source_message_id"
@@ -358,6 +384,7 @@ erDiagram
         text[] vibe
         text budget_hint
         text agent_tone "efficient | warm | dry"
+        int preferred_trip_days "2|3|5|7|10|14, default 7"
     }
     members {
         uuid id PK
@@ -425,6 +452,56 @@ erDiagram
         uuid id PK
         uuid decision_id FK
         uuid member_id FK "unique(decision_id, member_id) — never nudged twice"
+    }
+    budget_checks {
+        uuid id PK
+        uuid trip_id FK
+        uuid member_id FK
+        int threshold_amount
+        text status "pending | yes | no"
+        text reason "the hard-no reason, if any"
+        timestamptz answered_at
+    }
+    accommodations {
+        uuid id PK
+        uuid trip_id FK
+        uuid member_id FK
+        text name
+        text url
+        text price "AI-derived or manual, free text"
+        text area "AI-derived city/area"
+        text image_url
+        text source "chat | manual"
+        bool locked
+        date start_date "set when locked"
+        date end_date "set when locked"
+    }
+    accommodation_votes {
+        uuid id PK
+        uuid accommodation_id FK
+        uuid member_id FK
+    }
+    travel_options {
+        uuid id PK
+        uuid trip_id FK
+        uuid member_id FK
+        text name
+        text mode "air | road | water"
+        text timing
+        text price
+        text url
+        text source "chat | manual"
+        bool locked
+    }
+    travel_option_votes {
+        uuid id PK
+        uuid travel_option_id FK
+        uuid member_id FK
+    }
+    travel_option_members {
+        uuid id PK
+        uuid travel_option_id FK
+        uuid member_id FK "who's actually on this leg"
     }
     threads {
         uuid id PK
@@ -501,6 +578,9 @@ erDiagram
 - `agent_runs` is a full LLM observability log — tokens, estimated cost, latency, outcome — per call, per agent, per trip.
 - Every child table cascades on `trip_id` (`on delete cascade`), which is what makes trip deletion a genuine one-shot teardown with zero orphaned rows.
 - `date_outreach_nudges` has no `trip_id` of its own (same shape as `votes` — reachable only through `decision_id`); its `unique(decision_id, member_id)` constraint is the entire "never nudge the same person twice about the same decision" guarantee, enforced by the database rather than application logic.
+- `budget_checks` has a **partial unique index** (`unique(trip_id, member_id) where status = 'pending'`) — at most one open ask per member at a time, enforced by the database; a later re-estimate can ask again once they've answered, never piles a second ask on an unanswered one.
+- `travel_option_members` is a plain many-to-many join with no extra columns — unlike accommodations (everyone's assumed together), travel genuinely splits, so a member can appear against more than one option (flight there, train back).
+- `ideas.category` still technically allows `'stay'`/`'travel'` at the database level, but nothing files into those values anymore now that both have their own dedicated tables — left alone rather than tightened, since relaxing a constraint later is free and tightening one on a live table isn't.
 
 ---
 
@@ -631,20 +711,25 @@ app/
     (main)/                     # everything behind the trip shell (tab bar + sidebar)
       room/ plan/ you/ you/scrapbook/ settings/
       destination/ facts/ bookings/ ideas/ cost/
+      accommodations/ travel-options/
       decisions/[decisionId]/
   join/[code]/                 # invite landing → OAuth → auto-join → redirect
   api/trips/[tripId]/...       # every mutation: decisions, votes, intake, ideas,
-                                #   bookings, member removal, scout/planner/quartermaster
+                                #   bookings, accommodations, travel-options, budget-check,
+                                #   member removal, scout/planner/quartermaster
 components/caravan/            # the whole design system, organized by domain —
                                 #   primitives/ layout/ auth/ intake/ decisions/
                                 #   plan/ room/ generate/ sharing/ settings/ shared/
 lib/
   agents/                      # Scribe, Scout, Planner, Quartermaster, Chaser,
                                 #   Date Outreach, Digest, runtime/ (model, logging, posting)
-  dates/                       # date-solver.ts — the deterministic date-window core
-  budget/                      # budget.ts, cost-flags.ts
+  dates/                       # date-solver.ts — the deterministic, duration-aware date-window core
+  budget/                      # budget.ts, cost-flags.ts, trigger-budget-checks.ts
   decisions/                   # tally-votes.ts, on-decision-locked.ts (the lock → generation
-                                #   cascade), opened-message.ts, decision-titles.ts
+                                #   cascade), refresh-dates-decision.ts, opened-message.ts, decision-titles.ts
+  accommodations/, travel/     # extract-accommodation.ts, extract-travel-option.ts — Tavily
+                                #   + model enrichment (price/area, mode)
+  search/                      # tavily.ts — the one shared Tavily client
   facts/, ideas/, bookings/, threads/, trips/   # small domain-scoped helpers
   auth/                        # session + caller resolution
   supabase/                    # browser / server / service-role clients
@@ -652,7 +737,7 @@ lib/
   inngest/                     # client, functions (the cron sweep)
   validation.ts                # every Zod schema
   database.types.ts            # hand-maintained row types for every table
-supabase/migrations/           # 14 migrations, schema history
+supabase/migrations/           # 18 migrations, schema history
 docs/design/                   # PRD, UI spec, and a static HTML hi-fi mockup (screens.html)
 ```
 
@@ -664,7 +749,7 @@ docs/design/                   # PRD, UI spec, and a static HTML hi-fi mockup (s
 npm test
 ```
 
-308 tests across 59 files. The test strategy follows the deterministic-core/LLM-shell split: pure logic (`lib/dates/date-solver.ts`, `lib/budget/budget.ts`, `lib/decisions/tally-votes.ts`, `lib/budget/cost-flags.ts`, `lib/agents/chaser-rules.ts`, `lib/decisions/on-decision-locked.ts`, ...) and every API route are unit-tested with mocked Supabase/AI-SDK clients; agent LLM calls are tested for their deterministic surrounding logic (gating, prompt construction, fact filing, error handling), not for model output itself. Verified live against a real trip via Supabase MCP is the additional bar used for every agentic-coordination phase — see the commit history for `lib/agents/chaser.ts`. There's no component or end-to-end browser test layer yet — see [Known limitations](#known-limitations--roadmap).
+383 tests across 70 files. The test strategy follows the deterministic-core/LLM-shell split: pure logic (`lib/dates/date-solver.ts`, `lib/budget/budget.ts`, `lib/budget/cost-flags.ts`, `lib/decisions/tally-votes.ts`, `lib/agents/chaser-rules.ts`, `lib/decisions/on-decision-locked.ts`, ...) and every API route are unit-tested with mocked Supabase/AI-SDK clients; agent LLM calls are tested for their deterministic surrounding logic (gating, prompt construction, fact filing, error handling), not for model output itself. Verified live against a real trip via Supabase MCP is the additional bar used for every agentic-coordination phase — see the commit history for `lib/agents/chaser.ts` and `lib/agents/scribe.ts`. There's no component or end-to-end browser test layer yet — see [Known limitations](#known-limitations--roadmap).
 
 ---
 
@@ -703,7 +788,8 @@ Kept here on purpose so this stays an honest README, not a marketing page:
 - **Itinerary is regenerate-only.** Planner rebuilds the whole itinerary each time rather than supporting inline day edits.
 - **Single AI provider.** Everything runs on one Gemini model; swapping providers/tiers per-agent is a one-line change (the AI SDK abstracts it) but isn't wired up as a runtime option.
 - **No dark theme.** The design system is a single warm paper/plum palette.
-- **Autonomous-coordination thresholds are fixed constants, not admin-configurable.** The digest's 3h/5-message gate and date outreach's "majority but not everyone" bar live in code (`lib/agents/chaser.ts`), not a per-trip setting.
+- **Autonomous-coordination thresholds are fixed constants, not admin-configurable.** The digest's 3h/5-message gate, date outreach's "majority but not everyone" bar, and the budget-check midpoint threshold all live in code, not a per-trip setting.
+- **Accommodation/travel enrichment is best-effort.** Price, area, and timing come from a Tavily search + one model call; without a Tavily key, or if the search turns up nothing usable, those fields save as `null` rather than blocking the entry — the name and link (if any) always save regardless.
 
 ---
 
