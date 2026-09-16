@@ -7,8 +7,12 @@ const mockDecisionsSelect = vi.fn();
 const mockMembersSelect = vi.fn();
 const mockFactsSelect = vi.fn();
 const mockUpsert = vi.fn();
+const mockTriggerBudgetChecks = vi.fn();
 
 vi.mock("ai", () => ({ generateObject: (...args: unknown[]) => mockGenerateObject(...args) }));
+vi.mock("@/lib/budget/trigger-budget-checks", () => ({
+  triggerBudgetChecks: (...args: unknown[]) => mockTriggerBudgetChecks(...args),
+}));
 vi.mock("./runtime/log-run", () => ({ logAgentRun: (...args: unknown[]) => mockLogAgentRun(...args) }));
 vi.mock("./runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 vi.mock("./runtime/model", () => ({ flashModel: "mock-flash-model", estimateCost: () => 0 }));
@@ -33,6 +37,7 @@ beforeEach(() => {
   mockLogAgentRun.mockReset();
   mockPostAgentMessage.mockReset();
   mockUpsert.mockReset().mockResolvedValue({ error: null });
+  mockTriggerBudgetChecks.mockReset().mockResolvedValue(undefined);
   mockDecisionsSelect.mockReset();
   mockMembersSelect.mockReset().mockResolvedValue({ data: [{ id: "m1" }, { id: "m2" }], error: null });
   mockFactsSelect.mockReset().mockResolvedValue({ data: [], error: null });
@@ -70,9 +75,10 @@ describe("runCostEstimator", () => {
     expect(mockPostAgentMessage).toHaveBeenCalledWith(
       expect.objectContaining({ agentName: "quartermaster", body: expect.stringContaining("over") })
     );
+    expect(mockTriggerBudgetChecks).toHaveBeenCalledWith("trip-1", { minPerHead: 15000, maxPerHead: 22000 });
   });
 
-  it("posts a clean receipt when nobody is flagged", async () => {
+  it("posts a clean receipt when nobody is flagged, and doesn't trigger budget checks", async () => {
     mockDecisionsSelect.mockResolvedValue({ data: [lockedDestination], error: null });
     mockGenerateObject.mockResolvedValue({
       object: { minPerHead: 5000, maxPerHead: 8000, assumptions: "Budget stay." },
@@ -83,6 +89,7 @@ describe("runCostEstimator", () => {
     expect(mockPostAgentMessage).toHaveBeenCalledWith(
       expect.objectContaining({ body: expect.not.stringContaining("pushes") })
     );
+    expect(mockTriggerBudgetChecks).not.toHaveBeenCalled();
   });
 
   it("returns a graceful error instead of throwing when generation fails", async () => {

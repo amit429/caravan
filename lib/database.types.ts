@@ -194,6 +194,19 @@ export type CostEstimateRow = {
   updated_at: string;
 };
 
+export type BudgetCheckStatus = "pending" | "yes" | "no";
+
+export type BudgetCheckRow = {
+  id: string;
+  trip_id: string;
+  member_id: string;
+  threshold_amount: number;
+  status: BudgetCheckStatus;
+  reason: string | null;
+  created_at: string;
+  answered_at: string | null;
+};
+
 export type AgentRunRow = {
   id: string;
   trip_id: string;

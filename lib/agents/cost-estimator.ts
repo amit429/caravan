@@ -5,6 +5,7 @@ import { logAgentRun } from "./runtime/log-run";
 import { postAgentMessage } from "./runtime/post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { flagMembersOverBudget } from "@/lib/budget/cost-flags";
+import { triggerBudgetChecks } from "@/lib/budget/trigger-budget-checks";
 import type { DecisionRow, FactRow } from "@/lib/database.types";
 
 const MODEL_ID = "gemini-3.6-flash";
@@ -93,7 +94,7 @@ export async function runCostEstimator(tripId: string): Promise<CostEstimatorRes
   const memberCeilings = allFacts
     .filter((f) => f.category === "budget")
     .map((f) => ({ memberId: f.member_id, ceiling: (f.value as { amount: number }).amount }));
-  const flagged = flagMembersOverBudget(maxPerHead, memberCeilings);
+  const flagged = flagMembersOverBudget({ minPerHead, maxPerHead }, memberCeilings);
 
   const rangeText = `₹${minPerHead.toLocaleString("en-IN")}–${maxPerHead.toLocaleString("en-IN")} per head for ${destination}`;
   const body =
@@ -102,6 +103,10 @@ export async function runCostEstimator(tripId: string): Promise<CostEstimatorRes
       : `Estimate: ${rangeText}. Everyone's ceiling covers it.`;
 
   await postAgentMessage({ tripId, agentName: "quartermaster", body });
+
+  if (flagged.length > 0) {
+    await triggerBudgetChecks(tripId, { minPerHead, maxPerHead });
+  }
 
   return { ok: true };
 }

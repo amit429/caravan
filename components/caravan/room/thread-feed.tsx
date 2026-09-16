@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { ListChecks, SendHorizontal } from "lucide-react";
+import { BudgetCheckCard } from "@/components/caravan/room/budget-check-card";
 import type { MessageRow } from "@/lib/database.types";
 
 export function ThreadFeed({
@@ -59,8 +60,12 @@ export function ThreadFeed({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div ref={feedRef} className="flex-1 overflow-y-auto px-4 pt-4 pb-3 flex flex-col gap-3">
-        {messages.map((m) =>
-          m.author_type === "agent" ? (
+        {messages.map((m) => {
+          const budgetCheck =
+            m.metadata?.kind === "budget_check"
+              ? (m.metadata as { budgetCheckId: string; thresholdAmount: number; status: "pending" | "yes" | "no" })
+              : null;
+          return m.author_type === "agent" ? (
             <div
               key={m.id}
               className="animate-in fade-in slide-in-from-bottom-1 duration-300 self-start max-w-[280px] md:max-w-[420px] border-l-[2.5px] border-agent bg-agent-t rounded-r-2xl rounded-bl-2xl px-3.5 py-3 flex flex-col gap-1"
@@ -69,6 +74,14 @@ export function ThreadFeed({
                 {m.agent_name ?? "concierge"}
               </span>
               <span className="text-sm text-ink">{m.body}</span>
+              {budgetCheck && (
+                <BudgetCheckCard
+                  tripId={tripId}
+                  budgetCheckId={budgetCheck.budgetCheckId}
+                  thresholdAmount={budgetCheck.thresholdAmount}
+                  initialStatus={budgetCheck.status}
+                />
+              )}
             </div>
           ) : (
             <div
@@ -77,8 +90,8 @@ export function ThreadFeed({
             >
               <span className="text-sm">{m.body}</span>
             </div>
-          )
-        )}
+          );
+        })}
         {!intakeDone && (
           <Link
             href={`/trip/${tripId}/intake`}

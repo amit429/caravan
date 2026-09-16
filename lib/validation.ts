@@ -94,3 +94,9 @@ export const factUpdateSchema = z.object({
   type: z.literal("SOFT"),
 });
 export type FactUpdateInput = z.infer<typeof factUpdateSchema>;
+
+export const budgetCheckAnswerSchema = z.discriminatedUnion("answer", [
+  z.object({ answer: z.literal("yes") }),
+  z.object({ answer: z.literal("no"), reason: z.string().trim().min(1).max(280) }),
+]);
+export type BudgetCheckAnswerInput = z.infer<typeof budgetCheckAnswerSchema>;

@@ -28,7 +28,7 @@ export default async function CostPage({ params }: { params: Promise<{ tripId: s
   if (estimate) {
     const ceilings = ((facts ?? []) as FactRow[]).map((f) => (f.value as { amount: number }).amount);
     overCount = flagMembersOverBudget(
-      estimate.max_per_head,
+      { minPerHead: estimate.min_per_head, maxPerHead: estimate.max_per_head },
       ceilings.map((ceiling, i) => ({ memberId: String(i), ceiling }))
     ).length;
     underCount = ceilings.length - overCount;
