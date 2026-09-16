@@ -65,6 +65,7 @@ export default async function DecisionDetailPage({
         decision={decisionRow}
         votes={allVotes}
         isAdmin={isAdmin}
+        myMemberId={caller.id}
         showDetailLink={false}
         redirectOnDeleteTo={`/trip/${tripId}/plan`}
       />

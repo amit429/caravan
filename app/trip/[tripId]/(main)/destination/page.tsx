@@ -44,7 +44,14 @@ export default async function DestinationPage({ params }: { params: Promise<{ tr
       </div>
 
       {destinationDecision ? (
-        <DecisionCard tripId={tripId} decision={destinationDecision} votes={votes} isAdmin={isAdmin} showDetailLink={false} />
+        <DecisionCard
+          tripId={tripId}
+          decision={destinationDecision}
+          votes={votes}
+          isAdmin={isAdmin}
+          myMemberId={caller.id}
+          showDetailLink={false}
+        />
       ) : isAdmin ? (
         <EmptyState
           icon={<CompassIllustration size={96} />}

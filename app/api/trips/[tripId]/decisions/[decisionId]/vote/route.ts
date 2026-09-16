@@ -50,3 +50,32 @@ export async function POST(
   await broadcastTripChange(tripId);
   return NextResponse.json({ vote });
 }
+
+// Clicking the option you already voted/vetoed a second time removes your
+// ballot entirely, same toggle semantics idea votes already have — this is
+// the "clicking again" half of that, which upsert alone can't express.
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ tripId: string; decisionId: string }> }
+) {
+  const { tripId, decisionId } = await params;
+  const supabase = createServiceSupabaseClient();
+  const caller = await resolveCaller(tripId, supabase);
+  const authError = callerAuthError(caller);
+  if (authError) return authError;
+
+  const { data: decision } = await supabase
+    .from("decisions")
+    .select("id, state")
+    .eq("id", decisionId)
+    .eq("trip_id", tripId)
+    .single();
+  if (!decision) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  if (decision.state === "LOCKED") {
+    return NextResponse.json({ error: "decision_already_locked" }, { status: 409 });
+  }
+
+  await supabase.from("votes").delete().eq("decision_id", decisionId).eq("member_id", caller!.id);
+  await broadcastTripChange(tripId);
+  return NextResponse.json({ ok: true });
+}

@@ -238,7 +238,14 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
           <h3 className="font-mono text-xs text-ink-3">DECISIONS</h3>
           <div className="flex flex-col gap-3">
             {otherDecisions.map((d) => (
-              <DecisionCard key={d.id} tripId={tripId} decision={d} votes={votesByDecision.get(d.id) ?? []} isAdmin={isAdmin} />
+              <DecisionCard
+                key={d.id}
+                tripId={tripId}
+                decision={d}
+                votes={votesByDecision.get(d.id) ?? []}
+                isAdmin={isAdmin}
+                myMemberId={caller.id}
+              />
             ))}
           </div>
         </section>

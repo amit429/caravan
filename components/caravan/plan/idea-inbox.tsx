@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react";
 import { useConfirm } from "@/components/caravan/shared/use-confirm";
 import { EmptyState } from "@/components/caravan/primitives/empty-state";
 import { BookmarkIllustration } from "@/components/caravan/primitives/illustrations";
@@ -10,7 +10,7 @@ import type { IdeaRow, IdeaVoteRow } from "@/lib/database.types";
 export function IdeaInbox({
   tripId,
   ideas,
-  votes,
+  votes: initialVotes,
   myMemberId,
   isAdmin = false,
 }: {
@@ -25,6 +25,20 @@ export function IdeaInbox({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { confirm, dialog } = useConfirm();
+
+  // Same optimistic pattern as DecisionCard: local vote state seeded from
+  // the server prop, flipped instantly on click, only ever touched again if
+  // the background request actually fails.
+  const [votes, setVotes] = useState<IdeaVoteRow[]>(initialVotes);
+  // Same render-time re-sync as DecisionCard — see the comment there for why
+  // this isn't an effect.
+  const [syncedFrom, setSyncedFrom] = useState(initialVotes);
+  if (initialVotes !== syncedFrom) {
+    setSyncedFrom(initialVotes);
+    setVotes(initialVotes);
+  }
+  const [pendingIdeaIds, setPendingIdeaIds] = useState<Set<string>>(new Set());
+  const [voteError, setVoteError] = useState<string | null>(null);
 
   const countsByIdea = new Map<string, number>();
   const votedByMe = new Set<string>();
@@ -52,8 +66,30 @@ export function IdeaInbox({
   }
 
   async function vote(ideaId: string) {
-    await fetch(`/api/trips/${tripId}/ideas/${ideaId}/vote`, { method: "POST" });
-    router.refresh();
+    if (pendingIdeaIds.has(ideaId)) return;
+    const wasVoted = votedByMe.has(ideaId);
+    const previousVotes = votes;
+    const optimisticVotes = wasVoted
+      ? votes.filter((v) => !(v.idea_id === ideaId && v.member_id === myMemberId))
+      : [...votes, { id: `optimistic-${ideaId}`, idea_id: ideaId, member_id: myMemberId, created_at: new Date().toISOString() }];
+
+    setVoteError(null);
+    setVotes(optimisticVotes);
+    setPendingIdeaIds((cur) => new Set(cur).add(ideaId));
+
+    try {
+      const res = await fetch(`/api/trips/${tripId}/ideas/${ideaId}/vote`, { method: "POST" });
+      if (!res.ok) throw new Error("vote request failed");
+    } catch {
+      setVotes(previousVotes);
+      setVoteError("Couldn't save your vote — try again.");
+    } finally {
+      setPendingIdeaIds((cur) => {
+        const next = new Set(cur);
+        next.delete(ideaId);
+        return next;
+      });
+    }
   }
 
   async function remove(ideaId: string) {
@@ -81,6 +117,7 @@ export function IdeaInbox({
         </button>
       </div>
       {error && <p className="text-xs text-stop">{error}</p>}
+      {voteError && <p className="text-xs text-stop">{voteError}</p>}
       {ideas.length === 0 ? (
         <EmptyState
           icon={<BookmarkIllustration size={88} />}
@@ -89,39 +126,43 @@ export function IdeaInbox({
         />
       ) : (
         <div className="flex flex-col gap-2">
-          {ideas.map((idea) => (
-            <div key={idea.id} className="flex gap-3 rounded-lg border border-line bg-card p-3">
-              {idea.image_url && (
-                // eslint-disable-next-line @next/next/no-img-element -- arbitrary scraped host, not configurable via next/image remotePatterns
-                <img src={idea.image_url} alt="" className="h-14 w-14 shrink-0 rounded-md object-cover" />
-              )}
-              <div className="min-w-0 flex-1">
-                <a href={idea.url} target="_blank" rel="noreferrer" className="text-sm font-semibold hover:underline">
-                  {idea.title ?? idea.url}
-                </a>
-                {idea.note && <p className="text-xs text-ink-2">{idea.note}</p>}
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1.5">
-                <button
-                  onClick={() => vote(idea.id)}
-                  className={`h-fit rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors ${
-                    votedByMe.has(idea.id) ? "border-plum bg-plum text-white" : "border-line text-ink-2"
-                  }`}
-                >
-                  &#9650; {countsByIdea.get(idea.id) ?? 0}
-                </button>
-                {(idea.member_id === myMemberId || isAdmin) && (
-                  <button
-                    onClick={() => remove(idea.id)}
-                    aria-label="Delete idea"
-                    className="text-ink-3 transition-colors hover:text-stop"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
+          {ideas.map((idea) => {
+            const isPending = pendingIdeaIds.has(idea.id);
+            return (
+              <div key={idea.id} className="flex gap-3 rounded-lg border border-line bg-card p-3">
+                {idea.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element -- arbitrary scraped host, not configurable via next/image remotePatterns
+                  <img src={idea.image_url} alt="" className="h-14 w-14 shrink-0 rounded-md object-cover" />
                 )}
+                <div className="min-w-0 flex-1">
+                  <a href={idea.url} target="_blank" rel="noreferrer" className="text-sm font-semibold hover:underline">
+                    {idea.title ?? idea.url}
+                  </a>
+                  {idea.note && <p className="text-xs text-ink-2">{idea.note}</p>}
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <button
+                    disabled={isPending}
+                    onClick={() => vote(idea.id)}
+                    className={`flex h-fit items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all disabled:cursor-not-allowed ${
+                      votedByMe.has(idea.id) ? "border-plum bg-plum text-white" : "border-line text-ink-2"
+                    } ${isPending ? "opacity-70" : "active:scale-95"}`}
+                  >
+                    {isPending ? <Loader2 className="size-3 animate-spin" /> : <>&#9650;</>} {countsByIdea.get(idea.id) ?? 0}
+                  </button>
+                  {(idea.member_id === myMemberId || isAdmin) && (
+                    <button
+                      onClick={() => remove(idea.id)}
+                      aria-label="Delete idea"
+                      className="text-ink-3 transition-colors hover:text-stop"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
