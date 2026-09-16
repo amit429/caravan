@@ -6,6 +6,7 @@ import { postAgentMessage } from "./runtime/post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { extractIdeaMetadata } from "@/lib/ideas/extract-idea";
 import { extractAccommodationDetails } from "@/lib/accommodations/extract-accommodation";
+import { extractTravelOptionDetails } from "@/lib/travel/extract-travel-option";
 import { refreshDatesDecisionIfStale } from "@/lib/decisions/refresh-dates-decision";
 import type { DecisionRow, MemberRow, MessageRow } from "@/lib/database.types";
 
@@ -402,8 +403,35 @@ export async function runScribe(params: {
         image_url: details.imageUrl,
         source: "chat",
       });
+    } else if (item.category === "travel") {
+      // Same shape as the stay path above — flight/bus/train/ferry mentions
+      // get their own richer home (travel_options), classified by mode
+      // instead of grouped by area.
+      if (item.url) {
+        const { data: existing } = await supabase
+          .from("travel_options")
+          .select("id")
+          .eq("trip_id", params.tripId)
+          .eq("url", item.url)
+          .maybeSingle();
+        if (existing) {
+          receipts.push(`already have "${item.title}"`);
+          continue;
+        }
+      }
+      const details = await extractTravelOptionDetails({ name: item.title, url: item.url });
+      await supabase.from("travel_options").insert({
+        trip_id: params.tripId,
+        member_id: item.memberId,
+        name: details.title,
+        mode: details.mode,
+        timing: details.timing,
+        price: details.price,
+        url: item.url ?? null,
+        source: "chat",
+      });
     } else {
-      // idea (activity, or travel until its own dedicated home ships) —
+      // idea (activity only, now that stay/travel have their own homes) —
       // dedupe by exact URL within the trip first so the same link pasted
       // twice (or mentioned once and already filed via the explicit "drop a
       // link" composer) doesn't produce a second card.

@@ -4,8 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { resolveCaller } from "@/lib/auth/resolve-caller";
 import { BookingTracker } from "@/components/caravan/plan/booking-tracker";
-import { SuggestedIdeas } from "@/components/caravan/plan/suggested-ideas";
-import type { BookingRow, BookingStatusRow, IdeaRow, IdeaVoteRow, MemberRow } from "@/lib/database.types";
+import type { BookingRow, BookingStatusRow, MemberRow } from "@/lib/database.types";
 
 export default async function BookingsPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
@@ -13,12 +12,11 @@ export default async function BookingsPage({ params }: { params: Promise<{ tripI
   const caller = await resolveCaller(tripId, supabase);
   if (!caller || caller.status === "removed") notFound();
 
-  const [{ data: bookings }, { data: members }, { data: suggestions }, { count: accommodationCount }] = await Promise.all([
+  const [{ data: bookings }, { data: members }, { count: accommodationCount }, { count: travelOptionCount }] = await Promise.all([
     supabase.from("bookings").select().eq("trip_id", tripId).order("created_at", { ascending: false }),
     supabase.from("members").select().eq("trip_id", tripId).eq("status", "active").order("joined_at", { ascending: true }),
-    // Travel ideas only now — stays got their own richer home (Accommodations).
-    supabase.from("ideas").select().eq("trip_id", tripId).eq("category", "travel").order("created_at", { ascending: false }),
     supabase.from("accommodations").select("id", { count: "exact", head: true }).eq("trip_id", tripId),
+    supabase.from("travel_options").select("id", { count: "exact", head: true }).eq("trip_id", tripId),
   ]);
 
   const allBookings = (bookings ?? []) as BookingRow[];
@@ -27,12 +25,6 @@ export default async function BookingsPage({ params }: { params: Promise<{ tripI
     ? await supabase.from("booking_status").select().in("booking_id", bookingIds)
     : { data: [] as BookingStatusRow[] };
 
-  const travel = (suggestions ?? []) as IdeaRow[];
-  const suggestionIds = travel.map((i) => i.id);
-  const { data: suggestionVotes } = suggestionIds.length
-    ? await supabase.from("idea_votes").select().in("idea_id", suggestionIds)
-    : { data: [] as IdeaVoteRow[] };
-  const allSuggestionVotes = (suggestionVotes ?? []) as IdeaVoteRow[];
   const isAdmin = caller.role === "admin";
 
   return (
@@ -59,14 +51,21 @@ export default async function BookingsPage({ params }: { params: Promise<{ tripI
           <ChevronRight className="size-4 shrink-0 text-ink-3" />
         </Link>
       </section>
-      <SuggestedIdeas
-        tripId={tripId}
-        title="SUGGESTED TRAVEL"
-        ideas={travel}
-        votes={allSuggestionVotes}
-        myMemberId={caller.id}
-        isAdmin={isAdmin}
-      />
+      <section className="flex flex-col gap-2">
+        <h3 className="font-mono text-xs text-ink-3">TRAVEL OPTIONS</h3>
+        <Link
+          href={`/trip/${tripId}/travel-options`}
+          className="flex items-center gap-3 rounded-lg bg-card p-3.5 transition-colors hover:bg-sunk"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold">
+              {travelOptionCount ? `${travelOptionCount} option${travelOptionCount === 1 ? "" : "s"} suggested` : "Nothing suggested yet"}
+            </div>
+            <div className="mt-0.5 text-xs text-ink-3">Flights, buses, trains from chat — grouped by mode, join the one you&rsquo;re on</div>
+          </div>
+          <ChevronRight className="size-4 shrink-0 text-ink-3" />
+        </Link>
+      </section>
       <section className="flex flex-col gap-2">
         <h3 className="font-mono text-xs text-ink-3">TRACKING</h3>
         <BookingTracker

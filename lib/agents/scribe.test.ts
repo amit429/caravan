@@ -15,6 +15,9 @@ const mockAvailabilitySelect = vi.fn();
 const mockExtractAccommodationDetails = vi.fn();
 const mockAccommodationsInsert = vi.fn();
 const mockAccommodationsExistingLookup = vi.fn();
+const mockExtractTravelOptionDetails = vi.fn();
+const mockTravelOptionsInsert = vi.fn();
+const mockTravelOptionsExistingLookup = vi.fn();
 
 vi.mock("ai", () => ({
   generateObject: (...args: unknown[]) => mockGenerateObject(...args),
@@ -34,6 +37,9 @@ vi.mock("@/lib/ideas/extract-idea", () => ({
 }));
 vi.mock("@/lib/accommodations/extract-accommodation", () => ({
   extractAccommodationDetails: (...args: unknown[]) => mockExtractAccommodationDetails(...args),
+}));
+vi.mock("@/lib/travel/extract-travel-option", () => ({
+  extractTravelOptionDetails: (...args: unknown[]) => mockExtractTravelOptionDetails(...args),
 }));
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
@@ -76,6 +82,14 @@ vi.mock("@/lib/supabase/service", () => ({
             eq: () => ({ eq: () => ({ maybeSingle: () => mockAccommodationsExistingLookup() }) }),
           }),
           insert: (row: unknown) => mockAccommodationsInsert(row),
+        };
+      }
+      if (table === "travel_options") {
+        return {
+          select: () => ({
+            eq: () => ({ eq: () => ({ maybeSingle: () => mockTravelOptionsExistingLookup() }) }),
+          }),
+          insert: (row: unknown) => mockTravelOptionsInsert(row),
         };
       }
       throw new Error(`unexpected table ${table}`);
@@ -128,6 +142,9 @@ beforeEach(() => {
   mockExtractAccommodationDetails.mockReset().mockResolvedValue({ title: "Some Hotel", imageUrl: null, price: null, area: null });
   mockAccommodationsInsert.mockReset().mockResolvedValue({ error: null });
   mockAccommodationsExistingLookup.mockReset().mockResolvedValue({ data: null });
+  mockExtractTravelOptionDetails.mockReset().mockResolvedValue({ title: "IndiGo 6E-204", mode: "air", timing: null, price: null });
+  mockTravelOptionsInsert.mockReset().mockResolvedValue({ error: null });
+  mockTravelOptionsExistingLookup.mockReset().mockResolvedValue({ data: null });
   mockExtractIdeaMetadata.mockReset().mockResolvedValue({ title: "Scraped Title", note: "Scraped note", imageUrl: null });
   mockAvailabilitySelect.mockReset().mockRejectedValue(new Error("no mock configured"));
 });
@@ -474,6 +491,74 @@ describe("runScribe", () => {
     );
   });
 
+  it("files a travel suggestion into travel_options, not ideas, enriched via extractTravelOptionDetails", async () => {
+    mockGenerateObject
+      .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
+      .mockResolvedValueOnce({
+        object: {
+          extractions: [
+            {
+              kind: "idea",
+              memberId: "member-1",
+              category: "travel",
+              title: "IndiGo flight",
+              url: "https://example.com/flight",
+              confidence: 0.9,
+              rationale: "Karan found a flight",
+            },
+          ],
+        },
+        usage: usage(),
+      });
+    mockExtractTravelOptionDetails.mockResolvedValue({ title: "IndiGo 6E-204", mode: "air", timing: "08:00", price: "₹4,200" });
+
+    const result = await runScribe({ tripId: "trip-1", message, authorMember: member });
+
+    expect(mockExtractTravelOptionDetails).toHaveBeenCalledWith({ name: "IndiGo flight", url: "https://example.com/flight" });
+    expect(mockTravelOptionsInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trip_id: "trip-1",
+        member_id: "member-1",
+        name: "IndiGo 6E-204",
+        mode: "air",
+        timing: "08:00",
+        price: "₹4,200",
+        source: "chat",
+      })
+    );
+    expect(mockIdeasInsert).not.toHaveBeenCalled();
+    expect(result).toEqual({ posted: true });
+  });
+
+  it("dedupes a travel suggestion by URL against existing travel_options", async () => {
+    mockGenerateObject
+      .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
+      .mockResolvedValueOnce({
+        object: {
+          extractions: [
+            {
+              kind: "idea",
+              memberId: "member-1",
+              category: "travel",
+              title: "IndiGo flight",
+              url: "https://example.com/flight",
+              confidence: 0.9,
+              rationale: "Karan found a flight",
+            },
+          ],
+        },
+        usage: usage(),
+      });
+    mockTravelOptionsExistingLookup.mockResolvedValue({ data: { id: "existing-travel" } });
+
+    await runScribe({ tripId: "trip-1", message, authorMember: member });
+
+    expect(mockTravelOptionsInsert).not.toHaveBeenCalled();
+    expect(mockPostAgentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ body: expect.stringContaining("already have") })
+    );
+  });
+
   it("files a plain-text idea with no URL directly from the model's title/note", async () => {
     mockGenerateObject
       .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
@@ -515,11 +600,11 @@ describe("runScribe", () => {
             {
               kind: "idea",
               memberId: "member-1",
-              category: "travel",
-              title: "Flight deal",
-              url: "https://example.com/flights",
+              category: "activity",
+              title: "Kayaking spot",
+              url: "https://example.com/kayak",
               confidence: 0.9,
-              rationale: "Karan shared a flight link",
+              rationale: "Karan shared a kayaking link",
             },
           ],
         },

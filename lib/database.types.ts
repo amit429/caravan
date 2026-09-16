@@ -176,6 +176,36 @@ export type AccommodationVoteRow = {
   created_at: string;
 };
 
+export type TravelMode = "air" | "road" | "water";
+
+export type TravelOptionRow = {
+  id: string;
+  trip_id: string;
+  member_id: string;
+  name: string;
+  mode: TravelMode;
+  timing: string | null;
+  price: string | null;
+  url: string | null;
+  source: "chat" | "manual";
+  locked: boolean;
+  created_at: string;
+};
+
+export type TravelOptionVoteRow = {
+  id: string;
+  travel_option_id: string;
+  member_id: string;
+  created_at: string;
+};
+
+export type TravelOptionMemberRow = {
+  id: string;
+  travel_option_id: string;
+  member_id: string;
+  created_at: string;
+};
+
 export type TaskCategory = "docs" | "booking" | "packing" | "other";
 
 export type TaskRow = {

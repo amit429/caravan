@@ -114,3 +114,17 @@ export const lockAccommodationSchema = z.object({
   endDate: isoDate.optional(),
 });
 export type LockAccommodationInput = z.infer<typeof lockAccommodationSchema>;
+
+export const createTravelOptionSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  mode: z.enum(["air", "road", "water"]),
+  url: z.string().trim().url().max(2000).optional(),
+  timing: z.string().trim().max(60).optional(),
+  price: z.string().trim().max(60).optional(),
+});
+export type CreateTravelOptionInput = z.infer<typeof createTravelOptionSchema>;
+
+export const lockTravelOptionSchema = z.object({
+  locked: z.boolean(),
+});
+export type LockTravelOptionInput = z.infer<typeof lockTravelOptionSchema>;
