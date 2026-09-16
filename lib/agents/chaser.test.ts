@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const mockPostAgentMessage = vi.fn();
 const mockDecisionsSelect = vi.fn(); // sweepDecisions: .select().eq('trip_id').in('state', [...])
 const mockDecisionsTypesSelect = vi.fn(); // sweepAutoGeneration: .select('type').eq('trip_id') — no .in()
+const mockDateOutreachDecisionsSelect = vi.fn(); // sweepDateOutreach: .select().eq('trip_id').eq('type','DATES').in('state', [...])
 const mockDecisionsInsert = vi.fn();
 const mockVotesSelect = vi.fn();
 const mockDecisionsUpdate = vi.fn();
@@ -13,6 +14,14 @@ const mockMembersUpdate = vi.fn();
 const mockBroadcast = vi.fn();
 const mockHandleDecisionLocked = vi.fn();
 const mockRunScout = vi.fn();
+const mockRunDateOutreach = vi.fn();
+const mockRunDigest = vi.fn();
+const mockEnsureThread = vi.fn();
+const mockNudgesSelect = vi.fn();
+const mockNudgesInsert = vi.fn();
+const mockTripSelect = vi.fn();
+const mockLastDigestSelect = vi.fn();
+const mockNewMessagesSelect = vi.fn();
 
 vi.mock("@/lib/agents/runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 vi.mock("@/lib/realtime/broadcast", () => ({ broadcastTripChange: (...args: unknown[]) => mockBroadcast(...args) }));
@@ -20,20 +29,45 @@ vi.mock("@/lib/decisions/on-decision-locked", () => ({
   handleDecisionLocked: (...args: unknown[]) => mockHandleDecisionLocked(...args),
 }));
 vi.mock("@/lib/agents/scout", () => ({ runScout: (...args: unknown[]) => mockRunScout(...args) }));
+vi.mock("@/lib/agents/date-outreach", () => ({ runDateOutreach: (...args: unknown[]) => mockRunDateOutreach(...args) }));
+vi.mock("@/lib/agents/digest", () => ({ runDigest: (...args: unknown[]) => mockRunDigest(...args) }));
+vi.mock("@/lib/threads/ensure-thread", () => ({ ensureThread: (...args: unknown[]) => mockEnsureThread(...args) }));
+
+// Chainable + thenable builder for messages: neither of sweepDigest's two
+// queries ends in .single(), so the whole chain gets awaited directly — one
+// shared builder distinguishes which query it was by whether .limit() was
+// called (only the "last digest" lookup uses it).
+function messagesQueryBuilder() {
+  let usedLimit = false;
+  const builder = {
+    eq: () => builder,
+    contains: () => builder,
+    gt: () => builder,
+    order: () => builder,
+    limit: () => {
+      usedLimit = true;
+      return builder;
+    },
+    then: (resolve: (v: unknown) => void) => resolve(usedLimit ? mockLastDigestSelect() : mockNewMessagesSelect()),
+  };
+  return builder;
+}
 
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
     from: (table: string) => {
       if (table === "decisions") {
         return {
-          // Both shapes have to live on the same eq() return: sweepDecisions
-          // chains .in('state', [...]) off it, sweepAutoGeneration awaits it
-          // directly (no .in() call) — a bare `await` on a plain object
-          // invokes its own `.then`, same as any thenable.
+          // Three shapes share the same eq() return: sweepDecisions chains
+          // .in('state', [...]) off it, sweepAutoGeneration awaits it
+          // directly (no .in() call — a bare `await` on a plain object
+          // invokes its own `.then`, same as any thenable), and
+          // sweepDateOutreach chains a second .eq() then .in() off it.
           select: () => ({
             eq: () => ({
               in: () => mockDecisionsSelect(),
               then: (resolve: (v: unknown) => void) => resolve(mockDecisionsTypesSelect()),
+              eq: () => ({ in: () => mockDateOutreachDecisionsSelect() }),
             }),
           }),
           update: (patch: unknown) => ({ eq: () => mockDecisionsUpdate(patch) }),
@@ -58,12 +92,24 @@ vi.mock("@/lib/supabase/service", () => ({
       if (table === "availability") {
         return { select: () => ({ eq: () => mockAvailabilitySelect() }) };
       }
+      if (table === "date_outreach_nudges") {
+        return {
+          select: () => ({ eq: () => mockNudgesSelect() }),
+          insert: (row: unknown) => mockNudgesInsert(row),
+        };
+      }
+      if (table === "trips") {
+        return { select: () => ({ eq: () => ({ single: () => mockTripSelect() }) }) };
+      }
+      if (table === "messages") {
+        return { select: () => messagesQueryBuilder() };
+      }
       throw new Error(`unexpected table ${table}`);
     },
   }),
 }));
 
-import { sweepDecisions, sweepAutoGeneration, sweepIntakeNudges } from "./chaser";
+import { sweepDecisions, sweepAutoGeneration, sweepDateOutreach, sweepDigest, sweepIntakeNudges } from "./chaser";
 
 const NOW_ISO = new Date().toISOString();
 
@@ -79,6 +125,7 @@ beforeEach(() => {
   mockPostAgentMessage.mockReset();
   mockDecisionsSelect.mockReset().mockResolvedValue({ data: [], error: null });
   mockDecisionsTypesSelect.mockReset().mockResolvedValue({ data: [], error: null });
+  mockDateOutreachDecisionsSelect.mockReset().mockResolvedValue({ data: [], error: null });
   mockDecisionsInsert.mockReset().mockResolvedValue({ data: null, error: null });
   mockVotesSelect.mockReset().mockResolvedValue({ data: [], error: null });
   mockDecisionsUpdate.mockReset().mockResolvedValue({ error: null });
@@ -92,6 +139,14 @@ beforeEach(() => {
   mockBroadcast.mockReset();
   mockHandleDecisionLocked.mockReset();
   mockRunScout.mockReset().mockResolvedValue({ ok: true });
+  mockRunDateOutreach.mockReset().mockResolvedValue({ posted: true });
+  mockRunDigest.mockReset().mockResolvedValue({ posted: true });
+  mockEnsureThread.mockReset().mockResolvedValue("thread-1");
+  mockNudgesSelect.mockReset().mockResolvedValue({ data: [], error: null });
+  mockNudgesInsert.mockReset().mockResolvedValue({ error: null });
+  mockTripSelect.mockReset().mockResolvedValue({ data: { created_at: pastIso(100) }, error: null });
+  mockLastDigestSelect.mockReset().mockResolvedValue({ data: [], error: null });
+  mockNewMessagesSelect.mockReset().mockResolvedValue({ data: [], error: null });
 });
 
 describe("sweepDecisions", () => {
@@ -323,6 +378,137 @@ describe("sweepAutoGeneration", () => {
     await sweepAutoGeneration("trip-1");
 
     expect(mockDecisionsInsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("sweepDateOutreach", () => {
+  const activeMembers = [
+    { id: "m1", display_name: "Amit" },
+    { id: "m2", display_name: "Rhea" },
+    { id: "m3", display_name: "Karan" },
+  ];
+  // m1 and m2 both free Nov 3-6; m3 has no availability at all, so they're
+  // "out" of the only window the solver produces from this span.
+  const majorityFitAvailability = [
+    { member_id: "m1", start_date: "2026-11-03", end_date: "2026-11-06", strength: "free" },
+    { member_id: "m2", start_date: "2026-11-03", end_date: "2026-11-06", strength: "free" },
+  ];
+
+  it("does nothing when there's no open DATES decision", async () => {
+    mockDateOutreachDecisionsSelect.mockResolvedValue({ data: [], error: null });
+    await sweepDateOutreach("trip-1");
+    expect(mockRunDateOutreach).not.toHaveBeenCalled();
+  });
+
+  it("nudges the minority member once a majority fits the leading window but not everyone does", async () => {
+    mockDateOutreachDecisionsSelect.mockResolvedValue({ data: [{ id: "d1", type: "DATES", state: "OPEN" }], error: null });
+    mockMembersSelect.mockResolvedValue({ data: activeMembers, error: null });
+    mockAvailabilitySelect.mockResolvedValue({ data: majorityFitAvailability, error: null });
+    mockNudgesSelect.mockResolvedValue({ data: [], error: null });
+
+    await sweepDateOutreach("trip-1");
+
+    expect(mockEnsureThread).toHaveBeenCalledWith("trip-1", "m3", expect.anything());
+    expect(mockRunDateOutreach).toHaveBeenCalledWith(
+      "trip-1",
+      "thread-1",
+      expect.objectContaining({ id: "m3" }),
+      expect.objectContaining({ startDate: "2026-11-03", endDate: "2026-11-06" }),
+      2,
+      3
+    );
+    expect(mockNudgesInsert).toHaveBeenCalledWith({ decision_id: "d1", member_id: "m3" });
+  });
+
+  it("does not nudge a member already nudged for this decision", async () => {
+    mockDateOutreachDecisionsSelect.mockResolvedValue({ data: [{ id: "d1", type: "DATES", state: "OPEN" }], error: null });
+    mockMembersSelect.mockResolvedValue({ data: activeMembers, error: null });
+    mockAvailabilitySelect.mockResolvedValue({ data: majorityFitAvailability, error: null });
+    mockNudgesSelect.mockResolvedValue({ data: [{ member_id: "m3" }], error: null });
+
+    await sweepDateOutreach("trip-1");
+
+    expect(mockRunDateOutreach).not.toHaveBeenCalled();
+  });
+
+  it("does not nudge anyone once everyone fits the leading window", async () => {
+    mockDateOutreachDecisionsSelect.mockResolvedValue({ data: [{ id: "d1", type: "DATES", state: "OPEN" }], error: null });
+    mockMembersSelect.mockResolvedValue({ data: [{ id: "m1", display_name: "Amit" }, { id: "m2", display_name: "Rhea" }], error: null });
+    mockAvailabilitySelect.mockResolvedValue({ data: majorityFitAvailability, error: null });
+
+    await sweepDateOutreach("trip-1");
+
+    expect(mockRunDateOutreach).not.toHaveBeenCalled();
+  });
+
+  it("does not record a nudge if the outreach message failed to post", async () => {
+    mockDateOutreachDecisionsSelect.mockResolvedValue({ data: [{ id: "d1", type: "DATES", state: "OPEN" }], error: null });
+    mockMembersSelect.mockResolvedValue({ data: activeMembers, error: null });
+    mockAvailabilitySelect.mockResolvedValue({ data: majorityFitAvailability, error: null });
+    mockNudgesSelect.mockResolvedValue({ data: [], error: null });
+    mockRunDateOutreach.mockResolvedValue({ posted: false });
+
+    await sweepDateOutreach("trip-1");
+
+    expect(mockNudgesInsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("sweepDigest", () => {
+  it("does nothing when fewer than 3 hours have passed since the last digest", async () => {
+    mockLastDigestSelect.mockResolvedValue({ data: [{ created_at: pastIso(1) }], error: null });
+    await sweepDigest("trip-1");
+    expect(mockRunDigest).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when 3+ hours have passed but there hasn't been enough discussion", async () => {
+    mockLastDigestSelect.mockResolvedValue({ data: [{ created_at: pastIso(5) }], error: null });
+    mockNewMessagesSelect.mockResolvedValue({
+      data: [
+        { body: "hi", author_type: "member" },
+        { body: "hey", author_type: "member" },
+      ],
+      error: null,
+    });
+    await sweepDigest("trip-1");
+    expect(mockRunDigest).not.toHaveBeenCalled();
+  });
+
+  it("runs the digest once 3+ hours have passed and enough members have posted", async () => {
+    mockLastDigestSelect.mockResolvedValue({ data: [{ created_at: pastIso(5) }], error: null });
+    const messages = Array.from({ length: 5 }, (_, i) => ({ body: `msg ${i}`, author_type: "member" as const }));
+    mockNewMessagesSelect.mockResolvedValue({ data: messages, error: null });
+
+    await sweepDigest("trip-1");
+
+    expect(mockRunDigest).toHaveBeenCalledWith("trip-1", messages);
+  });
+
+  it("falls back to trip creation time when no digest has ever been posted", async () => {
+    mockTripSelect.mockResolvedValue({ data: { created_at: pastIso(10) }, error: null });
+    mockLastDigestSelect.mockResolvedValue({ data: [], error: null });
+    const messages = Array.from({ length: 5 }, (_, i) => ({ body: `msg ${i}`, author_type: "member" as const }));
+    mockNewMessagesSelect.mockResolvedValue({ data: messages, error: null });
+
+    await sweepDigest("trip-1");
+
+    expect(mockRunDigest).toHaveBeenCalledWith("trip-1", messages);
+  });
+
+  it("doesn't count agent messages toward the volume threshold", async () => {
+    mockLastDigestSelect.mockResolvedValue({ data: [{ created_at: pastIso(5) }], error: null });
+    mockNewMessagesSelect.mockResolvedValue({
+      data: [
+        { body: "a", author_type: "member" },
+        { body: "b", author_type: "agent" },
+        { body: "c", author_type: "agent" },
+        { body: "d", author_type: "agent" },
+        { body: "e", author_type: "agent" },
+      ],
+      error: null,
+    });
+    await sweepDigest("trip-1");
+    expect(mockRunDigest).not.toHaveBeenCalled();
   });
 });
 

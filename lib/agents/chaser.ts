@@ -7,7 +7,10 @@ import { handleDecisionLocked } from "@/lib/decisions/on-decision-locked";
 import { computeTopDateWindows, formatWindowLabel } from "@/lib/dates/date-solver";
 import { buildDecisionOpenedMessage } from "@/lib/decisions/opened-message";
 import { runScout } from "@/lib/agents/scout";
-import type { AvailabilityRow, DecisionRow, FactRow, MemberRow } from "@/lib/database.types";
+import { runDateOutreach } from "@/lib/agents/date-outreach";
+import { runDigest } from "@/lib/agents/digest";
+import { ensureThread } from "@/lib/threads/ensure-thread";
+import type { AvailabilityRow, DateOutreachNudgeRow, DecisionRow, FactRow, MemberRow, MessageRow } from "@/lib/database.types";
 
 const DECISION_TITLES: Record<string, string> = {
   DATES: "the dates",
@@ -175,6 +178,102 @@ export async function sweepAutoGeneration(tripId: string) {
       }
     }
   }
+}
+
+// "If majority people have dates based on the interval of the trip and 1 or
+// 2 people don't, the agent should ask them if they can adjust" — the rule
+// half of that: a majority (not everyone, that's sweepDecisions' quorum
+// lock's job) fitting the trip's leading date window is what makes a member
+// outside it worth privately asking, once, ever, per decision.
+export async function sweepDateOutreach(tripId: string) {
+  const supabase = createServiceSupabaseClient();
+  const [{ data: decisions }, { data: activeMembers }, { data: availability }] = await Promise.all([
+    supabase.from("decisions").select().eq("trip_id", tripId).eq("type", "DATES").in("state", ["OPEN", "VOTING"]),
+    supabase.from("members").select().eq("trip_id", tripId).eq("status", "active"),
+    supabase.from("availability").select().eq("trip_id", tripId),
+  ]);
+  const decision = ((decisions ?? []) as DecisionRow[])[0];
+  if (!decision) return;
+
+  const activeMemberRows = (activeMembers ?? []) as MemberRow[];
+  const activeMemberIds = activeMemberRows.map((m) => m.id);
+  if (activeMemberIds.length === 0) return;
+
+  const windows = computeTopDateWindows((availability ?? []) as AvailabilityRow[], activeMemberIds);
+  const leading = windows[0];
+  if (!leading) return;
+
+  const fitCount = leading.membersIn.length + leading.membersPartial.length;
+  const isMajority = fitCount * 2 > activeMemberIds.length;
+  const everyoneFits = fitCount === activeMemberIds.length;
+  if (!isMajority || everyoneFits) return;
+
+  const outMemberIds = activeMemberIds.filter(
+    (id) => !leading.membersIn.includes(id) && !leading.membersPartial.includes(id)
+  );
+  if (outMemberIds.length === 0) return;
+
+  const { data: existingNudges } = await supabase
+    .from("date_outreach_nudges")
+    .select("member_id")
+    .eq("decision_id", decision.id);
+  const alreadyNudged = new Set(
+    ((existingNudges ?? []) as Pick<DateOutreachNudgeRow, "member_id">[]).map((n) => n.member_id)
+  );
+
+  for (const memberId of outMemberIds) {
+    if (alreadyNudged.has(memberId)) continue;
+    const member = activeMemberRows.find((m) => m.id === memberId);
+    if (!member) continue;
+    const threadId = await ensureThread(tripId, memberId, supabase);
+    const { posted } = await runDateOutreach(tripId, threadId, member, leading, fitCount, activeMemberIds.length);
+    if (posted) {
+      await supabase.from("date_outreach_nudges").insert({ decision_id: decision.id, member_id: memberId });
+    }
+  }
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+const DIGEST_MIN_HOURS = 3;
+const DIGEST_MIN_MEMBER_MESSAGES = 5;
+
+// The "adds their opinions/suggestions... every 3 hours if enough discussion
+// has happened" cadence — clock and volume combined (confirmed in Phase 1
+// planning), both derived from message history directly rather than a new
+// tracked column, same way buildDateContext reads existing rows for context
+// instead of storing a duplicate pointer.
+export async function sweepDigest(tripId: string) {
+  const supabase = createServiceSupabaseClient();
+  const { data: trip } = await supabase.from("trips").select("created_at").eq("id", tripId).single();
+  if (!trip) return;
+
+  const { data: lastDigestRows } = await supabase
+    .from("messages")
+    .select("created_at")
+    .eq("trip_id", tripId)
+    .eq("lane", "group")
+    .eq("agent_name", "concierge")
+    .contains("metadata", { kind: "digest" })
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const since = lastDigestRows?.[0]?.created_at ?? trip.created_at;
+
+  const hoursSince = (Date.now() - new Date(since).getTime()) / HOUR_MS;
+  if (hoursSince < DIGEST_MIN_HOURS) return;
+
+  const { data: newMessages } = await supabase
+    .from("messages")
+    .select("body, author_type")
+    .eq("trip_id", tripId)
+    .eq("lane", "group")
+    .gt("created_at", since)
+    .order("created_at", { ascending: true });
+
+  const allNew = (newMessages ?? []) as Pick<MessageRow, "body" | "author_type">[];
+  const memberMessageCount = allNew.filter((m) => m.author_type === "member").length;
+  if (memberMessageCount < DIGEST_MIN_MEMBER_MESSAGES) return;
+
+  await runDigest(tripId, allNew);
 }
 
 // D6's silence ladder, batched per trip per sweep so several members crossing

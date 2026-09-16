@@ -101,6 +101,13 @@ export type DecisionRow = {
   created_at: string;
 };
 
+export type DateOutreachNudgeRow = {
+  id: string;
+  decision_id: string;
+  member_id: string;
+  created_at: string;
+};
+
 export type VoteRow = {
   id: string;
   decision_id: string;
