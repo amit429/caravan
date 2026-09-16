@@ -1,6 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { computeTopDateWindows } from "./date-solver";
+import { computeTopDateWindows, formatWindowLabel } from "./date-solver";
 import type { AvailabilityRow } from "../database.types";
+
+describe("formatWindowLabel", () => {
+  it("formats a window as a short date range", () => {
+    // Not asserting exact day/month ordering — that's locale-dependent
+    // (toLocaleDateString with an undefined locale follows the runtime's
+    // default, "27 Feb" vs "Feb 27"), just that both ends show up correctly
+    // abbreviated and joined.
+    const label = formatWindowLabel({ startDate: "2027-02-27", endDate: "2027-03-02" });
+    expect(label).toContain("Feb");
+    expect(label).toContain("27");
+    expect(label).toContain("Mar");
+    expect(label).toContain("2");
+    expect(label).toContain(" – ");
+  });
+});
 
 function avail(
   memberId: string,

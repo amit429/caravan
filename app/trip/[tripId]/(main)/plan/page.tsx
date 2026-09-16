@@ -4,7 +4,7 @@ import { resolveCaller } from "@/lib/auth/resolve-caller";
 import { computeTopDateWindows } from "@/lib/dates/date-solver";
 import { groupBudgetCeiling } from "@/lib/budget/budget";
 import { MapRouteIllustration } from "@/components/caravan/primitives/illustrations";
-import { Avatar } from "@/components/caravan/primitives/avatar";
+import { Avatar, AvatarStack } from "@/components/caravan/primitives/avatar";
 import { DecisionCard } from "@/components/caravan/decisions/decision-card";
 import { CreateDatesDecisionButton } from "@/components/caravan/decisions/create-dates-decision-button";
 import { GenerateItineraryButton } from "@/components/caravan/generate/generate-itinerary-button";
@@ -92,6 +92,12 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
     allAvailability,
     activeMembers.map((m) => m.id)
   );
+  // computeTopDateWindows already knows exactly who's in/partial/out per
+  // window (membersIn/membersPartial/membersOut) — this just turns those id
+  // arrays into the {name, colorIndex} shape AvatarStack expects, reusing
+  // each member's existing stable colorIndex (their position in the roster)
+  // rather than inventing a second one.
+  const memberById = new Map(activeMembers.map((m, i) => [m.id, { name: m.display_name, colorIndex: i }]));
   const budgetAmounts = allFacts.filter((f) => f.category === "budget").map((f) => (f.value as { amount: number }).amount);
   const groupCeiling = groupBudgetCeiling(budgetAmounts);
   const hasDatesDecision = allDecisions.some((d) => d.type === "DATES");
@@ -184,16 +190,32 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
           <div className="rounded-lg bg-sunk p-4 text-sm text-ink-2">Nobody&rsquo;s shared their dates yet.</div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-line bg-card">
-            {dateWindows.map((w, i) => (
-              <div key={i} className="border-t border-line px-3.5 py-2.5 first:border-t-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">{formatRange(w.startDate, w.endDate)}</span>
-                  <span className="ml-auto text-xs text-ink-3">
-                    {w.membersIn.length + w.membersPartial.length}/{activeMembers.length} in
-                  </span>
+            {dateWindows.map((w, i) => {
+              const inStack = w.membersIn.map((id) => memberById.get(id)).filter((m) => m != null);
+              const partialStack = w.membersPartial.map((id) => memberById.get(id)).filter((m) => m != null);
+              return (
+                <div key={i} className="flex flex-col gap-1.5 border-t border-line px-3.5 py-2.5 first:border-t-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">{formatRange(w.startDate, w.endDate)}</span>
+                    <span className="ml-auto text-xs text-ink-3">
+                      {w.membersIn.length + w.membersPartial.length}/{activeMembers.length} in
+                    </span>
+                  </div>
+                  {(inStack.length > 0 || partialStack.length > 0) && (
+                    <div className="flex items-center gap-2">
+                      {inStack.length > 0 && <AvatarStack members={inStack} />}
+                      {partialStack.length > 0 && (
+                        <span className="flex items-center gap-1.5">
+                          {inStack.length > 0 && <span className="text-ink-3">+</span>}
+                          <AvatarStack members={partialStack} />
+                          <span className="text-[10.5px] text-warn">tight</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {isAdmin && !hasDatesDecision && (
               <div className="border-t border-line px-3.5 py-2.5">
                 <CreateDatesDecisionButton tripId={tripId} windows={dateWindows} />

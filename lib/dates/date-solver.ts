@@ -9,6 +9,16 @@ export type DateWindow = {
   score: number;
 };
 
+// Shared between the manual "Put these to a vote" button
+// (components/caravan/decisions/create-dates-decision-button.tsx) and
+// Chaser's autonomous DATES-decision creation — both need to turn a window
+// into the same short label a decision's option ends up showing.
+export function formatWindowLabel(window: Pick<DateWindow, "startDate" | "endDate">): string {
+  const format = (iso: string) =>
+    new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+  return `${format(window.startDate)} – ${format(window.endDate)}`;
+}
+
 type Status = "free" | "partial" | "blocked";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

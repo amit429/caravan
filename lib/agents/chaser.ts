@@ -3,7 +3,11 @@ import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import { broadcastTripChange } from "@/lib/realtime/broadcast";
 import { isPastDeadline, needsDeadlineReminder, nextNudgeTier } from "@/lib/agents/chaser-rules";
 import { pickWinningOption } from "@/lib/decisions/tally-votes";
-import type { DecisionRow, FactRow, MemberRow } from "@/lib/database.types";
+import { handleDecisionLocked } from "@/lib/decisions/on-decision-locked";
+import { computeTopDateWindows, formatWindowLabel } from "@/lib/dates/date-solver";
+import { buildDecisionOpenedMessage } from "@/lib/decisions/opened-message";
+import { runScout } from "@/lib/agents/scout";
+import type { AvailabilityRow, DecisionRow, FactRow, MemberRow } from "@/lib/database.types";
 
 const DECISION_TITLES: Record<string, string> = {
   DATES: "the dates",
@@ -19,11 +23,11 @@ const DECISION_TITLES: Record<string, string> = {
 // without Inngest's step harness.
 export async function sweepDecisions(tripId: string) {
   const supabase = createServiceSupabaseClient();
-  const { data: decisions } = await supabase
-    .from("decisions")
-    .select()
-    .eq("trip_id", tripId)
-    .in("state", ["OPEN", "VOTING"]);
+  const [{ data: decisions }, { data: activeMembers }] = await Promise.all([
+    supabase.from("decisions").select().eq("trip_id", tripId).in("state", ["OPEN", "VOTING"]),
+    supabase.from("members").select("id").eq("trip_id", tripId).eq("status", "active"),
+  ]);
+  const activeMemberIds = (activeMembers ?? []).map((m) => (m as Pick<MemberRow, "id">).id);
   const now = new Date();
 
   for (const decision of (decisions ?? []) as DecisionRow[]) {
@@ -49,6 +53,7 @@ export async function sweepDecisions(tripId: string) {
           agentName: "chaser",
           body: `Locked: ${label}. Deadline passed, this had the most votes.`,
         });
+        await handleDecisionLocked(tripId, { type: decision.type });
       } else {
         // Nobody voted at all — locking anything would be a guess, and the
         // LLM/agent layer never gets to guess on someone's behalf (spec D6).
@@ -61,13 +66,113 @@ export async function sweepDecisions(tripId: string) {
           body: `Nobody voted before the deadline for ${DECISION_TITLES[decision.type] ?? "this"}. Needs a new deadline.`,
         });
       }
-    } else if (needsDeadlineReminder(decision, now)) {
+      continue;
+    }
+
+    // Quorum lock: independent of any deadline (most decisions never get
+    // one — confirmed on the live trip this was built for) — the instant
+    // every active member has voted and the leader isn't vetoed, it locks.
+    // No "propose then confirm" step; that was an explicit product decision,
+    // not an oversight.
+    if (activeMemberIds.length > 0) {
+      const { data: votes } = await supabase
+        .from("votes")
+        .select("option_id, is_veto, member_id")
+        .eq("decision_id", decision.id);
+      const allVotes = votes ?? [];
+      const voterIds = new Set(allVotes.map((v) => v.member_id));
+      const everyoneVoted = activeMemberIds.every((id) => voterIds.has(id));
+
+      if (everyoneVoted) {
+        const winner = pickWinningOption(decision.options, allVotes);
+        if (winner) {
+          const label = decision.options.find((o) => o.id === winner)?.label ?? winner;
+          await supabase
+            .from("decisions")
+            .update({
+              state: "LOCKED",
+              locked_option: winner,
+              rationale: "Locked automatically — everyone's voted.",
+            })
+            .eq("id", decision.id);
+          await postAgentMessage({
+            tripId,
+            agentName: "chaser",
+            body: `Locked: ${label}. Everyone's voted.`,
+          });
+          await handleDecisionLocked(tripId, { type: decision.type });
+          continue;
+        }
+        // Everyone voted but every option left standing is vetoed — that's
+        // an admin call (override or repropose), not something to guess.
+      }
+    }
+
+    if (needsDeadlineReminder(decision, now)) {
       await supabase.from("decisions").update({ reminded_at: now.toISOString() }).eq("id", decision.id);
       await postAgentMessage({
         tripId,
         agentName: "chaser",
         body: `Voting on ${DECISION_TITLES[decision.type] ?? "this"} closes in the next 24h.`,
       });
+    }
+  }
+}
+
+// The other half of "trip-leader effort zero": once everyone's answered,
+// generating destination options — and once everyone's shared their dates,
+// putting a DATES decision up for a vote — shouldn't wait on an admin
+// noticing and tapping a button. Same "every active member" bar as the
+// quorum lock above, for the same reason: it's already backed by working
+// nudge infrastructure (sweepIntakeNudges), not a new dependency.
+export async function sweepAutoGeneration(tripId: string) {
+  const supabase = createServiceSupabaseClient();
+  const [{ data: activeMembers }, { data: facts }, { data: availability }, { data: decisions }] = await Promise.all([
+    supabase.from("members").select("id").eq("trip_id", tripId).eq("status", "active"),
+    supabase.from("facts").select("member_id").eq("trip_id", tripId),
+    supabase.from("availability").select().eq("trip_id", tripId),
+    supabase.from("decisions").select("type").eq("trip_id", tripId),
+  ]);
+  const activeMemberIds = (activeMembers ?? []).map((m) => (m as Pick<MemberRow, "id">).id);
+  if (activeMemberIds.length === 0) return;
+
+  const existingDecisionTypes = new Set((decisions ?? []).map((d) => (d as Pick<DecisionRow, "type">).type));
+
+  const membersWithIntake = new Set((facts ?? []).map((f) => (f as Pick<FactRow, "member_id">).member_id));
+  const everyoneAnswered = activeMemberIds.every((id) => membersWithIntake.has(id));
+  if (everyoneAnswered && !existingDecisionTypes.has("DESTINATION")) {
+    // Scout has its own internal gate (needs at least one budget fact) and
+    // its own failure handling — a best-effort call, same as the manual
+    // "Generate destinations" button already is.
+    await runScout(tripId);
+  }
+
+  const allAvailability = (availability ?? []) as AvailabilityRow[];
+  const membersWithAvailability = new Set(allAvailability.map((a) => a.member_id));
+  const everyoneSharedDates = activeMemberIds.every((id) => membersWithAvailability.has(id));
+  if (everyoneSharedDates && !existingDecisionTypes.has("DATES")) {
+    const windows = computeTopDateWindows(allAvailability, activeMemberIds);
+    if (windows.length > 0) {
+      const { data: decision } = await supabase
+        .from("decisions")
+        .insert({
+          trip_id: tripId,
+          type: "DATES",
+          state: "OPEN",
+          options: windows.map((w, i) => ({ id: `window-${i}`, label: formatWindowLabel(w) })),
+          quorum_rule: "simple_majority",
+          default_on_silence: "none",
+        })
+        .select()
+        .single();
+      if (decision) {
+        await postAgentMessage({
+          tripId,
+          agentName: "concierge",
+          body: buildDecisionOpenedMessage(decision as DecisionRow),
+        });
+        await broadcastTripChange(tripId);
+      }
     }
   }
 }

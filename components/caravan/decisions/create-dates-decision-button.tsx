@@ -1,15 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { DateWindow } from "@/lib/dates/date-solver";
-
-function formatShort(iso: string) {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
+import { formatWindowLabel, type DateWindow } from "@/lib/dates/date-solver";
 
 export function CreateDatesDecisionButton({ tripId, windows }: { tripId: string; windows: DateWindow[] }) {
   const router = useRouter();
@@ -24,7 +16,7 @@ export function CreateDatesDecisionButton({ tripId, windows }: { tripId: string;
         type: "DATES",
         options: windows.map((w, i) => ({
           id: `window-${i}`,
-          label: `${formatShort(w.startDate)} – ${formatShort(w.endDate)}`,
+          label: formatWindowLabel(w),
         })),
       }),
     });

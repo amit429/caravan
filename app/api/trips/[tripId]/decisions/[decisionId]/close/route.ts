@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getAuthUser } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { closeDecisionSchema } from "@/lib/validation";
 import { pickWinningOption, tallyVotes } from "@/lib/decisions/tally-votes";
+import { handleDecisionLocked } from "@/lib/decisions/on-decision-locked";
 import { postAgentMessage } from "@/lib/agents/runtime/post-agent-message";
 import type { DecisionOption } from "@/lib/database.types";
 
@@ -25,7 +26,7 @@ export async function POST(
   const supabase = await createServerSupabaseClient();
   const { data: decision } = await supabase
     .from("decisions")
-    .select("id, state, options")
+    .select("id, type, state, options")
     .eq("id", decisionId)
     .eq("trip_id", tripId)
     .single();
@@ -83,6 +84,11 @@ export async function POST(
       ? `Locked: ${winningLabel}, by admin override.`
       : `Locked: ${winningLabel}.`,
   });
+
+  // Whatever this lock unblocks (itinerary, cost estimate, the checklist)
+  // runs after the response goes out — these are real multi-second LLM
+  // calls, and the admin's "Lock" tap shouldn't sit there waiting on them.
+  after(() => handleDecisionLocked(tripId, { type: decision.type }));
 
   return NextResponse.json({ decision: updated });
 }

@@ -1,6 +1,6 @@
 import { inngest } from "./client";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { sweepDecisions, sweepIntakeNudges } from "@/lib/agents/chaser";
+import { sweepDecisions, sweepAutoGeneration, sweepIntakeNudges } from "@/lib/agents/chaser";
 
 export const chaserSweep = inngest.createFunction(
   { id: "chaser-sweep", triggers: { cron: "*/30 * * * *" } },
@@ -10,6 +10,7 @@ export const chaserSweep = inngest.createFunction(
 
     for (const trip of trips ?? []) {
       await step.run(`sweep-decisions-${trip.id}`, () => sweepDecisions(trip.id));
+      await step.run(`sweep-auto-generation-${trip.id}`, () => sweepAutoGeneration(trip.id));
       await step.run(`sweep-intake-${trip.id}`, () => sweepIntakeNudges(trip.id));
     }
 
