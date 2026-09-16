@@ -66,6 +66,15 @@ export async function POST(
   // blocks the member's send. "Ask the agent" (D3) skips Scribe entirely: a
   // question isn't a fact statement, and running both would double the LLM
   // calls for no reason.
+  //
+  // For a plain-chat message, Scribe already posts a receipt whenever it
+  // files something — but when there's nothing to file (small talk, a
+  // question the member never routed through the explicit "ask" sheet),
+  // this used to just... stop. That's the exact "I type something in You
+  // and nothing happens" bug: a private 1:1 thread should never go silent
+  // the way the shared group feed intentionally does. Falling back to the
+  // same conversational answer "ask" uses closes that gap without touching
+  // the group Room, which is right to stay quiet on plain chatter.
   if (parsed.data.intent === "ask") {
     after(async () => {
       const answer = await answerTripQuestion(tripId, parsed.data.body);
@@ -74,8 +83,11 @@ export async function POST(
   } else {
     after(async () => {
       const { data: authorMember } = await supabase.from("members").select().eq("id", callerMemberId).single();
-      if (authorMember) {
-        await runScribe({ tripId, message, authorMember, threadId });
+      if (!authorMember) return;
+      const { posted } = await runScribe({ tripId, message, authorMember, threadId });
+      if (!posted) {
+        const answer = await answerTripQuestion(tripId, parsed.data.body);
+        await postAgentMessage({ tripId, agentName: "concierge", body: answer, threadId });
       }
     });
   }

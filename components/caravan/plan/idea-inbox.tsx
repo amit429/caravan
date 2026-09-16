@@ -135,9 +135,13 @@ export function IdeaInbox({
                   <img src={idea.image_url} alt="" className="h-14 w-14 shrink-0 rounded-md object-cover" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <a href={idea.url} target="_blank" rel="noreferrer" className="text-sm font-semibold hover:underline">
-                    {idea.title ?? idea.url}
-                  </a>
+                  {idea.url ? (
+                    <a href={idea.url} target="_blank" rel="noreferrer" className="text-sm font-semibold hover:underline">
+                      {idea.title ?? idea.url}
+                    </a>
+                  ) : (
+                    <span className="text-sm font-semibold">{idea.title}</span>
+                  )}
                   {idea.note && <p className="text-xs text-ink-2">{idea.note}</p>}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">

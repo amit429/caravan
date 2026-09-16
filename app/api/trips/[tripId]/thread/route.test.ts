@@ -52,7 +52,7 @@ beforeEach(() => {
   mockResolveCaller.mockReset();
   mockEnsureThread.mockReset().mockResolvedValue("thread-1");
   mockLoadThread.mockReset().mockResolvedValue({ threadId: "thread-1", messages: [] });
-  mockRunScribe.mockReset();
+  mockRunScribe.mockReset().mockResolvedValue({ posted: true });
   mockAnswerTripQuestion.mockReset().mockResolvedValue("The cost estimate is 11k-14k a head.");
   mockPostAgentMessage.mockReset();
   mockBroadcast.mockReset();
@@ -129,6 +129,31 @@ describe("POST /api/trips/[tripId]/thread", () => {
     expect(mockRunScribe).toHaveBeenCalledWith(
       expect.objectContaining({ tripId: "trip-1", threadId: "thread-1" })
     );
+  });
+
+  it("falls back to answerTripQuestion when Scribe files nothing, so the thread never goes silent", async () => {
+    mockResolveCaller.mockResolvedValue({ id: "m1", status: "active" });
+    mockInsertSingle.mockResolvedValue({ data: { id: "msg-1", body: "When are we going" }, error: null });
+    mockMemberSingle.mockResolvedValue({ data: { id: "m1", display_name: "Rhea" }, error: null });
+    mockRunScribe.mockResolvedValue({ posted: false });
+    await POST(postRequest({ body: "When are we going" }), { params });
+    const deferred = mockAfter.mock.calls[0][0] as () => Promise<void>;
+    await deferred();
+    expect(mockAnswerTripQuestion).toHaveBeenCalledWith("trip-1", "When are we going");
+    expect(mockPostAgentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ tripId: "trip-1", agentName: "concierge", threadId: "thread-1" })
+    );
+  });
+
+  it("does not double-reply when Scribe already posted something (a filed receipt or its own fallback)", async () => {
+    mockResolveCaller.mockResolvedValue({ id: "m1", status: "active" });
+    mockInsertSingle.mockResolvedValue({ data: { id: "msg-1", body: "My budget is 15k" }, error: null });
+    mockMemberSingle.mockResolvedValue({ data: { id: "m1", display_name: "Rhea" }, error: null });
+    mockRunScribe.mockResolvedValue({ posted: true });
+    await POST(postRequest({ body: "My budget is 15k" }), { params });
+    const deferred = mockAfter.mock.calls[0][0] as () => Promise<void>;
+    await deferred();
+    expect(mockAnswerTripQuestion).not.toHaveBeenCalled();
   });
 
   it("answers instead of running Scribe when intent is 'ask'", async () => {

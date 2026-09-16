@@ -122,14 +122,17 @@ export type ItineraryRow = {
   updated_at: string;
 };
 
+export type IdeaCategory = "activity" | "stay" | "travel";
+
 export type IdeaRow = {
   id: string;
   trip_id: string;
   member_id: string;
-  url: string;
+  url: string | null;
   title: string | null;
   note: string | null;
   image_url: string | null;
+  category: IdeaCategory;
   created_at: string;
 };
 

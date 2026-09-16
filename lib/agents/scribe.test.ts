@@ -8,14 +8,25 @@ const mockFactsInsert = vi.fn();
 const mockFactsInsertResult = vi.fn();
 const mockFactsUpdate = vi.fn();
 const mockAvailabilityInsert = vi.fn();
+const mockIdeasInsert = vi.fn();
+const mockIdeasExistingLookup = vi.fn();
+const mockExtractIdeaMetadata = vi.fn();
 
-vi.mock("ai", () => ({ generateObject: (...args: unknown[]) => mockGenerateObject(...args) }));
+vi.mock("ai", () => ({
+  generateObject: (...args: unknown[]) => mockGenerateObject(...args),
+  // Real NoObjectGeneratedError.isInstance checks a private symbol on real
+  // SDK errors — a plain mocked rejection is never one, same as this stub.
+  NoObjectGeneratedError: { isInstance: () => false },
+}));
 vi.mock("./runtime/log-run", () => ({ logAgentRun: (...args: unknown[]) => mockLogAgentRun(...args) }));
 vi.mock("./runtime/post-agent-message", () => ({ postAgentMessage: (...args: unknown[]) => mockPostAgentMessage(...args) }));
 vi.mock("./runtime/model", () => ({
   flashModel: "mock-flash-model",
   estimateCost: () => 0,
   fastGoogleOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
+}));
+vi.mock("@/lib/ideas/extract-idea", () => ({
+  extractIdeaMetadata: (...args: unknown[]) => mockExtractIdeaMetadata(...args),
 }));
 vi.mock("@/lib/supabase/service", () => ({
   createServiceSupabaseClient: () => ({
@@ -32,6 +43,19 @@ vi.mock("@/lib/supabase/service", () => ({
         };
       }
       if (table === "availability") return { insert: (row: unknown) => mockAvailabilityInsert(row) };
+      // No "decisions" branch here on purpose: buildDateContext's lookups are
+      // best-effort (wrapped in try/catch) and this mock intentionally
+      // doesn't implement `.select()` for either table above, or `decisions`
+      // at all — every existing test exercises that graceful-degradation
+      // path, not a happy one, and still passes.
+      if (table === "ideas") {
+        return {
+          select: () => ({
+            eq: () => ({ eq: () => ({ maybeSingle: () => mockIdeasExistingLookup() }) }),
+          }),
+          insert: (row: unknown) => mockIdeasInsert(row),
+        };
+      }
       throw new Error(`unexpected table ${table}`);
     },
   }),
@@ -77,6 +101,9 @@ beforeEach(() => {
   mockFactsInsertResult.mockReset().mockResolvedValue({ data: { id: "fact-new-1" }, error: null });
   mockFactsUpdate.mockReset().mockResolvedValue({ error: null });
   mockAvailabilityInsert.mockReset().mockResolvedValue({ error: null });
+  mockIdeasInsert.mockReset().mockResolvedValue({ error: null });
+  mockIdeasExistingLookup.mockReset().mockResolvedValue({ data: null });
+  mockExtractIdeaMetadata.mockReset().mockResolvedValue({ title: "Scraped Title", note: "Scraped note", imageUrl: null });
 });
 
 describe("runScribe", () => {
@@ -266,8 +293,166 @@ describe("runScribe", () => {
 
   it("fails closed and logs an error when the gate call itself throws", async () => {
     mockGenerateObject.mockRejectedValueOnce(new Error("network error"));
-    await runScribe({ tripId: "trip-1", message, authorMember: member });
+    const result = await runScribe({ tripId: "trip-1", message, authorMember: member });
     expect(mockFactsInsert).not.toHaveBeenCalled();
     expect(mockLogAgentRun).toHaveBeenCalledWith(expect.objectContaining({ outcome: "error" }));
+    expect(result).toEqual({ posted: false });
+  });
+
+  it("files a link idea, reusing extractIdeaMetadata and the idea's category", async () => {
+    mockGenerateObject
+      .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
+      .mockResolvedValueOnce({
+        object: {
+          extractions: [
+            {
+              kind: "idea",
+              memberId: "member-1",
+              category: "stay",
+              title: "Some Hotel",
+              url: "https://example.com/hotel",
+              confidence: 0.9,
+              rationale: "Karan found a hotel",
+            },
+          ],
+        },
+        usage: usage(),
+      });
+    const result = await runScribe({ tripId: "trip-1", message, authorMember: member });
+    expect(mockExtractIdeaMetadata).toHaveBeenCalledWith("https://example.com/hotel");
+    expect(mockIdeasInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trip_id: "trip-1",
+        member_id: "member-1",
+        category: "stay",
+        url: "https://example.com/hotel",
+        title: "Scraped Title",
+      })
+    );
+    expect(result).toEqual({ posted: true });
+  });
+
+  it("files a plain-text idea with no URL directly from the model's title/note", async () => {
+    mockGenerateObject
+      .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
+      .mockResolvedValueOnce({
+        object: {
+          extractions: [
+            {
+              kind: "idea",
+              memberId: "member-1",
+              category: "activity",
+              title: "Scuba diving",
+              note: "Karan wants to go scuba diving",
+              confidence: 0.9,
+              rationale: "Karan proposed scuba diving",
+            },
+          ],
+        },
+        usage: usage(),
+      });
+    await runScribe({ tripId: "trip-1", message, authorMember: member });
+    expect(mockExtractIdeaMetadata).not.toHaveBeenCalled();
+    expect(mockIdeasInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "activity",
+        url: null,
+        title: "Scuba diving",
+        note: "Karan wants to go scuba diving",
+      })
+    );
+  });
+
+  it("dedupes a link idea already filed for this trip instead of inserting a second card", async () => {
+    mockIdeasExistingLookup.mockResolvedValue({ data: { id: "idea-existing" } });
+    mockGenerateObject
+      .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
+      .mockResolvedValueOnce({
+        object: {
+          extractions: [
+            {
+              kind: "idea",
+              memberId: "member-1",
+              category: "travel",
+              title: "Flight deal",
+              url: "https://example.com/flights",
+              confidence: 0.9,
+              rationale: "Karan shared a flight link",
+            },
+          ],
+        },
+        usage: usage(),
+      });
+    const result = await runScribe({ tripId: "trip-1", message, authorMember: member });
+    expect(mockIdeasInsert).not.toHaveBeenCalled();
+    expect(mockPostAgentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ body: expect.stringContaining("already have") })
+    );
+    expect(result).toEqual({ posted: true });
+  });
+
+  it("retries once after a schema-validation failure and succeeds on the second attempt", async () => {
+    mockGenerateObject
+      .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
+      .mockRejectedValueOnce(new Error("AI_NoObjectGeneratedError"))
+      .mockResolvedValueOnce({
+        object: {
+          extractions: [
+            {
+              kind: "availability",
+              memberId: "member-1",
+              startDate: "2026-11-01",
+              endDate: "2026-11-03",
+              strength: "blocked",
+              confidence: 0.9,
+              rationale: "Karan can't make Nov 1-3",
+            },
+          ],
+        },
+        usage: usage(),
+      });
+    const result = await runScribe({ tripId: "trip-1", message, authorMember: member });
+    expect(mockGenerateObject).toHaveBeenCalledTimes(3); // gate + failed extract + retried extract
+    expect(mockAvailabilityInsert).toHaveBeenCalledWith(expect.objectContaining({ start_date: "2026-11-01" }));
+    expect(result).toEqual({ posted: true });
+  });
+
+  it("posts an honest fallback receipt instead of staying silent when both extraction attempts fail", async () => {
+    mockGenerateObject
+      .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
+      .mockRejectedValueOnce(new Error("AI_NoObjectGeneratedError"))
+      .mockRejectedValueOnce(new Error("AI_NoObjectGeneratedError"));
+    const result = await runScribe({ tripId: "trip-1", message, authorMember: member });
+    expect(mockPostAgentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ agentName: "scribe", body: expect.stringContaining("couldn't pin down") })
+    );
+    expect(mockLogAgentRun).toHaveBeenCalledWith(expect.objectContaining({ outcome: "error" }));
+    // The fallback receipt itself counts as "posted" — a caller relying on
+    // this (the You-thread route) must not stack a second, unrelated reply
+    // on top of the one that already went out.
+    expect(result).toEqual({ posted: true });
+  });
+
+  it("returns posted: true after successfully filing a fact", async () => {
+    mockGenerateObject
+      .mockResolvedValueOnce({ object: { containsExtractableInfo: true }, usage: usage() })
+      .mockResolvedValueOnce({
+        object: {
+          extractions: [
+            {
+              kind: "fact",
+              memberId: "member-1",
+              category: "vibe",
+              type: "SOFT",
+              value: { tags: ["Beach"] },
+              confidence: 0.9,
+              rationale: "Karan wants beach vibes",
+            },
+          ],
+        },
+        usage: usage(),
+      });
+    const result = await runScribe({ tripId: "trip-1", message, authorMember: member });
+    expect(result).toEqual({ posted: true });
   });
 });

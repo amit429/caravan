@@ -12,7 +12,15 @@ export default async function IdeasPage({ params }: { params: Promise<{ tripId: 
   const caller = await resolveCaller(tripId, supabase);
   if (!caller || caller.status === "removed") notFound();
 
-  const { data: ideas } = await supabase.from("ideas").select().eq("trip_id", tripId).order("created_at", { ascending: false });
+  // Stay/travel-categorized ideas get their own home on Bookings (suggested
+  // stays / suggested travel) — showing them here too would just duplicate
+  // the same card in two places.
+  const { data: ideas } = await supabase
+    .from("ideas")
+    .select()
+    .eq("trip_id", tripId)
+    .eq("category", "activity")
+    .order("created_at", { ascending: false });
 
   const allIdeas = (ideas ?? []) as IdeaRow[];
   const ideaIds = allIdeas.map((i) => i.id);

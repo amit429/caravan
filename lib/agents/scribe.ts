@@ -1,10 +1,11 @@
-import { generateObject } from "ai";
+import { generateObject, NoObjectGeneratedError } from "ai";
 import { z } from "zod";
 import { flashModel, estimateCost, fastGoogleOptions } from "./runtime/model";
 import { logAgentRun } from "./runtime/log-run";
 import { postAgentMessage } from "./runtime/post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import type { MemberRow, MessageRow } from "@/lib/database.types";
+import { extractIdeaMetadata } from "@/lib/ideas/extract-idea";
+import type { DecisionRow, MemberRow, MessageRow } from "@/lib/database.types";
 
 const MODEL_ID = "gemini-3.6-flash";
 const CONFIDENCE_THRESHOLD = 0.7;
@@ -17,7 +18,7 @@ async function passesGate(tripId: string, messageBody: string): Promise<boolean>
     const { object, usage } = await generateObject({
       model: flashModel,
       schema: gateSchema,
-      prompt: `Does this message contain a travel constraint, date/availability mention, budget mention, destination preference, or a hard "I can't"/"no" statement? Message: "${messageBody}"`,
+      prompt: `Does this message contain a travel constraint, date/availability mention, budget mention, destination preference, an activity/place proposal or link, or a hard "I can't"/"no" statement? Message: "${messageBody}"`,
       providerOptions: fastGoogleOptions,
     });
     await logAgentRun({
@@ -66,23 +67,130 @@ const extractionItemSchema = z.discriminatedUnion("kind", [
     confidence: z.number().min(0).max(1),
     rationale: z.string(),
   }),
+  z.object({
+    kind: z.literal("idea"),
+    memberId: z.string(),
+    category: z.enum(["activity", "stay", "travel"]),
+    title: z.string(),
+    note: z.string().optional(),
+    url: z.string().optional(),
+    confidence: z.number().min(0).max(1),
+    rationale: z.string(),
+  }),
 ]);
 
 const scribeOutputSchema = z.object({ extractions: z.array(extractionItemSchema) });
 
-function buildScribePrompt(member: MemberRow, body: string): string {
-  return `You are extracting structured trip-planning facts from one chat message. Only extract what this specific person (memberId "${member.id}", name "${member.display_name}") is saying about themselves — never invent facts, never guess at other people. If the message contains no extractable constraint, dates, budget, or preference, return an empty extractions array.
+// The bug this fixes: "2nd march", "before 1st march" etc. have no year and
+// no reference point in the raw message text — buildScribePrompt used to
+// hand the model nothing but the message itself, so it either hallucinated
+// or refused to produce a valid ISO date, and generateObject threw
+// AI_NoObjectGeneratedError on every one of them (silently swallowed below).
+// This anchors "now" to a real year the trip has already established
+// (whatever's already in availability, if anything) and surfaces the
+// group's actual proposed date window(s) so a relative ask like "can we
+// finish a day earlier" resolves against something real instead of guessing.
+async function buildDateContext(
+  tripId: string,
+  supabase: ReturnType<typeof createServiceSupabaseClient>
+): Promise<string> {
+  const today = new Date().toISOString().slice(0, 10);
+  let anchorYear: number | null = null;
+  let leadingWindows: string[] = [];
+
+  try {
+    const { data: earliestAvailability } = await supabase
+      .from("availability")
+      .select("start_date")
+      .eq("trip_id", tripId)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    const firstRow = earliestAvailability?.[0] as { start_date: string } | undefined;
+    if (firstRow) anchorYear = Number(firstRow.start_date.slice(0, 4));
+  } catch {
+    // Best-effort context only — a failed lookup here should never block
+    // extraction, it just means the model falls back to "nearest future date."
+  }
+
+  try {
+    const { data: datesDecisions } = await supabase
+      .from("decisions")
+      .select("options")
+      .eq("trip_id", tripId)
+      .eq("type", "DATES")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const latest = datesDecisions?.[0] as Pick<DecisionRow, "options"> | undefined;
+    if (latest) leadingWindows = latest.options.map((o) => o.label);
+  } catch {
+    // Same as above — proceed without it.
+  }
+
+  const lines = [`Today's date is ${today}.`];
+  lines.push(
+    anchorYear
+      ? `This trip's other members have already shared dates around ${anchorYear} — use that year for any date mentioned without one, unless the message clearly states a different year.`
+      : `No year has been established for this trip yet — assume the nearest sensible future occurrence of any date mentioned.`
+  );
+  if (leadingWindows.length > 0) {
+    lines.push(
+      `The group's current proposed date option(s): ${leadingWindows.join(", ")}. Resolve relative requests ("before X", "a day earlier", "can we skip the last night") against these into concrete startDate/endDate values.`
+    );
+  }
+  return lines.join(" ");
+}
+
+function buildScribePrompt(member: MemberRow, body: string, dateContext: string): string {
+  return `You are extracting structured trip-planning facts from one chat message. Only extract what this specific person (memberId "${member.id}", name "${member.display_name}") is saying about themselves — never invent facts, never guess at other people. If the message contains nothing extractable, return an empty extractions array.
+
+${dateContext}
 
 Message: "${body}"
 
 Rules:
 - A firm "I can't" / "no" statement is HARD. A preference ("I'd like", "maybe") is SOFT.
-- Only use category "budget", "departure_city", "vibe", or "hard_no" for facts.
+- Only use category "budget", "departure_city", "vibe", or "hard_no" for kind "fact".
 - For category "budget", value must be {"amount": <integer, INR per head>} — convert anything vague ("around 15k", "fifteen thousand") to a plain number, never a range or band.
-- Only extract availability (kind: "availability") when the message states specific or clearly-implied dates.
+- Extract kind "availability" whenever the message states or clearly implies specific dates — including relative asks ("before the 1st", "can we finish a day earlier"). startDate/endDate must be real YYYY-MM-DD values, resolved using the date context above. Never emit a placeholder or partial date.
+- Extract kind "idea" only for an actual proposal or a link — "let's go scuba diving", "we should check out X", or any URL. A vague vibe comment ("I like beaches") is NOT an idea — leave it out entirely. category: "stay" for hotel/accommodation links or suggestions, "travel" for flight/train/bus links or timing/schedule info, "activity" for everything else (things to do, food, nightlife, general suggestions). If the message contains a URL, put it verbatim in "url". The place/activity name goes in a field called exactly "title" — never "label" or "name".
 - confidence is 0-1. If you're not confident, say so with a lower number rather than guessing.
 - rationale is a short (under 12 words) human-readable summary for a receipt message, e.g. "Karan can't travel Nov 20-25 (hard)".`;
 }
+
+// One corrective retry before giving up — cheap insurance against a single
+// malformed generation, not a fix for a model that's fundamentally
+// confused. Distinct from generateObject's own maxRetries, which only
+// retries transient request failures, never a schema-validation failure
+// (NoObjectGeneratedError) — the actual failure mode this trip's agent_runs
+// showed on repeat.
+//
+// Verified against the live trip this was built for: a generic "double-check
+// your dates" reminder wasn't enough — the model's actual mistake was
+// structural, not the dates themselves (e.g. inventing an "isSoft" boolean
+// instead of the schema's "strength" enum, or a bare string where "value"
+// needs an object). NoObjectGeneratedError carries the model's own raw
+// output (`.text`) and Zod's exact complaint (`String(error)`) — echoing
+// both back is a far stronger repair signal than a generic nudge, since the
+// model is now correcting its own literal mistake instead of guessing what
+// might be wrong.
+async function extractWithRetry(prompt: string) {
+  try {
+    return await generateObject({ model: flashModel, schema: scribeOutputSchema, providerOptions: fastGoogleOptions, prompt });
+  } catch (error) {
+    const raw = NoObjectGeneratedError.isInstance(error) ? error.text : undefined;
+    const repairPrompt = raw
+      ? `${prompt}\n\nYour previous attempt produced this, which does not match the required schema:\n${raw}\n\nValidation errors: ${String(error)}\n\nFix it: match every field name and type in the schema exactly (e.g. "strength" must be one of "free"/"partial"/"blocked", not an "isSoft" boolean; a "fact"'s "value" must be an object, never a bare string). Return corrected, complete JSON.`
+      : `${prompt}\n\nYour previous attempt at this didn't produce valid output. Double-check: every "startDate"/"endDate" must be a real YYYY-MM-DD value (never a placeholder, never partial), and every field the schema requires must be present.`;
+    return await generateObject({ model: flashModel, schema: scribeOutputSchema, providerOptions: fastGoogleOptions, prompt: repairPrompt });
+  }
+}
+
+// "posted" means Scribe put a message on the board somewhere — a filed
+// receipt, a dedupe note, or its own honest "couldn't parse that" fallback.
+// Callers that need a reply guarantee (the You thread) check this, not
+// whether a DB row landed — a message that already got an answer must never
+// get a second, unrelated one stacked on top of it.
+type ScribeResult = { posted: boolean };
 
 // The whole extraction pipeline for one new group message (spec F5, §8.1
 // message-events trigger, simplified to per-message since batching needs a
@@ -93,20 +201,20 @@ export async function runScribe(params: {
   message: MessageRow;
   authorMember: MemberRow;
   threadId?: string;
-}) {
+}): Promise<ScribeResult> {
   const passed = await passesGate(params.tripId, params.message.body);
-  if (!passed) return;
+  if (!passed) return { posted: false };
+
+  const supabase = createServiceSupabaseClient();
+  const dateContext = await buildDateContext(params.tripId, supabase);
+  const prompt = buildScribePrompt(params.authorMember, params.message.body, dateContext);
 
   const start = Date.now();
   let result: Awaited<ReturnType<typeof generateObject<typeof scribeOutputSchema>>>;
   try {
-    result = await generateObject({
-      model: flashModel,
-      schema: scribeOutputSchema,
-      providerOptions: fastGoogleOptions,
-      prompt: buildScribePrompt(params.authorMember, params.message.body),
-    });
+    result = await extractWithRetry(prompt);
   } catch (error) {
+    if (process.env.SCRIBE_DEBUG) console.log("[scribe debug] extraction failed after retry:", error);
     await logAgentRun({
       tripId: params.tripId,
       agent: "scribe",
@@ -118,7 +226,17 @@ export async function runScribe(params: {
       outcome: "error",
       errorMessage: String(error),
     });
-    return;
+    // Never silent: the member said something the gate flagged as real, but
+    // extraction still couldn't resolve it after a retry — say so instead of
+    // leaving them wondering whether the message did anything at all.
+    await postAgentMessage({
+      tripId: params.tripId,
+      agentName: "scribe",
+      body: "Got that, but couldn't pin down the specifics — mind rephrasing with an exact date or detail?",
+      metadata: { sourceMessageId: params.message.id },
+      threadId: params.threadId,
+    });
+    return { posted: true };
   }
 
   await logAgentRun({
@@ -132,15 +250,16 @@ export async function runScribe(params: {
     outcome: "success",
   });
 
+  if (process.env.SCRIBE_DEBUG) console.log("[scribe debug] raw extractions:", JSON.stringify(result.object.extractions, null, 2));
+
   // Only ever file facts about the message's own author, at or above the
   // confidence floor — low-confidence guesses are skipped, not applied
   // (spec: ambiguity should prompt clarification, never a silent guess).
   const applied = result.object.extractions.filter(
     (item) => item.confidence >= CONFIDENCE_THRESHOLD && item.memberId === params.authorMember.id
   );
-  if (applied.length === 0) return;
+  if (applied.length === 0) return { posted: false };
 
-  const supabase = createServiceSupabaseClient();
   const receipts: string[] = [];
 
   for (const item of applied) {
@@ -177,7 +296,7 @@ export async function runScribe(params: {
           .is("superseded_by", null)
           .neq("id", inserted.id);
       }
-    } else {
+    } else if (item.kind === "availability") {
       await supabase.from("availability").insert({
         trip_id: params.tripId,
         member_id: item.memberId,
@@ -185,6 +304,42 @@ export async function runScribe(params: {
         end_date: item.endDate,
         strength: item.strength,
       });
+    } else {
+      // idea — dedupe by exact URL within the trip first so the same link
+      // pasted twice (or mentioned once and already filed via the explicit
+      // "drop a link" composer) doesn't produce a second card.
+      if (item.url) {
+        const { data: existingIdea } = await supabase
+          .from("ideas")
+          .select("id")
+          .eq("trip_id", params.tripId)
+          .eq("url", item.url)
+          .maybeSingle();
+        if (existingIdea) {
+          receipts.push(`already have "${item.title}"`);
+          continue;
+        }
+        const meta = await extractIdeaMetadata(item.url);
+        await supabase.from("ideas").insert({
+          trip_id: params.tripId,
+          member_id: item.memberId,
+          category: item.category,
+          url: item.url,
+          title: meta.title ?? item.title,
+          note: meta.note ?? item.note ?? null,
+          image_url: meta.imageUrl,
+        });
+      } else {
+        await supabase.from("ideas").insert({
+          trip_id: params.tripId,
+          member_id: item.memberId,
+          category: item.category,
+          url: null,
+          title: item.title,
+          note: item.note ?? null,
+          image_url: null,
+        });
+      }
     }
     receipts.push(item.rationale);
   }
@@ -196,4 +351,6 @@ export async function runScribe(params: {
     metadata: { sourceMessageId: params.message.id },
     threadId: params.threadId,
   });
+
+  return { posted: true };
 }
