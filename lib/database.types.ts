@@ -153,6 +153,29 @@ export type IdeaVoteRow = {
   created_at: string;
 };
 
+export type AccommodationRow = {
+  id: string;
+  trip_id: string;
+  member_id: string;
+  name: string;
+  url: string | null;
+  price: string | null;
+  area: string | null;
+  image_url: string | null;
+  source: "chat" | "manual";
+  locked: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+};
+
+export type AccommodationVoteRow = {
+  id: string;
+  accommodation_id: string;
+  member_id: string;
+  created_at: string;
+};
+
 export type TaskCategory = "docs" | "booking" | "packing" | "other";
 
 export type TaskRow = {

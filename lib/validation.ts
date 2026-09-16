@@ -100,3 +100,17 @@ export const budgetCheckAnswerSchema = z.discriminatedUnion("answer", [
   z.object({ answer: z.literal("no"), reason: z.string().trim().min(1).max(280) }),
 ]);
 export type BudgetCheckAnswerInput = z.infer<typeof budgetCheckAnswerSchema>;
+
+export const createAccommodationSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  url: z.string().trim().url().max(2000).optional(),
+  price: z.string().trim().max(60).optional(),
+});
+export type CreateAccommodationInput = z.infer<typeof createAccommodationSchema>;
+
+export const lockAccommodationSchema = z.object({
+  locked: z.boolean(),
+  startDate: isoDate.optional(),
+  endDate: isoDate.optional(),
+});
+export type LockAccommodationInput = z.infer<typeof lockAccommodationSchema>;

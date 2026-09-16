@@ -5,6 +5,7 @@ import { logAgentRun } from "./runtime/log-run";
 import { postAgentMessage } from "./runtime/post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { groupBudgetCeiling } from "@/lib/budget/budget";
+import { searchTavily } from "@/lib/search/tavily";
 import type { FactRow } from "@/lib/database.types";
 
 const MODEL_ID = "gemini-3.6-flash";
@@ -19,27 +20,6 @@ const destinationOptionSchema = z.object({
 });
 
 const scoutOutputSchema = z.object({ options: z.array(destinationOptionSchema).length(3) });
-
-async function searchTavily(query: string): Promise<string> {
-  const apiKey = process.env.TAVILY_API_KEY;
-  if (!apiKey) return "";
-  try {
-    const res = await fetch("https://api.tavily.com/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ api_key: apiKey, query, max_results: 5 }),
-    });
-    if (!res.ok) return "";
-    const data = await res.json();
-    const results = (data.results ?? []) as { title: string; content: string }[];
-    return results.map((r) => `${r.title}: ${r.content}`).join("\n");
-  } catch {
-    // Web search is enrichment, not a dependency — Scout still works from the
-    // model's own knowledge if Tavily is unset or unreachable (graceful
-    // degradation, spec §12.4).
-    return "";
-  }
-}
 
 type ScoutResult = { ok: true } | { ok: false; reason: string };
 

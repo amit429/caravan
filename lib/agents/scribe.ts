@@ -5,6 +5,7 @@ import { logAgentRun } from "./runtime/log-run";
 import { postAgentMessage } from "./runtime/post-agent-message";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { extractIdeaMetadata } from "@/lib/ideas/extract-idea";
+import { extractAccommodationDetails } from "@/lib/accommodations/extract-accommodation";
 import { refreshDatesDecisionIfStale } from "@/lib/decisions/refresh-dates-decision";
 import type { DecisionRow, MemberRow, MessageRow } from "@/lib/database.types";
 
@@ -373,10 +374,39 @@ export async function runScribe(params: {
         strength: item.strength,
       });
       filedAvailability = true;
+    } else if (item.category === "stay") {
+      // A stay suggestion gets its own richer home (accommodations), not
+      // the general ideas inbox — price and area are what actually matter
+      // here, in a way a plain idea card never captures. Same URL-dedupe
+      // shape as the general idea path below.
+      if (item.url) {
+        const { data: existing } = await supabase
+          .from("accommodations")
+          .select("id")
+          .eq("trip_id", params.tripId)
+          .eq("url", item.url)
+          .maybeSingle();
+        if (existing) {
+          receipts.push(`already have "${item.title}"`);
+          continue;
+        }
+      }
+      const details = await extractAccommodationDetails({ name: item.title, url: item.url });
+      await supabase.from("accommodations").insert({
+        trip_id: params.tripId,
+        member_id: item.memberId,
+        name: details.title,
+        url: item.url ?? null,
+        price: details.price,
+        area: details.area,
+        image_url: details.imageUrl,
+        source: "chat",
+      });
     } else {
-      // idea — dedupe by exact URL within the trip first so the same link
-      // pasted twice (or mentioned once and already filed via the explicit
-      // "drop a link" composer) doesn't produce a second card.
+      // idea (activity, or travel until its own dedicated home ships) —
+      // dedupe by exact URL within the trip first so the same link pasted
+      // twice (or mentioned once and already filed via the explicit "drop a
+      // link" composer) doesn't produce a second card.
       if (item.url) {
         const { data: existingIdea } = await supabase
           .from("ideas")
